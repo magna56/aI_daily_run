@@ -5,11 +5,20 @@ Usage:
     python3 generate_excalidraw.py \
         --title "Mixture of Agents" \
         --subtitle "Multi-LLM collaboration for better outputs" \
+        --explainer "A weak model asking several strong models for a first draft, \
+then having one more model merge the best of those drafts, beats asking any \
+single model once — the same principle as a code review from three people \
+catching more than a review from one." \
         --concepts '["Proposer Agents|Multiple LLMs generate diverse initial responses",
                      "Aggregator|Synthesizes proposals into a refined final answer"]' \
         --flow '["Input Query", "Parallel Proposals", "Aggregation", "Output"]' \
         --category "Agent Frameworks & Tools" \
         --output ~/ai_learning/2026-07-04/diagram.excalidraw
+
+--explainer is optional but strongly recommended: 2-4 plain-language sentences that
+explain what the article is actually about, the way you'd explain it out loud. It is
+prose, not a bullet list — --concepts stays the terse at-a-glance summary, --explainer
+is the section that carries the actual explanation for someone who has not read topic.md.
 """
 
 import json
@@ -118,6 +127,32 @@ def text(x, y, content, size=BODY_SIZE, align="left", v_align="top",
     return tid
 
 
+def wrap_lines(content, width_px, size):
+    """Greedy word-wrap for sizing a box ahead of render time.
+
+    The SVG renderer re-wraps every text element to its declared width using
+    real per-glyph metrics (see excalidraw-svg.js's `measure`), which run
+    slightly narrower than this flat size*0.55-per-char estimate — so this
+    always predicts as many or more lines than the renderer actually needs.
+    That means the box this sizes is never too short, only possibly a touch
+    tall, which is the safe direction to be wrong in.
+    """
+    words = content.split()
+    lines, cur, cur_w = [], [], 0.0
+    for w in words:
+        adv = len(w) * size * 0.55
+        sep = size * 0.3 if cur else 0
+        if cur and cur_w + sep + adv > width_px:
+            lines.append(" ".join(cur))
+            cur, cur_w = [w], adv
+        else:
+            cur.append(w)
+            cur_w += sep + adv
+    if cur:
+        lines.append(" ".join(cur))
+    return lines
+
+
 def arrow(x1, y1, x2, y2, stroke=STROKE, stroke_w=2,
           start_id=None, end_id=None):
     aid = make_id()
@@ -145,7 +180,7 @@ def arrow(x1, y1, x2, y2, stroke=STROKE, stroke_w=2,
     return aid
 
 
-def build_diagram(title, subtitle, concepts, flow=None, category=None):
+def build_diagram(title, subtitle, concepts, flow=None, category=None, explainer=None):
     primary_bg, secondary_bg = CATEGORY_COLORS.get(
         category or "", (BLUE, PURPLE))
 
@@ -164,6 +199,19 @@ def build_diagram(title, subtitle, concepts, flow=None, category=None):
     rect(50, Y, 200, 35, bg=GRAY, label=today, label_size=SMALL_SIZE)
     rect(270, Y, 300, 35, bg=primary_bg, label=cat_label, label_size=SMALL_SIZE)
     Y += 60
+
+    if explainer:
+        text(50, Y, "The Idea", size=SUBTITLE_SIZE, width=300)
+        Y += 40
+
+        pad = 20
+        inner_w = CANVAS_W - 100 - pad * 2
+        lines = wrap_lines(explainer, inner_w, BODY_SIZE)
+        box_h = len(lines) * BODY_SIZE * 1.25 + pad * 2
+        rect(50, Y, CANVAS_W - 100, box_h, bg=GRAY, stroke=STROKE, stroke_w=1)
+        text(50 + pad, Y + pad, explainer, size=BODY_SIZE, color="#333333",
+             width=inner_w)
+        Y += box_h + 30
 
     text(50, Y, "Key Concepts", size=SUBTITLE_SIZE, width=300)
     Y += 40
@@ -258,6 +306,8 @@ def main():
                         help='JSON array of "Name|Description" strings')
     parser.add_argument("--flow", default=None,
                         help="JSON array of flow step names")
+    parser.add_argument("--explainer", default=None,
+                        help="2-4 plain-language sentences explaining the article, as prose")
     parser.add_argument("--category", default=None)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
@@ -281,7 +331,7 @@ def main():
         sys.exit(1)
 
     build_diagram(args.title, args.subtitle, concepts,
-                  flow=flow, category=args.category)
+                  flow=flow, category=args.category, explainer=args.explainer)
 
     excalidraw = {
         "type": "excalidraw",

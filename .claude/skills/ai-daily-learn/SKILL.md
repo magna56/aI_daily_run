@@ -251,6 +251,7 @@ done
 python3 "$GEN" \
   --title "Topic Title" \
   --subtitle "Brief subtitle" \
+  --explainer "2-4 plain-language sentences explaining what the article is actually about, as prose." \
   --concepts '["Concept 1|Description 1", "Concept 2|Description 2", ...]' \
   --flow '["Step A", "Step B", "Step C"]' \
   --category "Category Name" \
@@ -258,6 +259,10 @@ python3 "$GEN" \
 ```
 
 Provide 4-8 concepts as `"Name|Description"` pairs. Provide 3-6 flow steps if applicable.
+Always provide `--explainer` too: `--concepts` stays the terse at-a-glance summary, but the
+diagram needs one section that actually explains the idea in sentences, the way you would say
+it out loud — draw that explanation from `## For a Software Engineer` or `## Why It Matters`
+in topic.md, condensed to 2-4 sentences, not copied verbatim.
 
 If the script fails, generate the Excalidraw JSON directly using this element format:
 - Rectangle: `{"id":"r1","type":"rectangle","x":100,"y":100,"width":300,"height":80,"strokeColor":"#1e1e1e","backgroundColor":"#a5d8ff","fillStyle":"solid","strokeWidth":2,"roughness":0,"opacity":100,"roundness":{"type":3},...}`
