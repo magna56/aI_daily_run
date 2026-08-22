@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#111217" />
 <title>AI Daily Learn</title>
 <meta name="description" content="Daily 30-minute AI learning sessions — topic, diagram, runnable code and further reading, in one place." />
+<script defer src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
 <style>
   :root {
     --bg: #111217;
@@ -183,6 +184,22 @@
   .badge.bad { color: var(--warn); border-color: rgba(255,176,76,.4); background: rgba(255,176,76,.10); }
   .shot { max-width: 100%; border: 1px solid var(--line); border-radius: 10px; margin-top: 16px; display: block; background: #fff; }
 
+  /* Interactive code editor */
+  .code-editor { display: flex; flex-direction: column; gap: 9px; }
+  .editor-textarea { font-family: var(--mono); font-size: 12.4px; background: #0d0e12; color: var(--ink); border: none; padding: 15px; resize: none; line-height: 1.62; border-radius: 0; width: 100%; min-height: 200px; max-height: 60vh; }
+  .editor-textarea:focus { outline: 1px solid var(--accent); }
+  .editor-controls { display: flex; gap: 8px; padding: 0 15px 9px; }
+  .btn-repl { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--ink); border-radius: 6px; padding: 7px 16px; font: inherit; font-family: var(--mono); font-size: 12px; cursor: pointer; transition: all .15s; }
+  .btn-repl:hover { color: var(--accent2); border-color: rgba(56,189,248,.45); }
+  .btn-repl:active { transform: scale(.98); }
+  .btn-repl.running { opacity: .6; cursor: wait; }
+  .terminal-pane { background: #0d0e12; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+  .terminal-output { flex: 1; padding: 15px; overflow-y: auto; max-height: 40vh; font-family: var(--mono); font-size: 12.4px; line-height: 1.62; white-space: pre-wrap; word-wrap: break-word; }
+  .terminal-out-ok { color: #cfcabf; }
+  .terminal-out-err { color: #ffb4a2; }
+  .terminal-out-run { color: var(--dim); font-style: italic; }
+  .pyodide-note { font-size: 11px; color: var(--muted); padding: 8px 15px; border-top: 1px solid var(--line); }
+
   /* Python syntax colours */
   .py-kw  { color: #c792ea; }
   .py-str { color: #a5d6a7; }
@@ -277,6 +294,88 @@
   var PANES = ["overview", "diagram", "code", "articles"];
 
   var $ = function (id) { return document.getElementById(id); };
+  var pyodideReady = false;
+
+  /* ---- REPL setup ---- */
+  window.loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/" }).then(function (py) {
+    window.pyodide = py;
+    window.pyodideReady = true;
+  }).catch(function (e) {
+    console.warn("Pyodide failed to load:", e);
+  });
+
+  function getCodeCache(sessionId) {
+    var cached = localStorage.getItem("code_editor_" + sessionId);
+    if (!cached) return null;
+    try {
+      var data = JSON.parse(cached);
+      var now = Date.now();
+      if (data.expires && now > data.expires) {
+        localStorage.removeItem("code_editor_" + sessionId);
+        return null;
+      }
+      return data.code;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setCodeCache(sessionId, code, ttlMs) {
+    ttlMs = ttlMs || 24 * 60 * 60 * 1000;  // 24 hours default
+    localStorage.setItem("code_editor_" + sessionId, JSON.stringify({
+      code: code,
+      expires: Date.now() + ttlMs,
+      savedAt: new Date().toISOString()
+    }));
+  }
+
+  function clearCodeCache(sessionId) {
+    localStorage.removeItem("code_editor_" + sessionId);
+  }
+
+  function parseRequires(sourceCode) {
+    var lines = String(sourceCode).split("\n");
+    for (var i = 0; i < Math.min(5, lines.length); i++) {
+      var m = lines[i].match(/^#\s*REQUIRES:\s*(.+)$/);
+      if (m) {
+        return m[1].split(/[,\s]+/).filter(function (s) { return s.trim(); });
+      }
+    }
+    return [];
+  }
+
+  async function runPython(code, outputEl, sessionId) {
+    if (!window.pyodideReady) {
+      outputEl.textContent = "Python interpreter is loading... try again in a moment.";
+      return;
+    }
+
+    setCodeCache(sessionId, code);
+    var term = outputEl.querySelector(".terminal-output") || outputEl;
+    term.innerHTML = '<span class="terminal-out-run">> running...</span>';
+
+    try {
+      var requires = parseRequires(code);
+      if (requires.length > 0) {
+        term.innerHTML = '<span class="terminal-out-run">> installing: ' + esc(requires.join(", ")) + '</span>\n';
+        await pyodide.loadPackagesFromImports(code);
+      }
+
+      var oldStdout = pyodide.globals.get("_old_stdout");
+      if (!oldStdout) {
+        pyodide.globals.set("_output", "");
+        pyodide.runPython("import sys\nclass _Capture:\n  def write(self, s):\n    globals()['_output'] += str(s)\n  def flush(self): pass\n_old_stdout = sys.stdout\nsys.stdout = _Capture()");
+      }
+
+      pyodide.runPython("globals()['_output'] = ''");
+      pyodide.runPython(code);
+      var output = pyodide.globals.get("_output");
+      term.innerHTML = '<span class="terminal-out-ok">' + esc(output || "(the script printed nothing)") + '</span>\n<span class="terminal-out-run">> done</span>';
+    } catch (e) {
+      term.innerHTML = '<span class="terminal-out-err">' + esc(String(e)) + '</span>\n<span class="terminal-out-run">> error</span>';
+    }
+  }
+
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
@@ -722,51 +821,85 @@
     });
   }
 
-  /* code: source beside the output the build captured */
+  /* code: source in an editable REPL, with captured output as fallback */
   function renderCode(el, p) {
     var run = p.code.run || {};
     var cmd = "python3 " + p.id + "/code_example.py";
-    var outBody, badge;
+    var captured = "";
 
-    if (run.skipped) {
-      badge = '<span class="badge bad">not run</span>';
-      outBody = '<span class="out-bad">Output was not captured at build time (' + esc(run.reason || "skipped") + ").</span>";
-    } else if (run.ok) {
-      badge = '<span class="badge ok">exit 0</span>';
-      outBody = '<span class="out-ok">' + esc(run.stdout || "(the script printed nothing)") + "</span>";
+    if (run.ok) {
+      captured = run.stdout || "(the script printed nothing)";
+    } else if (run.skipped) {
+      captured = "Output was not captured at build time (" + (run.reason || "skipped") + ").";
     } else {
-      badge = '<span class="badge bad">' + (run.timedOut ? "timed out" : "exit " + run.exitCode) + "</span>";
-      outBody = (run.stdout ? '<span class="out-ok">' + esc(run.stdout) + "</span>\n" : "") +
-        '<span class="out-bad">' + esc(run.stderr || run.note || "No output.") + "\n\n" +
-        "This example does not run cleanly — run it locally to debug:\n  " + esc(cmd) + "</span>";
+      captured = (run.stdout ? run.stdout + "\n\n" : "") +
+        (run.stderr || run.note || "No output.") + "\n\n" +
+        "This example did not run cleanly at build time — try running it live above.";
     }
 
     var shots = (p.images || []).map(function (name) {
       return '<img class="shot" src="assets/' + esc(p.id) + "/" + esc(name) + '" alt="Figure produced by ' + esc(p.id) + '" loading="lazy" />';
     }).join("");
 
-    // Wide output (ASCII tables, sparkline charts) is unreadable in a half
-    // column, so those sessions stack instead of sitting side by side.
-    var widest = 0;
-    String(run.stdout || "").split("\n").forEach(function (l) { widest = Math.max(widest, l.length); });
+    var cachedCode = getCodeCache(p.id);
+    var sourceToShow = cachedCode || p.code.source;
 
     el.innerHTML =
-      '<p class="runline">Run it yourself: <code>' + esc(cmd) + "</code></p>" +
-      '<div class="code-cols' + (widest > 84 ? " stacked" : "") + '">' +
+      '<p class="runline">Run it yourself — edit and click Run (or fallback to captured output below)</p>' +
+      '<div class="code-cols stacked">' +
         '<div class="panel">' +
           '<div class="panel-head">code_example.py<span class="spacer"></span>' +
             '<button class="mini" id="copyCode">copy</button></div>' +
-          "<pre><code>" + highlightPython(p.code.source) + "</code></pre>" +
+          '<div class="code-editor">' +
+            '<textarea class="editor-textarea" id="codeEditor" spellcheck="false">' + esc(sourceToShow) + '</textarea>' +
+            '<div class="editor-controls">' +
+              '<button class="btn-repl" id="runCode">Run</button>' +
+              '<button class="btn-repl" id="resetCode">Reset</button>' +
+            '</div>' +
+          '</div>' +
         "</div>" +
         '<div class="panel">' +
-          '<div class="panel-head">output ' + badge + "</div>" +
-          "<pre>" + outBody + "</pre>" +
+          '<div class="panel-head">output (live)</div>' +
+          '<div id="liveOutput" class="terminal-pane">' +
+            '<div class="terminal-output"><span class="terminal-out-run">(output will appear here when you click Run)</span></div>' +
+            '<div class="pyodide-note">Powered by ' + (window.pyodideReady ? 'Pyodide ✓' : 'Pyodide (loading...)') + '</div>' +
+          '</div>' +
         "</div>" +
+      "</div>" +
+      '<hr class="sep" />' +
+      '<h3 style="margin-top: 0; font-size: 14px; color: var(--muted);">Captured at build time</h3>' +
+      '<div class="panel" style="max-height: 30vh; overflow-y: auto;">' +
+        '<div class="panel-head">output (static)</div>' +
+        "<pre><span class=\"out-ok\">" + esc(captured) + "</span></pre>" +
       "</div>" + shots;
 
-    $("copyCode").addEventListener("click", function () {
+    var editorEl = $("codeEditor");
+    var runBtn = $("runCode");
+    var resetBtn = $("resetCode");
+    var copyBtn = $("copyCode");
+    var liveOutputEl = $("liveOutput");
+
+    runBtn.addEventListener("click", function () {
+      runBtn.classList.add("running");
+      var code = editorEl.value;
+      runPython(code, liveOutputEl, p.id).finally(function () {
+        runBtn.classList.remove("running");
+      });
+    });
+
+    resetBtn.addEventListener("click", function () {
+      editorEl.value = p.code.source;
+      clearCodeCache(p.id);
+      liveOutputEl.querySelector(".terminal-output").innerHTML = '<span class="terminal-out-run">(output will appear here when you click Run)</span>';
+    });
+
+    copyBtn.addEventListener("click", function () {
       var b = this;
-      copyText(p.code.source, function () { b.classList.add("done"); b.textContent = "copied"; });
+      copyText(editorEl.value, function () { b.classList.add("done"); b.textContent = "copied"; });
+    });
+
+    editorEl.addEventListener("input", function () {
+      setCodeCache(p.id, editorEl.value);
     });
   }
 

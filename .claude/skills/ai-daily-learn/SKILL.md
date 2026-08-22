@@ -224,11 +224,11 @@ Write `~/ai_learning/YYYY-MM-DD/code_example.py` — a **runnable** pure Python 
 
 - Include a docstring explaining what it demonstrates and how to run it
 - **No API keys needed** — use simulations, visualizations, pure implementations
-- Include `pip install` comments for dependencies (prefer stdlib when possible)
 - Keep under 150 lines — focused, not a tutorial dump
 - Include print output so results are visible immediately
 - For hardware/business topics: write analysis, visualization, or comparison code
 - For algorithm topics: implement a minimal working version from scratch
+- **Library dependencies**: if the script needs numpy, matplotlib, or other packages, add a **`# REQUIRES: numpy==1.24.3, matplotlib==3.7.1`** line in the first few comments (exact versions, comma-separated). The reader uses this to auto-install libraries when running the code in the browser. Prefer stdlib whenever possible; use external packages only when essential.
 
 ### Step 7: Generate diagram.excalidraw
 
