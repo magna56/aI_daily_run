@@ -1,11 +1,12 @@
 # AI Daily Learn — the reader UI for the daily session artifacts, published to
-# BBGitHub Pages.
+# GitHub Pages and Cloudflare Pages.
 #
 # Each session is a YYYY-MM-DD/ folder written by the /ai-daily-learn skill.
 # build.js compiles those folders into site/data/ (a small manifest plus one
 # JSON payload per session, with diagrams pre-rendered to SVG and each
 # code_example.py executed so its output can be read in the browser).
-# `make site` assembles the publishable folder; deploy.sh pushes it to gh-pages.
+# `make site` assembles the publishable folder; deploy.sh pushes it to both
+# gh-pages (GitHub Pages) and Cloudflare Pages.
 #
 # Set NORUN=1 on any target to skip executing the Python examples — handy when
 # iterating on index.html, since a cold run of all sessions takes ~45s.
@@ -29,6 +30,7 @@ site: build ## Assemble the publishable site/ folder
 	mkdir -p $(OUTPUT_DIR)
 	cp index.html 404.html $(OUTPUT_DIR)/
 	touch $(OUTPUT_DIR)/.nojekyll
+	echo "/*  /index.html  200" > $(OUTPUT_DIR)/_redirects
 	@echo "==> Built $(OUTPUT_DIR)/"
 
 serve: site ## Preview locally at http://127.0.0.1:$(PORT) (Ctrl-C to stop)

@@ -21,7 +21,8 @@ which the reader uses as the card blurb.
 
 `build.js` compiles the session folders into `site/data/` (a small manifest plus one JSON payload
 per session); `index.html` is the reader SPA that loads that data. `site/` is build output, never
-committed, force-pushed to the `gh-pages` branch by `deploy.sh`.
+committed — `deploy.sh` publishes it to Cloudflare Pages (theaicommit.com, the primary host) and
+force-pushes it to the `gh-pages` branch (GitHub Pages, kept as a mirror).
 
 ## Commands
 
@@ -29,7 +30,7 @@ committed, force-pushed to the `gh-pages` branch by `deploy.sh`.
 make serve           # build + preview at http://127.0.0.1:8000
 make build            # regenerate site/data/ only
 make check             # lint every session, write nothing (use in review/CI)
-make deploy           # build and publish to gh-pages (runs deploy.sh)
+make deploy           # build and publish to Cloudflare Pages + gh-pages (runs deploy.sh)
 make clean             # drop site/ and the run cache
 
 make serve NORUN=1    # skip executing code_example.py files (~45s faster, no output pane)
@@ -69,9 +70,23 @@ element shapes the generator script (`.claude/skills/ai-daily-learn/scripts/gene
 actually emits (rectangle/text/arrow, roughness 0); anything else is skipped rather than
 approximated, and the build warns when that happens.
 
-**`deploy.sh`** builds `site/`, then publishes it by initializing a *throwaway* git repo in a
-temp dir, committing, and force-pushing that single commit to the `gh-pages` branch of whatever
-`origin` remote is configured — it does not touch this repo's own git history or branches.
+**`deploy.sh`** builds `site/` once, then publishes that *same* built folder to two hosts — it
+never rebuilds per-target, which matters because `lib/runner.js` needs `python3` to execute every
+`code_example.py`, and that is only guaranteed to exist on this machine, not on a remote build
+server:
+- **Cloudflare Pages** (theaicommit.com, primary): `npx wrangler pages deploy site
+  --project-name=theaicommit`, authenticated via a `CLOUDFLARE_API_TOKEN` read from macOS Keychain
+  (`security find-generic-password -a wrangler -s cloudflare-api-token-theaicommit`). Non-fatal on
+  failure — a Cloudflare hiccup must not undo the gh-pages publish that already succeeded above it.
+- **GitHub Pages** (mirror): initializes a *throwaway* git repo in a temp dir, commits, and
+  force-pushes that single commit to the `gh-pages` branch of whatever `origin` remote is
+  configured — it does not touch this repo's own git history or branches.
+
+`site/_redirects` (`/* /index.html 200`, written by `make site`) is Cloudflare Pages' native
+SPA-fallback mechanism, needed because the reader is a single-page app using hash routing
+(`#2026-08-22/code`) — without it, a fresh load of a path Cloudflare doesn't recognize 404s.
+GitHub Pages ignores this file; it uses `404.html`'s own redirect-with-hash-preserved script
+instead, for the same purpose.
 
 ## Session content conventions
 
