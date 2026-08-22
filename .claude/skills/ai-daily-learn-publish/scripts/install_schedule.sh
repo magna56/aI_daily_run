@@ -84,6 +84,20 @@ mkdir -p "$HOME/Library/LaunchAgents" "$ROOT/.logs"
 # authenticate.
 JOB_PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
+# node is required for the site-rebuild half of publish.sh (build.js, deploy.sh),
+# but a version manager (nvm, volta, asdf, fnm, ...) puts it somewhere none of the
+# paths above cover — nvm alone means ~/.nvm/versions/node/vX.Y.Z/bin, versioned
+# per-install, so it cannot be hardcoded. Resolve it in THIS shell instead, where
+# .zshrc/.bashrc have already loaded the version manager, and prepend whatever
+# directory node actually lives in. launchd never sources shell rc files, so this
+# is the only chance to capture it.
+NODE_BIN="$(command -v node 2>/dev/null || true)"
+if [ -n "$NODE_BIN" ]; then
+  JOB_PATH="$(cd "$(dirname "$NODE_BIN")" && pwd):$JOB_PATH"
+else
+  say "WARN: no 'node' found in this shell — the daily job's site rebuild step will be skipped until node is on PATH"
+fi
+
 cat > "$PLIST" <<PLIST_EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
