@@ -165,9 +165,12 @@
   .code-cols { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); gap: 18px; align-items: start; }
   /* Output that draws ASCII charts needs the full width or it scrolls sideways. */
   .code-cols.stacked { grid-template-columns: 1fr; }
-  /* Cap the source when stacked so the output panel stays above the fold. */
-  .code-cols.stacked .panel:first-child pre { max-height: 46vh; }
-  @media (max-width: 940px) { .code-cols { grid-template-columns: 1fr; } }
+  /* Cap each pane when stacked so neither one pushes the other below the fold. */
+  .code-cols.stacked .editor-textarea, .code-cols.stacked .terminal-output { height: 40vh; }
+  @media (max-width: 940px) {
+    .code-cols { grid-template-columns: 1fr; }
+    .code-cols .editor-textarea, .code-cols .terminal-output { height: 40vh; }
+  }
   .panel { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #0d0e12; }
   .panel-head { display: flex; align-items: center; gap: 10px; padding: 9px 13px; background: rgba(255,255,255,.03); border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
   .panel-head .spacer { margin-left: auto; }
@@ -184,21 +187,33 @@
   .badge.bad { color: var(--warn); border-color: rgba(255,176,76,.4); background: rgba(255,176,76,.10); }
   .shot { max-width: 100%; border: 1px solid var(--line); border-radius: 10px; margin-top: 16px; display: block; background: #fff; }
 
-  /* Interactive code editor */
-  .code-editor { display: flex; flex-direction: column; gap: 9px; }
-  .editor-textarea { font-family: var(--mono); font-size: 12.4px; background: #0d0e12; color: var(--ink); border: none; padding: 15px; resize: none; line-height: 1.62; border-radius: 0; width: 100%; min-height: 200px; max-height: 60vh; }
+  /* Interactive code editor — mirrors the two-column .code-cols layout the
+     static code/output panels used, so this reads as one screen, not a
+     scroll-through-three-panes stack. */
+  .code-editor { display: flex; flex-direction: column; height: 100%; }
+  .editor-textarea { font-family: var(--mono); font-size: 12.4px; background: #0d0e12; color: var(--ink); border: none; padding: 15px; resize: none; line-height: 1.62; border-radius: 0; width: 100%; height: 70vh; }
   .editor-textarea:focus { outline: 1px solid var(--accent); }
-  .editor-controls { display: flex; gap: 8px; padding: 0 15px 9px; }
-  .btn-repl { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--ink); border-radius: 6px; padding: 7px 16px; font: inherit; font-family: var(--mono); font-size: 12px; cursor: pointer; transition: all .15s; }
+  .editor-controls { display: flex; gap: 8px; padding: 9px 13px; border-top: 1px solid var(--line); background: rgba(255,255,255,.03); }
+  .btn-repl { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--ink); border-radius: 6px; padding: 6px 16px; font: inherit; font-family: var(--mono); font-size: 12px; cursor: pointer; transition: all .15s; }
   .btn-repl:hover { color: var(--accent2); border-color: rgba(56,189,248,.45); }
   .btn-repl:active { transform: scale(.98); }
   .btn-repl.running { opacity: .6; cursor: wait; }
-  .terminal-pane { background: #0d0e12; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
-  .terminal-output { flex: 1; padding: 15px; overflow-y: auto; max-height: 40vh; font-family: var(--mono); font-size: 12.4px; line-height: 1.62; white-space: pre-wrap; word-wrap: break-word; }
+  .terminal-pane { height: 100%; }
+  .terminal-output { padding: 15px; overflow-y: auto; height: 70vh; font-family: var(--mono); font-size: 12.4px; line-height: 1.62; white-space: pre-wrap; word-wrap: break-word; }
   .terminal-out-ok { color: #cfcabf; }
   .terminal-out-err { color: #ffb4a2; }
   .terminal-out-run { color: var(--dim); font-style: italic; }
-  .pyodide-note { font-size: 11px; color: var(--muted); padding: 8px 15px; border-top: 1px solid var(--line); }
+  .pyodide-note { font-size: 10.5px; color: var(--muted); }
+
+  /* Captured-output fallback, collapsed by default so it never adds scroll
+     unless someone actually wants it. */
+  .fallback { margin-top: 18px; border: 1px solid var(--line); border-radius: 10px; background: #0d0e12; overflow: hidden; }
+  .fallback summary { cursor: pointer; padding: 11px 15px; font-family: var(--mono); font-size: 11.5px; color: var(--muted); list-style: none; }
+  .fallback summary::-webkit-details-marker { display: none; }
+  .fallback summary::before { content: "▸ "; color: var(--dim); }
+  .fallback[open] summary::before { content: "▾ "; }
+  .fallback summary:hover { color: var(--accent2); }
+  .fallback pre { margin: 0; padding: 0 15px 15px; overflow: auto; max-height: 40vh; font-family: var(--mono); font-size: 12.4px; line-height: 1.62; }
 
   /* Python syntax colours */
   .py-kw  { color: #c792ea; }
@@ -861,9 +876,15 @@
     var cachedCode = getCodeCache(p.id);
     var sourceToShow = cachedCode || p.code.source;
 
+    // Wide captured output (ASCII tables, sparkline charts) is unreadable in a
+    // half column, so those sessions stack instead of sitting side by side —
+    // same rule the static-only view used to use.
+    var widest = 0;
+    captured.split("\n").forEach(function (l) { widest = Math.max(widest, l.length); });
+
     el.innerHTML =
-      '<p class="runline">Run it yourself — edit and click Run (or fallback to captured output below)</p>' +
-      '<div class="code-cols stacked">' +
+      '<p class="runline">Run it yourself — edit and click Run</p>' +
+      '<div class="code-cols' + (widest > 84 ? " stacked" : "") + '">' +
         '<div class="panel">' +
           '<div class="panel-head">code_example.py<span class="spacer"></span>' +
             '<button class="mini" id="copyCode">copy</button></div>' +
@@ -876,19 +897,16 @@
           '</div>' +
         "</div>" +
         '<div class="panel">' +
-          '<div class="panel-head">output (live)</div>' +
+          '<div class="panel-head">output<span class="spacer"></span>' +
+            '<span class="pyodide-note">' + (window.pyodideReady ? 'Pyodide ✓' : 'Pyodide loading…') + '</span></div>' +
           '<div id="liveOutput" class="terminal-pane">' +
-            '<div class="terminal-output"><span class="terminal-out-run">(output will appear here when you click Run)</span></div>' +
-            '<div class="pyodide-note">Powered by ' + (window.pyodideReady ? 'Pyodide ✓' : 'Pyodide (loading...)') + '</div>' +
+            '<div class="terminal-output"><span class="terminal-out-run">(click Run to see output here)</span></div>' +
           '</div>' +
         "</div>" +
       "</div>" +
-      '<hr class="sep" />' +
-      '<h3 style="margin-top: 0; font-size: 14px; color: var(--muted);">Captured at build time</h3>' +
-      '<div class="panel" style="max-height: 30vh; overflow-y: auto;">' +
-        '<div class="panel-head">output (static)</div>' +
-        "<pre><span class=\"out-ok\">" + esc(captured) + "</span></pre>" +
-      "</div>" + shots;
+      "<details class=\"fallback\"><summary>Captured output from build time (fallback)</summary>" +
+        '<pre><span class="out-ok">' + esc(captured) + "</span></pre>" +
+      "</details>" + shots;
 
     var editorEl = $("codeEditor");
     var runBtn = $("runCode");
