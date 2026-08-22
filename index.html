@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#111217" />
+<title>AI Daily Learn</title>
+<meta name="description" content="Daily 30-minute AI learning sessions — topic, diagram, runnable code and further reading, in one place." />
+<style>
+  :root {
+    --bg: #111217;
+    --ink: #e7e2d8;
+    --muted: #9a9488;
+    --dim: #6f6a60;
+    --line: rgba(255,255,255,.10);
+    --card: rgba(255,255,255,.028);
+    --card-hi: rgba(255,255,255,.05);
+    --accent: #38bdf8;
+    --accent2: #7dd3fc;
+    --good: #6fd79a;
+    --warn: #ffc879;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle 420px at 40% 16%, rgba(56,189,248,.10) 0, transparent 80%),
+      radial-gradient(circle 560px at 58% 60%, rgba(120,152,255,.05) 0, transparent 85%),
+      radial-gradient(circle 250px at 72% 82%, rgba(125,211,252,.10) 0, transparent 90%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px 90px; }
+  .hidden { display: none !important; }
+
+  /* Header */
+  header.top { text-align: center; padding: 44px 24px 6px; }
+  .title {
+    font-family: var(--mono); font-weight: 700;
+    font-size: clamp(24px, 4.6vw, 44px); letter-spacing: .06em; margin: 0;
+    background: linear-gradient(90deg, #38bdf8 0%, #7dd3fc 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .kicker { font-family: var(--mono); color: var(--dim); font-size: 12.5px; letter-spacing: .18em; margin: 10px 0 0; text-transform: uppercase; }
+  .subtitle { color: var(--muted); font-size: 15px; max-width: 640px; margin: 16px auto 0; line-height: 1.6; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin: 34px 0 8px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; text-align: center; }
+  .stat .n { font-family: var(--mono); font-size: 30px; font-weight: 700; line-height: 1; }
+  .stat.accent .n { background: linear-gradient(90deg,#38bdf8,#7dd3fc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .stat .l { color: var(--muted); font-size: 11.5px; margin-top: 9px; text-transform: uppercase; letter-spacing: .06em; }
+  .stat .sub { color: var(--dim); font-size: 11px; margin-top: 5px; }
+
+  hr.sep { border: none; border-top: 1px solid var(--line); margin: 30px 0 22px; }
+
+  /* Controls */
+  .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; margin-bottom: 18px; }
+  .search { flex: 1 1 320px; max-width: 520px; display: flex; align-items: center; gap: 9px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px; }
+  .search:focus-within { border-color: rgba(56,189,248,.55); }
+  .search input { border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: 15px; width: 100%; }
+  .search svg { flex-shrink: 0; opacity: .5; }
+  .search kbd { flex-shrink: 0; font-family: var(--mono); font-size: 10.5px; color: var(--dim); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  select { font: inherit; font-size: 13.5px; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; cursor: pointer; }
+  select:hover { border-color: rgba(255,255,255,.22); }
+  option { background: #1b1c22; }
+
+  /* Pill filter bar */
+  .pills { display: flex; flex-wrap: wrap; gap: 0; justify-content: center; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin: 0 auto 26px; width: fit-content; max-width: 100%; }
+  .pill-btn { appearance: none; border: 0; background: transparent; color: #cfcabf; font: inherit; font-size: 13px; padding: 10px 16px; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s; }
+  .pill-btn + .pill-btn { border-left: 1px solid var(--line); }
+  .pill-btn:hover { background: rgba(255,255,255,.06); color: #fff; }
+  .pill-btn.active { background: var(--accent); color: #06202e; font-weight: 600; }
+  .pill-btn .c { opacity: .6; font-family: var(--mono); font-size: 11px; margin-left: 6px; }
+  .pill-btn.active .c { opacity: .8; }
+
+  .count { text-align: center; color: var(--dim); font-family: var(--mono); font-size: 12.5px; margin-bottom: 18px; }
+  .count .reset { margin-left: 10px; color: var(--accent); cursor: pointer; border: 0; background: none; font: inherit; font-size: 12.5px; }
+
+  /* Cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; min-height: 220px; cursor: pointer; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+  .card:hover, .card.kbd { transform: translateY(-6px); border-color: transparent; box-shadow: 0 8px 24px rgba(56,189,248,.28), 0 0 0 2px var(--accent); background: var(--card-hi); }
+  .card-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .card-title { font-size: 16.5px; font-weight: 650; line-height: 1.32; margin: 0; }
+  .new { flex-shrink: 0; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .08em; background: linear-gradient(90deg,#38bdf8,#7dd3fc); color: #06202e; border-radius: 999px; padding: 3px 8px; }
+  .done { flex-shrink: 0; color: var(--good); font-size: 15px; line-height: 1.2; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .tag { font-size: 11px; border-radius: 6px; padding: 3px 8px; border: 1px solid transparent; white-space: nowrap; }
+  .tag.cat { background: rgba(56,189,248,.12); color: var(--accent2); border-color: rgba(56,189,248,.25); }
+  .tag.day { font-family: var(--mono); background: rgba(255,255,255,.05); color: var(--muted); border-color: var(--line); }
+  /* The journal's key insight runs long by design — clamp on the card, full text in the reader. */
+  .desc { color: var(--muted); font-size: 13.2px; line-height: 1.55; margin: 0 0 14px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-family: var(--mono); font-size: 10.5px; color: #a9c6d4; background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; }
+  .chip.off { color: var(--dim); opacity: .45; }
+  .mins { font-family: var(--mono); font-size: 11.5px; color: var(--dim); white-space: nowrap; }
+  .empty { text-align: center; color: var(--muted); padding: 60px 0; grid-column: 1 / -1; }
+
+  /* ---- Reader ---- */
+  .reader { max-width: 1200px; margin: 0 auto; padding: 0 24px 90px; }
+  .rbar { position: sticky; top: 0; z-index: 20; background: rgba(17,18,23,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); margin: 0 -24px 0; padding: 14px 24px 0; }
+  .rbar-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .back { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--ink); border-radius: 8px; padding: 7px 13px; font: inherit; font-size: 13px; cursor: pointer; }
+  .back:hover { border-color: rgba(255,255,255,.28); }
+  .rbar h1 { font-size: 17px; margin: 0; font-weight: 650; line-height: 1.3; flex: 1 1 260px; min-width: 0; }
+  .rbar .spacer { flex: 1 1 auto; }
+  .readbtn { appearance: none; border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 8px; padding: 7px 13px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .readbtn:hover { border-color: rgba(255,255,255,.28); color: var(--ink); }
+  .readbtn.on { color: var(--good); border-color: rgba(63,201,120,.45); background: rgba(63,201,120,.10); }
+  .nav { display: flex; gap: 6px; }
+  .nav button { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--muted); border-radius: 8px; width: 30px; height: 30px; cursor: pointer; font: inherit; }
+  .nav button:hover:not(:disabled) { color: var(--ink); border-color: rgba(255,255,255,.28); }
+  .nav button:disabled { opacity: .3; cursor: default; }
+
+  .tabs { display: flex; gap: 2px; margin-top: 14px; overflow-x: auto; }
+  .tab { appearance: none; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); font: inherit; font-size: 14px; padding: 10px 15px; cursor: pointer; white-space: nowrap; }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+  .tab .n { font-family: var(--mono); font-size: 11px; opacity: .55; margin-left: 5px; }
+
+  .rmeta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12.5px; color: var(--muted); margin: 20px 0 6px; }
+  .rmeta .k { color: var(--dim); text-transform: uppercase; font-size: 10.5px; letter-spacing: .05em; margin-right: 6px; }
+  .insight { background: rgba(56,189,248,.07); border: 1px solid rgba(56,189,248,.22); border-left: 3px solid var(--accent); border-radius: 8px; padding: 14px 18px; margin: 18px 0 26px; color: #cfe6f2; font-size: 14px; line-height: 1.65; }
+  .insight .k { display: block; color: var(--accent2); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+  .pane { padding: 22px 0 0; }
+
+  /* Prose */
+  .prose { color: #cfcabf; font-size: 15px; line-height: 1.75; max-width: 780px; }
+  .prose h2 { font-size: 19px; margin: 32px 0 10px; color: var(--accent2); }
+  .prose > :first-child { margin-top: 0; }
+  .prose em { color: #ded9cf; font-style: italic; }
+  .prose h3, .prose h4 { font-size: 15.5px; margin: 24px 0 8px; color: var(--ink); }
+  .prose p { margin: 0 0 14px; }
+  .prose ul, .prose ol { margin: 0 0 14px; padding-left: 22px; }
+  .prose li { margin: 6px 0; }
+  .prose code { font-family: var(--mono); font-size: 12.8px; background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; }
+  .prose pre { background: #0d0e12; border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow: auto; }
+  .prose pre code { background: none; padding: 0; font-size: 12.5px; }
+  .prose blockquote { margin: 0 0 14px; padding-left: 14px; border-left: 2px solid var(--line); color: var(--muted); }
+  .prose table { border-collapse: collapse; margin: 0 0 18px; font-size: 13.5px; width: 100%; }
+  .prose th, .prose td { border: 1px solid var(--line); padding: 8px 11px; text-align: left; vertical-align: top; }
+  .prose th { background: rgba(255,255,255,.04); color: var(--ink); font-weight: 600; }
+
+  /* Diagram */
+  .dgm-tools { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .dgm-view { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fff; height: min(74vh, 780px); cursor: grab; touch-action: none; }
+  .dgm-view.drag { cursor: grabbing; }
+  .dgm-canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  .dgm-canvas svg { display: block; }
+  .dgm-hint { color: var(--dim); font-size: 12px; margin-top: 9px; }
+
+  /* Code + output */
+  .code-cols { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); gap: 18px; align-items: start; }
+  /* Output that draws ASCII charts needs the full width or it scrolls sideways. */
+  .code-cols.stacked { grid-template-columns: 1fr; }
+  /* Cap the source when stacked so the output panel stays above the fold. */
+  .code-cols.stacked .panel:first-child pre { max-height: 46vh; }
+  @media (max-width: 940px) { .code-cols { grid-template-columns: 1fr; } }
+  .panel { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #0d0e12; }
+  .panel-head { display: flex; align-items: center; gap: 10px; padding: 9px 13px; background: rgba(255,255,255,.03); border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+  .panel-head .spacer { margin-left: auto; }
+  .panel pre { margin: 0; padding: 15px; overflow: auto; max-height: 70vh; font-family: var(--mono); font-size: 12.4px; line-height: 1.62; }
+  .panel pre code { font: inherit; }
+  .mini { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--muted); border-radius: 6px; padding: 3px 9px; font: inherit; font-family: var(--mono); font-size: 11px; cursor: pointer; }
+  .mini:hover { color: var(--accent2); border-color: rgba(56,189,248,.45); }
+  .mini.done { color: var(--good); border-color: rgba(63,201,120,.45); }
+  .runline { font-family: var(--mono); font-size: 11.5px; color: var(--dim); margin: 0 0 12px; }
+  .out-ok { color: #cfcabf; }
+  .out-bad { color: #ffb4a2; }
+  .badge { font-family: var(--mono); font-size: 10.5px; border-radius: 999px; padding: 2px 8px; border: 1px solid; }
+  .badge.ok { color: var(--good); border-color: rgba(63,201,120,.4); background: rgba(63,201,120,.10); }
+  .badge.bad { color: var(--warn); border-color: rgba(255,176,76,.4); background: rgba(255,176,76,.10); }
+  .shot { max-width: 100%; border: 1px solid var(--line); border-radius: 10px; margin-top: 16px; display: block; background: #fff; }
+
+  /* Python syntax colours */
+  .py-kw  { color: #c792ea; }
+  .py-str { color: #a5d6a7; }
+  .py-com { color: #6f6a60; font-style: italic; }
+  .py-num { color: #ffcb8b; }
+  .py-dec { color: #82aaff; }
+  .py-fn  { color: #7dd3fc; }
+
+  /* Articles */
+  .agroup h2 { font-size: 15px; color: var(--accent2); margin: 26px 0 12px; text-transform: uppercase; letter-spacing: .06em; }
+  .alist { display: grid; gap: 12px; }
+  .acard { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 16px 18px; }
+  .acard:hover { border-color: rgba(56,189,248,.35); background: var(--card-hi); }
+  .acard h3 { margin: 0 0 6px; font-size: 15px; font-weight: 600; line-height: 1.35; }
+  .acard .am { font-family: var(--mono); font-size: 11px; color: var(--dim); margin: 0 0 8px; }
+  .acard p.as { margin: 0; color: var(--muted); font-size: 13.4px; line-height: 1.6; }
+  .acard .host { color: var(--dim); font-size: 11px; font-family: var(--mono); }
+
+  footer { text-align: center; color: var(--dim); font-size: 12.5px; margin-top: 50px; line-height: 1.7; }
+  footer code { font-family: var(--mono); font-size: 11.5px; background: rgba(255,255,255,.05); padding: 1px 5px; border-radius: 4px; }
+
+  .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); background: #1b1c22; border: 1px solid var(--line); color: var(--ink); font-size: 13px; padding: 10px 16px; border-radius: 9px; box-shadow: 0 10px 30px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; z-index: 50; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card, .toast { transition: none; }
+    .card:hover, .card.kbd { transform: none; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============================ index view ============================ -->
+  <div id="viewIndex">
+    <header class="top">
+      <h1 class="title">AI DAILY LEARN</h1>
+      <p class="kicker">read · see · run</p>
+      <p class="subtitle">Thirty focused minutes a day on what is new in AI. Every session is a topic, a diagram, a runnable example with its output, and the reading behind it.</p>
+    </header>
+
+    <div class="wrap">
+      <div class="stats" id="stats"></div>
+      <hr class="sep" />
+
+      <div class="controls">
+        <label class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="q" type="search" placeholder="Search topic, insight, category…" autocomplete="off" />
+          <kbd>/</kbd>
+        </label>
+        <select id="sort" aria-label="Sort order">
+          <option value="date-desc">Newest first</option>
+          <option value="date-asc">Oldest first</option>
+          <option value="title-asc">Title A–Z</option>
+        </select>
+        <select id="fRead" aria-label="Filter by read state">
+          <option value="">All sessions</option>
+          <option value="unread">Unread only</option>
+          <option value="read">Read only</option>
+        </select>
+      </div>
+
+      <div class="pills" id="pills"></div>
+      <div class="count" id="count"></div>
+      <div class="grid" id="grid"></div>
+
+      <footer>
+        Sessions are generated by the <code>/ai-daily-learn</code> skill into
+        <code>YYYY-MM-DD/</code> folders and published from this repo's
+        <a href="https://github.com/magna56/aI_daily_run" target="_blank" rel="noopener">source</a>.<br />
+        Keys: <code>/</code> search · <code>↑↓</code> or <code>j/k</code> move · <code>Enter</code> open
+      </footer>
+    </div>
+  </div>
+
+  <!-- ============================ reader view =========================== -->
+  <div id="viewReader" class="reader hidden"></div>
+
+  <div class="toast" id="toast"></div>
+
+<script src="data/index.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var DATA = (window.SESSIONS || []).slice();
+  var ROTATION = window.CATEGORIES || [];
+  var CACHE = {};                                  // id -> fetched payload
+  var state = { q: "", cat: "", read: "", sort: "date-desc" };
+  var kbdIndex = -1;                               // keyboard-focused card
+  var view = null;                                 // null = grid, else {id, pane}
+  var PANES = ["overview", "diagram", "code", "articles"];
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  // Card blurbs come from journal.md, which is markdown — strip the emphasis
+  // markers rather than rendering them, since the card clamps to four lines.
+  function plain(s) {
+    return String(s == null ? "" : s)
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/(^|\W)\*([^*]+)\*(?=\W|$)/g, "$1$2")
+      .replace(/\[([^\]]+)\]\([^)\s]*\)/g, "$1");
+  }
+  function byId(id) { for (var i = 0; i < DATA.length; i++) if (DATA[i].id === id) return DATA[i]; return null; }
+  function host(url) { try { return new URL(url).hostname.replace(/^www\./, ""); } catch (e) { return ""; } }
+
+  /* ---- toast + clipboard (same behaviour as the tooling directory) ---- */
+  var toastTimer;
+  function toast(msg) {
+    var t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove("show"); }, 1800);
+  }
+  function copyText(text, done) {
+    function ok() { toast("Copied"); if (done) done(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); ok(); } catch (e) { toast("Copy failed"); }
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok, fallback);
+    } else { fallback(); }
+  }
+
+  /* ---- read progress -------------------------------------------------- */
+  var READ_KEY = "adl:read";
+  function readSet() {
+    try { return new Set(JSON.parse(localStorage.getItem(READ_KEY) || "[]")); }
+    catch (e) { return new Set(); }
+  }
+  function isRead(id) { return readSet().has(id); }
+  function toggleRead(id) {
+    var s = readSet();
+    if (s.has(id)) s.delete(id); else s.add(id);
+    try { localStorage.setItem(READ_KEY, JSON.stringify(Array.from(s))); } catch (e) { /* private mode */ }
+    return s.has(id);
+  }
+
+  /* ---- markdown ------------------------------------------------------- */
+  // Extends the tooling directory's renderer with GFM pipe tables, which the
+  // topic write-ups use for comparisons.
+  function mdTables(src) {
+    var lines = src.split("\n");
+    var out = [];
+    for (var i = 0; i < lines.length; i++) {
+      var isRow = /^\s*\|.*\|\s*$/.test(lines[i]);
+      var isRule = i + 1 < lines.length && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1]);
+      if (!isRow || !isRule) { out.push(lines[i]); continue; }
+
+      var cells = function (row) {
+        return row.trim().replace(/^\||\|$/g, "").split("|").map(function (c) { return c.trim(); });
+      };
+      var head = cells(lines[i]);
+      var aligns = cells(lines[i + 1]).map(function (c) {
+        if (/^:.*:$/.test(c)) return " style=\"text-align:center\"";
+        if (/:$/.test(c)) return " style=\"text-align:right\"";
+        return "";
+      });
+      var html = "<table><thead><tr>";
+      head.forEach(function (h, k) { html += "<th" + (aligns[k] || "") + ">" + h + "</th>"; });
+      html += "</tr></thead><tbody>";
+      i += 2;
+      for (; i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i]); i++) {
+        html += "<tr>";
+        cells(lines[i]).forEach(function (c, k) { html += "<td" + (aligns[k] || "") + ">" + c + "</td>"; });
+        html += "</tr>";
+      }
+      i--;
+      out.push(html + "</tbody></table>");
+    }
+    return out.join("\n");
+  }
+
+  function md(src) {
+    if (!src) return "";
+    var blocks = [];
+    src = String(src).replace(/```[a-z]*\n?([\s\S]*?)```/g, function (_, c) {
+      blocks.push(c); return "%%CB" + (blocks.length - 1) + "%%";
+    });
+    function e(s) { return s.replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
+    src = e(src);
+    src = mdTables(src);
+    src = src.replace(/^#### (.*)$/gm, "<h4>$1</h4>")
+             .replace(/^### (.*)$/gm, "<h3>$1</h3>")
+             .replace(/^## (.*)$/gm, "<h2>$1</h2>")
+             .replace(/^# (.*)$/gm, "<h2>$1</h2>");
+    src = src.replace(/(?:^|\n)((?:&gt; .*(?:\n|$))+)/g, function (_, q) {
+      return "\n<blockquote>" + q.replace(/^&gt; ?/gm, "").trim().replace(/\n/g, "<br>") + "</blockquote>";
+    });
+    src = src.replace(/(?:^|\n)((?:\d+\. .*(?:\n|$))+)/g, function (_, items) {
+      var lis = items.trim().split("\n").map(function (l) { return "<li>" + l.replace(/^\d+\. /, "") + "</li>"; }).join("");
+      return "\n<ol>" + lis + "</ol>";
+    });
+    src = src.replace(/(?:^|\n)((?:[*-] .*(?:\n|$))+)/g, function (_, items) {
+      var lis = items.trim().split("\n").map(function (l) { return "<li>" + l.replace(/^[*-] /, "") + "</li>"; }).join("");
+      return "\n<ul>" + lis + "</ul>";
+    });
+    src = src.replace(/`([^`]+)`/g, "<code>$1</code>");
+    src = src.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    src = src.replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
+    src = src.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    src = src.split(/\n{2,}/).map(function (ch) {
+      var t = ch.trim();
+      if (!t) return "";
+      if (/^<(h\d|ul|ol|pre|table|blockquote)/.test(t)) return t;
+      return "<p>" + t.replace(/\n/g, "<br>") + "</p>";
+    }).join("\n");
+    return src.replace(/%%CB(\d+)%%/g, function (_, i) {
+      return blocks[i] != null ? "<pre><code>" + e(blocks[i].replace(/^\n/, "")) + "</code></pre>" : "";
+    });
+  }
+
+  // Markdown for a single run of prose — same rules, minus the block wrapper.
+  function inline(src) { return md(src).replace(/^<p>/, "").replace(/<\/p>\s*$/, ""); }
+
+  /* ---- python highlighting -------------------------------------------- */
+  // Tokenise the RAW source (so quotes are still quotes), escaping each piece
+  // on the way out. Strings and comments come first in the alternation, which
+  // is what keeps a `#` inside a string from starting a comment.
+  var PY_RE = new RegExp([
+    '"""[\\s\\S]*?"""', "'''[\\s\\S]*?'''",
+    '#[^\\n]*',
+    '"(?:\\\\.|[^"\\\\\\n])*"', "'(?:\\\\.|[^'\\\\\\n])*'",
+    '@[A-Za-z_][\\w.]*',
+    '\\b(?:False|None|True|and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield)\\b',
+    '\\b\\d[\\d_]*\\.?\\d*(?:[eE][+-]?\\d+)?\\b'
+  ].join("|"), "g");
+
+  function pyClass(tok) {
+    var c = tok[0];
+    if (c === "#") return "py-com";
+    if (c === '"' || c === "'") return "py-str";
+    if (c === "@") return "py-dec";
+    if (c >= "0" && c <= "9") return "py-num";
+    return "py-kw";
+  }
+
+  function highlightPython(src) {
+    var out = "", last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(src)) !== null) {
+      out += esc(src.slice(last, m.index));
+      out += '<span class="' + pyClass(m[0]) + '">' + esc(m[0]) + "</span>";
+      last = PY_RE.lastIndex;
+    }
+    out += esc(src.slice(last));
+    // Name that follows def/class reads as the thing being defined.
+    return out.replace(/(<span class="py-kw">(?:def|class)<\/span>\s+)([A-Za-z_]\w*)/g,
+      '$1<span class="py-fn">$2</span>');
+  }
+
+  /* ---- stats ----------------------------------------------------------- */
+  function dayKey(d) { return String(d || "").slice(0, 10); }
+
+  // Consecutive calendar days with at least one session, counting back from the
+  // latest one — and only "current" if that day is today or yesterday.
+  function streak() {
+    var days = Array.from(new Set(DATA.map(function (s) { return dayKey(s.date); }))).sort().reverse();
+    if (!days.length) return 0;
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var latest = new Date(days[0] + "T00:00:00");
+    var gap = Math.round((today - latest) / 864e5);
+    if (gap > 1) return 0;
+    var n = 1;
+    for (var i = 1; i < days.length; i++) {
+      var a = new Date(days[i - 1] + "T00:00:00"), b = new Date(days[i] + "T00:00:00");
+      if (Math.round((a - b) / 864e5) === 1) n++; else break;
+    }
+    return n;
+  }
+
+  // Mirrors the skill's own selection rule: a never-covered category jumps the
+  // queue (so a newly added one does not wait out a full cycle), otherwise take
+  // the category after the most recent session's.
+  function nextCategory() {
+    if (!ROTATION.length) return "";
+    var covered = {};
+    DATA.forEach(function (s) { covered[s.category] = true; });
+    for (var k = 0; k < ROTATION.length; k++) {
+      if (!covered[ROTATION[k]]) return ROTATION[k];
+    }
+    var latest = DATA.slice().sort(function (a, b) { return (b.date || "").localeCompare(a.date || ""); })[0];
+    var i = latest ? ROTATION.indexOf(latest.category) : -1;
+    return i === -1 ? ROTATION[0] : ROTATION[(i + 1) % ROTATION.length];
+  }
+
+  function renderStats() {
+    var covered = new Set(DATA.map(function (s) { return s.category; }).filter(Boolean));
+    var read = readSet();
+    var readCount = DATA.filter(function (s) { return read.has(s.id); }).length;
+    var cards = [
+      { n: DATA.length, l: "Sessions" },
+      { n: readCount + "/" + DATA.length, l: "Read", a: true },
+      { n: covered.size + "/" + ROTATION.length, l: "Categories", sub: "next: " + esc(nextCategory()) },
+      { n: streak(), l: "Day streak" }
+    ];
+    $("stats").innerHTML = cards.map(function (c) {
+      return '<div class="stat' + (c.a ? " accent" : "") + '"><div class="n">' + c.n + "</div>" +
+             '<div class="l">' + c.l + "</div>" + (c.sub ? '<div class="sub">' + c.sub + "</div>" : "") + "</div>";
+    }).join("");
+  }
+
+  /* ---- grid ------------------------------------------------------------ */
+  var categories = Array.from(new Set(DATA.map(function (s) { return s.category; }).filter(Boolean)))
+    .sort(function (a, b) {
+      var ia = ROTATION.indexOf(a), ib = ROTATION.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+
+  function renderPills() {
+    var items = [{ v: "", l: "All", c: DATA.length }].concat(categories.map(function (c) {
+      return { v: c, l: c, c: DATA.filter(function (s) { return s.category === c; }).length };
+    }));
+    $("pills").innerHTML = items.map(function (it) {
+      return '<button class="pill-btn' + (state.cat === it.v ? " active" : "") + '" data-cat="' + esc(it.v) + '">' +
+             esc(it.l) + '<span class="c">' + it.c + "</span></button>";
+    }).join("");
+  }
+
+  function filtered() {
+    var q = state.q.toLowerCase();
+    var read = readSet();
+    var rows = DATA.filter(function (s) {
+      if (state.cat && s.category !== state.cat) return false;
+      if (state.read === "read" && !read.has(s.id)) return false;
+      if (state.read === "unread" && read.has(s.id)) return false;
+      if (!q) return true;
+      return (s.title + " " + s.insight + " " + s.category + " " + s.date).toLowerCase().indexOf(q) > -1;
+    });
+    var sorters = {
+      "date-desc": function (a, b) { return (b.date || "").localeCompare(a.date || ""); },
+      "date-asc": function (a, b) { return (a.date || "").localeCompare(b.date || ""); },
+      "title-asc": function (a, b) { return a.title.localeCompare(b.title); }
+    };
+    return rows.sort(sorters[state.sort]);
+  }
+
+  function chip(on, label) { return '<span class="chip' + (on ? "" : " off") + '">' + label + "</span>"; }
+
+  function renderGrid() {
+    var rows = filtered();
+    var read = readSet();
+    var grid = $("grid");
+
+    $("count").innerHTML = rows.length + " of " + DATA.length + " session" + (DATA.length === 1 ? "" : "s") +
+      (state.q || state.cat || state.read
+        ? ' <button class="reset" id="reset">clear filters</button>' : "");
+
+    if (!rows.length) {
+      grid.innerHTML = '<div class="empty">Nothing matches. Try a different search.</div>';
+      return;
+    }
+
+    grid.innerHTML = rows.map(function (s, i) {
+      return '<article class="card" data-id="' + esc(s.id) + '" data-i="' + i + '" tabindex="0">' +
+        '<div class="card-top">' +
+          '<h3 class="card-title">' + esc(plain(s.title)) + "</h3>" +
+          (read.has(s.id) ? '<span class="done" title="Read">✓</span>' : "") +
+        "</div>" +
+        '<div class="tags">' +
+          (s.category ? '<span class="tag cat">' + esc(s.category) + "</span>" : "") +
+          '<span class="tag day">' + esc(s.date) + "</span>" +
+        "</div>" +
+        '<p class="desc">' + esc(plain(s.insight) || "Open to read the write-up.") + "</p>" +
+        '<div class="card-foot">' +
+          '<div class="chips">' +
+            chip(s.diagram, "diagram") +
+            chip(s.code, s.codeLines ? s.codeLines + " lines" : "code") +
+            chip(s.articles > 0, s.articles ? s.articles + " links" : "links") +
+          "</div>" +
+          '<span class="mins">~' + s.minutes + " min</span>" +
+        "</div>" +
+      "</article>";
+    }).join("");
+
+    Array.prototype.forEach.call(grid.querySelectorAll(".card"), function (el) {
+      el.addEventListener("click", function () { location.hash = el.getAttribute("data-id"); });
+      el.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") location.hash = el.getAttribute("data-id");
+      });
+    });
+    kbdIndex = -1;
+  }
+
+  /* ---- reader ---------------------------------------------------------- */
+  function load(id) {
+    if (CACHE[id]) return Promise.resolve(CACHE[id]);
+    return fetch("data/" + encodeURIComponent(id) + ".json")
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (p) { CACHE[id] = p; return p; });
+  }
+
+  function availablePanes(p) {
+    return PANES.filter(function (name) {
+      if (name === "diagram") return !!p.diagram;
+      if (name === "code") return !!p.code;
+      if (name === "articles") return !!(p.articles && p.articles.length);
+      return true;
+    });
+  }
+
+  function renderReader(p, pane) {
+    var panes = availablePanes(p);
+    if (panes.indexOf(pane) === -1) pane = panes[0];
+
+    var order = DATA.map(function (s) { return s.id; }).sort().reverse();
+    var idx = order.indexOf(p.id);
+    var prev = idx < order.length - 1 ? order[idx + 1] : null;   // older
+    var next = idx > 0 ? order[idx - 1] : null;                  // newer
+    var read = isRead(p.id);
+    var label = { overview: "Overview", diagram: "Diagram", code: "Code", articles: "Articles" };
+
+    var head =
+      '<div class="rbar"><div class="rbar-top">' +
+        '<button class="back" id="back">← All sessions</button>' +
+        "<h1>" + esc(plain(p.title)) + "</h1>" +
+        '<div class="nav">' +
+          '<button id="goPrev" title="Older session ([)"' + (prev ? "" : " disabled") + ">←</button>" +
+          '<button id="goNext" title="Newer session (])"' + (next ? "" : " disabled") + ">→</button>" +
+        "</div>" +
+        '<button class="readbtn' + (read ? " on" : "") + '" id="markRead">' +
+          (read ? "✓ Read" : "Mark as read") + "</button>" +
+      "</div>" +
+      '<div class="tabs">' + panes.map(function (name) {
+        var n = name === "articles" ? p.articles.reduce(function (a, g) { return a + g.items.length; }, 0)
+              : name === "code" ? p.code.lines : 0;
+        return '<button class="tab' + (name === pane ? " active" : "") + '" data-pane="' + name + '">' +
+               label[name] + (n ? '<span class="n">' + n + "</span>" : "") + "</button>";
+      }).join("") + "</div></div>";
+
+    var meta =
+      '<div class="rmeta">' +
+        (p.category ? '<span><span class="k">Category</span>' + esc(p.category) + "</span>" : "") +
+        '<span><span class="k">Date</span>' + esc(p.date) + "</span>" +
+        (p.meta["Time to read"] ? '<span><span class="k">Read</span>' + esc(p.meta["Time to read"]) + "</span>" : "") +
+        (p.source && p.source.url
+          ? '<span><span class="k">Source</span><a href="' + esc(p.source.url) + '" target="_blank" rel="noopener">' + esc(p.source.label) + "</a></span>"
+          : "") +
+        '<span><span class="k">Files</span><a href="' + esc(p.repo) + '" target="_blank" rel="noopener">on GitHub</a></span>' +
+      "</div>" +
+      // Only on Overview: the other tabs are for doing, and a 10-line thesis
+      // above the fold pushes the code and the diagram off the screen.
+      (p.insight && pane === "overview"
+        ? '<div class="insight"><span class="k">Key insight</span>' + md(p.insight).replace(/^<p>|<\/p>$/g, "") + "</div>"
+        : "");
+
+    $("viewReader").innerHTML = head + meta + '<div class="pane" id="pane"></div>';
+    document.title = plain(p.title) + " — AI Daily Learn";
+    renderPane(p, pane);
+
+    $("back").addEventListener("click", function () { location.hash = ""; });
+    $("goPrev").addEventListener("click", function () { if (prev) location.hash = prev; });
+    $("goNext").addEventListener("click", function () { if (next) location.hash = next; });
+    $("markRead").addEventListener("click", function () {
+      var on = toggleRead(p.id);
+      this.classList.toggle("on", on);
+      this.textContent = on ? "✓ Read" : "Mark as read";
+      toast(on ? "Marked as read" : "Marked as unread");
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (t) {
+      t.addEventListener("click", function () {
+        location.hash = p.id + "/" + t.getAttribute("data-pane");
+      });
+    });
+  }
+
+  function renderPane(p, pane) {
+    var el = $("pane");
+    if (pane === "overview") { el.innerHTML = '<div class="prose">' + md(p.topic) + "</div>"; return; }
+    if (pane === "diagram") { renderDiagram(el, p); return; }
+    if (pane === "code") { renderCode(el, p); return; }
+    renderArticles(el, p);
+  }
+
+  /* diagram: build-time SVG in a pan/zoom viewport */
+  function renderDiagram(el, p) {
+    el.innerHTML =
+      '<div class="dgm-tools">' +
+        '<button class="mini" id="zIn">+ zoom</button>' +
+        '<button class="mini" id="zOut">− zoom</button>' +
+        '<button class="mini" id="zFit">fit</button>' +
+        '<a class="mini" href="' + esc(p.diagram.file) + '" download="' + esc(p.id) + '.excalidraw">download .excalidraw</a>' +
+      "</div>" +
+      '<div class="dgm-view" id="dgmView"><div class="dgm-canvas" id="dgmCanvas">' + p.diagram.svg + "</div></div>" +
+      '<p class="dgm-hint">Drag to pan, scroll to zoom. Download and drop the file into excalidraw.com to edit it.</p>';
+
+    var viewEl = $("dgmView"), canvas = $("dgmCanvas");
+    var z = { s: 1, x: 0, y: 0 };
+
+    function apply() { canvas.style.transform = "translate(" + z.x + "px," + z.y + "px) scale(" + z.s + ")"; }
+    function fit() {
+      var pad = 16;
+      z.s = Math.min((viewEl.clientWidth - pad * 2) / p.diagram.width, (viewEl.clientHeight - pad * 2) / p.diagram.height, 1);
+      z.x = (viewEl.clientWidth - p.diagram.width * z.s) / 2;
+      z.y = pad;
+      apply();
+    }
+    // Zoom about a point so the pixel under the cursor stays put.
+    function zoomAt(cx, cy, factor) {
+      var ns = Math.min(6, Math.max(0.1, z.s * factor));
+      z.x = cx - (cx - z.x) * (ns / z.s);
+      z.y = cy - (cy - z.y) * (ns / z.s);
+      z.s = ns;
+      apply();
+    }
+
+    fit();
+    $("zFit").addEventListener("click", fit);
+    $("zIn").addEventListener("click", function () { zoomAt(viewEl.clientWidth / 2, viewEl.clientHeight / 2, 1.25); });
+    $("zOut").addEventListener("click", function () { zoomAt(viewEl.clientWidth / 2, viewEl.clientHeight / 2, 0.8); });
+
+    viewEl.addEventListener("wheel", function (ev) {
+      ev.preventDefault();
+      var r = viewEl.getBoundingClientRect();
+      zoomAt(ev.clientX - r.left, ev.clientY - r.top, ev.deltaY < 0 ? 1.12 : 0.89);
+    }, { passive: false });
+
+    var drag = null;
+    viewEl.addEventListener("pointerdown", function (ev) {
+      drag = { x: ev.clientX - z.x, y: ev.clientY - z.y };
+      viewEl.setPointerCapture(ev.pointerId);
+      viewEl.classList.add("drag");
+    });
+    viewEl.addEventListener("pointermove", function (ev) {
+      if (!drag) return;
+      z.x = ev.clientX - drag.x; z.y = ev.clientY - drag.y; apply();
+    });
+    ["pointerup", "pointercancel"].forEach(function (t) {
+      viewEl.addEventListener(t, function () { drag = null; viewEl.classList.remove("drag"); });
+    });
+  }
+
+  /* code: source beside the output the build captured */
+  function renderCode(el, p) {
+    var run = p.code.run || {};
+    var cmd = "python3 " + p.id + "/code_example.py";
+    var outBody, badge;
+
+    if (run.skipped) {
+      badge = '<span class="badge bad">not run</span>';
+      outBody = '<span class="out-bad">Output was not captured at build time (' + esc(run.reason || "skipped") + ").</span>";
+    } else if (run.ok) {
+      badge = '<span class="badge ok">exit 0</span>';
+      outBody = '<span class="out-ok">' + esc(run.stdout || "(the script printed nothing)") + "</span>";
+    } else {
+      badge = '<span class="badge bad">' + (run.timedOut ? "timed out" : "exit " + run.exitCode) + "</span>";
+      outBody = (run.stdout ? '<span class="out-ok">' + esc(run.stdout) + "</span>\n" : "") +
+        '<span class="out-bad">' + esc(run.stderr || run.note || "No output.") + "\n\n" +
+        "This example does not run cleanly — run it locally to debug:\n  " + esc(cmd) + "</span>";
+    }
+
+    var shots = (p.images || []).map(function (name) {
+      return '<img class="shot" src="assets/' + esc(p.id) + "/" + esc(name) + '" alt="Figure produced by ' + esc(p.id) + '" loading="lazy" />';
+    }).join("");
+
+    // Wide output (ASCII tables, sparkline charts) is unreadable in a half
+    // column, so those sessions stack instead of sitting side by side.
+    var widest = 0;
+    String(run.stdout || "").split("\n").forEach(function (l) { widest = Math.max(widest, l.length); });
+
+    el.innerHTML =
+      '<p class="runline">Run it yourself: <code>' + esc(cmd) + "</code></p>" +
+      '<div class="code-cols' + (widest > 84 ? " stacked" : "") + '">' +
+        '<div class="panel">' +
+          '<div class="panel-head">code_example.py<span class="spacer"></span>' +
+            '<button class="mini" id="copyCode">copy</button></div>' +
+          "<pre><code>" + highlightPython(p.code.source) + "</code></pre>" +
+        "</div>" +
+        '<div class="panel">' +
+          '<div class="panel-head">output ' + badge + "</div>" +
+          "<pre>" + outBody + "</pre>" +
+        "</div>" +
+      "</div>" + shots;
+
+    $("copyCode").addEventListener("click", function () {
+      var b = this;
+      copyText(p.code.source, function () { b.classList.add("done"); b.textContent = "copied"; });
+    });
+  }
+
+  /* articles: link cards, grouped by the headings the session used */
+  function renderArticles(el, p) {
+    el.innerHTML = p.articles.map(function (g) {
+      var items = g.items.map(function (a) {
+        var m = Object.keys(a.meta).map(function (k) { return esc(k) + ": " + esc(a.meta[k]); }).join("  ·  ");
+        var h = a.url ? host(a.url) : "";
+        return '<article class="acard">' +
+          "<h3>" + (a.url
+            ? '<a href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(a.title) + "</a>"
+            : esc(a.title)) + "</h3>" +
+          (m ? '<p class="am">' + m + "</p>" : "") +
+          (a.summary ? '<p class="as">' + inline(a.summary) + "</p>" : "") +
+          (h ? '<p class="am host">' + esc(h) + "</p>" : "") +
+        "</article>";
+      }).join("");
+      return '<section class="agroup">' +
+        (g.heading ? "<h2>" + esc(g.heading) + "</h2>" : "") +
+        (items ? '<div class="alist">' + items + "</div>" : "") +
+        (g.note.trim() ? '<div class="prose">' + md(g.note) + "</div>" : "") +
+      "</section>";
+    }).join("");
+  }
+
+  /* ---- routing --------------------------------------------------------- */
+  function parseHash() {
+    var raw = decodeURIComponent(location.hash.replace(/^#/, "")).trim();
+    if (!raw) return null;
+    var parts = raw.split("/");
+    return { id: parts[0], pane: parts[1] || "overview" };
+  }
+
+  function route() {
+    var target = parseHash();
+    var idxEl = $("viewIndex"), rdEl = $("viewReader");
+
+    if (!target || !byId(target.id)) {
+      view = null;
+      rdEl.classList.add("hidden");
+      idxEl.classList.remove("hidden");
+      document.title = "AI Daily Learn";
+      renderStats();
+      renderGrid();
+      if (target) toast("No session " + target.id);
+      return;
+    }
+
+    view = target;
+    idxEl.classList.add("hidden");
+    rdEl.classList.remove("hidden");
+
+    // Cached sessions re-render instantly, so a tab switch is a full re-render
+    // rather than a patch — which keeps the header honest about which pane it
+    // is showing.
+    if (CACHE[target.id]) {
+      renderReader(CACHE[target.id], target.pane);
+      window.scrollTo(0, 0);
+      return;
+    }
+
+    rdEl.innerHTML = '<div class="empty">Loading ' + esc(target.id) + "…</div>";
+    load(target.id).then(function (p) {
+      if (!view || view.id !== p.id) return;   // navigated away while fetching
+      renderReader(p, target.pane);
+      window.scrollTo(0, 0);
+    }).catch(function (err) {
+      rdEl.innerHTML = '<div class="empty">Could not load <code>data/' + esc(target.id) + ".json</code> — " +
+        esc(err.message) + '.<br />If you opened this file directly, serve it instead: <code>make serve</code>.' +
+        '<br /><br /><button class="back" onclick="location.hash=\'\'">← All sessions</button></div>';
+    });
+  }
+
+  /* ---- events ---------------------------------------------------------- */
+  $("q").addEventListener("input", function () { state.q = this.value; renderGrid(); });
+  $("sort").addEventListener("change", function () { state.sort = this.value; renderGrid(); });
+  $("fRead").addEventListener("change", function () { state.read = this.value; renderGrid(); });
+  $("pills").addEventListener("click", function (ev) {
+    var b = ev.target.closest(".pill-btn");
+    if (!b) return;
+    state.cat = b.getAttribute("data-cat");
+    renderPills(); renderGrid();
+  });
+  $("count").addEventListener("click", function (ev) {
+    if (ev.target.id !== "reset") return;
+    state.q = ""; state.cat = ""; state.read = "";
+    $("q").value = ""; $("fRead").value = "";
+    renderPills(); renderGrid();
+  });
+
+  document.addEventListener("keydown", function (ev) {
+    var typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+
+    if (view) {
+      if (typing) return;
+      if (ev.key === "Escape") { location.hash = ""; return; }
+      var p = CACHE[view.id];
+      if (!p) return;
+      var panes = availablePanes(p);
+      if (ev.key >= "1" && ev.key <= "4") {
+        var want = panes[Number(ev.key) - 1];
+        if (want) location.hash = view.id + "/" + want;
+        return;
+      }
+      if (ev.key === "[" || ev.key === "]") {
+        var order = DATA.map(function (s) { return s.id; }).sort().reverse();
+        var i = order.indexOf(view.id);
+        var to = ev.key === "[" ? order[i + 1] : order[i - 1];
+        if (to) location.hash = to;
+      }
+      return;
+    }
+
+    if (ev.key === "/" && !typing) { ev.preventDefault(); $("q").focus(); return; }
+    if (ev.key === "Escape" && typing) { document.activeElement.blur(); return; }
+    if (typing && ev.key !== "Enter") return;
+
+    var cards = Array.prototype.slice.call(document.querySelectorAll(".card"));
+    if (!cards.length) return;
+    if (ev.key === "ArrowDown" || ev.key === "j") { ev.preventDefault(); kbdIndex = Math.min(cards.length - 1, kbdIndex + 1); }
+    else if (ev.key === "ArrowUp" || ev.key === "k") { ev.preventDefault(); kbdIndex = Math.max(0, kbdIndex - 1); }
+    else if (ev.key === "Enter" && kbdIndex > -1) { location.hash = cards[kbdIndex].getAttribute("data-id"); return; }
+    else return;
+
+    cards.forEach(function (c, i) { c.classList.toggle("kbd", i === kbdIndex); });
+    cards[kbdIndex].scrollIntoView({ block: "nearest", behavior: "smooth" });
+  });
+
+  window.addEventListener("hashchange", route);
+
+  /* ---- boot ------------------------------------------------------------ */
+  if (!DATA.length) {
+    $("grid").innerHTML = '<div class="empty">No sessions found. Run <code>make build</code> first.</div>';
+  } else {
+    renderPills();
+  }
+  route();
+})();
+</script>
+</body>
+</html>
