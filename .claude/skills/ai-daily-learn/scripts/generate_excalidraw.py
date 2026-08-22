@@ -5,20 +5,47 @@ Usage:
     python3 generate_excalidraw.py \
         --title "Mixture of Agents" \
         --subtitle "Multi-LLM collaboration for better outputs" \
-        --explainer "A weak model asking several strong models for a first draft, \
-then having one more model merge the best of those drafts, beats asking any \
-single model once — the same principle as a code review from three people \
-catching more than a review from one." \
         --concepts '["Proposer Agents|Multiple LLMs generate diverse initial responses",
                      "Aggregator|Synthesizes proposals into a refined final answer"]' \
         --flow '["Input Query", "Parallel Proposals", "Aggregation", "Output"]' \
+        --visuals '[{...}]' \
         --category "Agent Frameworks & Tools" \
         --output ~/ai_learning/2026-07-04/diagram.excalidraw
 
---explainer is optional but strongly recommended: 2-4 plain-language sentences that
-explain what the article is actually about, the way you'd explain it out loud. It is
-prose, not a bullet list — --concepts stays the terse at-a-glance summary, --explainer
-is the section that carries the actual explanation for someone who has not read topic.md.
+--visuals is where the diagram actually EXPLAINS the article, as opposed to listing it.
+--concepts is a terse at-a-glance grid and --flow is a pipeline strip; neither shows a
+mechanism. A visual panel does, by making the shape of the thing carry the argument.
+Never fall back to a paragraph of prose in a box: if the point cannot be drawn, it
+belongs in topic.md, which already explains the article at length.
+
+Pass a JSON array of panels. Three types, each suited to a different kind of claim:
+
+  {"type": "stack",                     # a quantity COMPOUNDING across steps
+   "title": "Every turn re-sends everything before it",
+   "note":  "optional one-line caption",
+   "columns": ["Turn 1", "Turn 2", "Turn 3"],
+   "legend": "what the red bottom block means"}
+
+    Column i is drawn i+1 blocks tall, so growth is the shape. The bottom block of
+    every column is red: the same early item, re-paid in every later step.
+
+  {"type": "rows",                      # WHERE a change lands changes the outcome
+   "title": "Caching is a prefix match",
+   "rows": [{"label": "Prefix untouched",
+             "segments": [{"label": "tools", "state": "ok", "w": 2},
+                          {"label": "history", "state": "ok", "w": 5}],
+             "result": "0.1x read"}]}
+
+    Rows share one segment sequence and differ only in colour, so a cascade reads
+    by scanning down. states: ok (green) / bad (red) / new (blue) / neutral (grey).
+    "w" weights a segment's width; it defaults to 1.
+
+  {"type": "bars",                      # the RANKING or RATIO is the surprise
+   "title": "Same session, priced four ways",
+   "bars": [{"label": "Cache thrashing", "value": 31.67,
+             "display": "$31.67", "state": "bad"}]}
+
+    Lengths are proportional to "value"; "display" is the text shown beside the bar.
 """
 
 import json
@@ -43,6 +70,19 @@ TITLE_SIZE = 36
 SUBTITLE_SIZE = 24
 BODY_SIZE = 20
 SMALL_SIZE = 16
+TINY_SIZE = 13
+
+CANVAS_W = 1200
+
+# Semantic fills for the visual panels. These carry meaning (cached / invalidated /
+# untouched), so they are deliberately NOT the per-category palette below — a reader
+# should be able to read state off the colour without a legend lookup.
+STATE_COLORS = {
+    "ok": GREEN,
+    "bad": RED_BG,
+    "new": BLUE,
+    "neutral": GRAY,
+}
 
 CATEGORY_COLORS = {
     "New Models & APIs": (BLUE, PURPLE),
@@ -180,12 +220,144 @@ def arrow(x1, y1, x2, y2, stroke=STROKE, stroke_w=2,
     return aid
 
 
-def build_diagram(title, subtitle, concepts, flow=None, category=None, explainer=None):
+def panel_title(y, title, note=None):
+    """Section heading, and an optional one-line caption under it."""
+    if title:
+        text(50, y, title, size=SUBTITLE_SIZE, width=CANVAS_W - 100)
+        y += 34
+    if note:
+        lines = wrap_lines(note, CANVAS_W - 100, SMALL_SIZE)
+        text(50, y, note, size=SMALL_SIZE, color="#555555", width=CANVAS_W - 100)
+        y += len(lines) * SMALL_SIZE * 1.25 + 10
+    return y
+
+
+def visual_stack(y, spec, secondary_bg):
+    """Columns of stacked blocks — shows a quantity compounding across steps.
+
+    Column i is i+1 blocks tall, so the growth is the shape itself. The bottom
+    block of every column is drawn in the 'bad' colour: that is the SAME early
+    item being re-paid in every later step, which is the point the panel exists
+    to make.
+    """
+    cols = spec.get("columns", [])
+    if not cols:
+        return y
+    y = panel_title(y, spec.get("title"), spec.get("note"))
+
+    n = len(cols)
+    block_h, block_gap, col_gap = 18, 4, 22
+    col_w = min(140, (CANVAS_W - 100 - (n - 1) * col_gap) // n)
+    total_w = n * col_w + (n - 1) * col_gap
+    start_x = (CANVAS_W - total_w) // 2
+
+    stack_h = n * (block_h + block_gap)
+    baseline = y + stack_h
+
+    for i in range(n):
+        cx = start_x + i * (col_w + col_gap)
+        for j in range(i + 1):
+            by = baseline - (j + 1) * (block_h + block_gap)
+            rect(cx, by, col_w, block_h,
+                 bg=RED_BG if j == 0 else secondary_bg, stroke_w=1)
+        text(cx + col_w / 2, baseline + 16, cols[i], size=TINY_SIZE,
+             align="center", v_align="middle", width=col_w + 16)
+
+    y = baseline + 42
+
+    legend = spec.get("legend")
+    if legend:
+        rect(50, y, 22, 16, bg=RED_BG, stroke_w=1)
+        text(80, y + 8, legend, size=SMALL_SIZE, v_align="middle",
+             color="#444444", width=CANVAS_W - 140)
+        y += 30
+    return y + 12
+
+
+def visual_rows(y, spec):
+    """Labelled horizontal bars split into coloured segments.
+
+    Built for before/after and good/bad comparisons where WHERE a change lands
+    matters — each row is the same sequence of segments, and only the colours
+    differ, so the cascade is visible by scanning down the columns.
+    """
+    rows = spec.get("rows", [])
+    if not rows:
+        return y
+    y = panel_title(y, spec.get("title"), spec.get("note"))
+
+    label_w, result_w, gap = 250, 165, 14
+    seg_x = 50 + label_w + gap
+    seg_total = CANVAS_W - 50 - result_w - gap - seg_x
+    row_h, row_gap = 44, 12
+
+    for row in rows:
+        segs = row.get("segments", [])
+        weights = [max(float(s.get("w", 1)), 0.1) for s in segs]
+        wsum = sum(weights) or 1
+
+        text(50, y + row_h / 2, row.get("label", ""), size=SMALL_SIZE,
+             v_align="middle", width=label_w)
+
+        x = seg_x
+        for seg, weight in zip(segs, weights):
+            w = int(seg_total * weight / wsum)
+            rect(x, y, w, row_h,
+                 bg=STATE_COLORS.get(seg.get("state", "neutral"), GRAY),
+                 stroke_w=1, label=seg.get("label", ""), label_size=TINY_SIZE)
+            x += w
+
+        result = row.get("result", "")
+        if result:
+            text(CANVAS_W - 50 - result_w, y + row_h / 2, result,
+                 size=SMALL_SIZE, v_align="middle", width=result_w)
+        y += row_h + row_gap
+
+    return y + 18
+
+
+def visual_bars(y, spec):
+    """Horizontal bar chart — lengths are proportional, so the ranking is visual.
+
+    Use it when the surprising part of a result is the ORDER or the RATIO, not
+    the individual figures.
+    """
+    bars = spec.get("bars", [])
+    if not bars:
+        return y
+    y = panel_title(y, spec.get("title"), spec.get("note"))
+
+    label_w, gap, value_w = 300, 16, 110
+    bar_x = 50 + label_w + gap
+    bar_max = CANVAS_W - 50 - value_w - gap - bar_x
+    bar_h, bar_gap = 34, 14
+    peak = max((abs(float(b.get("value", 0))) for b in bars), default=1) or 1
+
+    for b in bars:
+        text(50, y + bar_h / 2, b.get("label", ""), size=SMALL_SIZE,
+             v_align="middle", width=label_w)
+        w = max(int(bar_max * abs(float(b.get("value", 0))) / peak), 4)
+        rect(bar_x, y, w, bar_h,
+             bg=STATE_COLORS.get(b.get("state", "neutral"), GRAY), stroke_w=1)
+        text(bar_x + w + 12, y + bar_h / 2, str(b.get("display", b.get("value", ""))),
+             size=SMALL_SIZE, v_align="middle", width=value_w)
+        y += bar_h + bar_gap
+
+    return y + 18
+
+
+VISUAL_BUILDERS = {
+    "stack": lambda y, spec, sec: visual_stack(y, spec, sec),
+    "rows": lambda y, spec, sec: visual_rows(y, spec),
+    "bars": lambda y, spec, sec: visual_bars(y, spec),
+}
+
+
+def build_diagram(title, subtitle, concepts, flow=None, category=None, visuals=None):
     primary_bg, secondary_bg = CATEGORY_COLORS.get(
         category or "", (BLUE, PURPLE))
 
     Y = 0
-    CANVAS_W = 1200
 
     text(CANVAS_W / 2, Y, title, size=TITLE_SIZE, align="center",
          width=CANVAS_W - 100)
@@ -200,18 +372,13 @@ def build_diagram(title, subtitle, concepts, flow=None, category=None, explainer
     rect(270, Y, 300, 35, bg=primary_bg, label=cat_label, label_size=SMALL_SIZE)
     Y += 60
 
-    if explainer:
-        text(50, Y, "The Idea", size=SUBTITLE_SIZE, width=300)
-        Y += 40
-
-        pad = 20
-        inner_w = CANVAS_W - 100 - pad * 2
-        lines = wrap_lines(explainer, inner_w, BODY_SIZE)
-        box_h = len(lines) * BODY_SIZE * 1.25 + pad * 2
-        rect(50, Y, CANVAS_W - 100, box_h, bg=GRAY, stroke=STROKE, stroke_w=1)
-        text(50 + pad, Y + pad, explainer, size=BODY_SIZE, color="#333333",
-             width=inner_w)
-        Y += box_h + 30
+    for spec in (visuals or []):
+        builder = VISUAL_BUILDERS.get(spec.get("type"))
+        if builder is None:
+            print(f"warning: unknown visual type {spec.get('type')!r}, skipping",
+                  file=sys.stderr)
+            continue
+        Y = builder(Y, spec, secondary_bg)
 
     text(50, Y, "Key Concepts", size=SUBTITLE_SIZE, width=300)
     Y += 40
@@ -306,8 +473,8 @@ def main():
                         help='JSON array of "Name|Description" strings')
     parser.add_argument("--flow", default=None,
                         help="JSON array of flow step names")
-    parser.add_argument("--explainer", default=None,
-                        help="2-4 plain-language sentences explaining the article, as prose")
+    parser.add_argument("--visuals", default=None,
+                        help="JSON array of visual panels (see module docstring)")
     parser.add_argument("--category", default=None)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
@@ -330,8 +497,16 @@ def main():
         print("Need at least 2 concepts", file=sys.stderr)
         sys.exit(1)
 
+    visuals = None
+    if args.visuals:
+        try:
+            visuals = json.loads(args.visuals)
+        except json.JSONDecodeError as e:
+            print(f"Error parsing --visuals: {e}", file=sys.stderr)
+            sys.exit(1)
+
     build_diagram(args.title, args.subtitle, concepts,
-                  flow=flow, category=args.category, explainer=args.explainer)
+                  flow=flow, category=args.category, visuals=visuals)
 
     excalidraw = {
         "type": "excalidraw",

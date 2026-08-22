@@ -251,18 +251,30 @@ done
 python3 "$GEN" \
   --title "Topic Title" \
   --subtitle "Brief subtitle" \
-  --explainer "2-4 plain-language sentences explaining what the article is actually about, as prose." \
   --concepts '["Concept 1|Description 1", "Concept 2|Description 2", ...]' \
   --flow '["Step A", "Step B", "Step C"]' \
+  --visuals '[{"type": "stack", ...}, {"type": "rows", ...}]' \
   --category "Category Name" \
   --output ~/ai_learning/YYYY-MM-DD/diagram.excalidraw
 ```
 
 Provide 4-8 concepts as `"Name|Description"` pairs. Provide 3-6 flow steps if applicable.
-Always provide `--explainer` too: `--concepts` stays the terse at-a-glance summary, but the
-diagram needs one section that actually explains the idea in sentences, the way you would say
-it out loud — draw that explanation from `## For a Software Engineer` or `## Why It Matters`
-in topic.md, condensed to 2-4 sentences, not copied verbatim.
+
+**`--visuals` is the part that makes the diagram worth opening, so always provide 2-3 panels.**
+`--concepts` is a terse grid and `--flow` is a pipeline strip; neither shows a *mechanism*. A
+visual panel does, by making the shape of the thing carry the argument — a quantity compounding
+across steps is drawn as a growing stack, a change that cascades is drawn as coloured segments
+where the damage spreads, a counterintuitive ranking is drawn as bars you can compare by length.
+Run the generator with `--help`, or read its module docstring, for the three panel types and
+their exact JSON.
+
+Pick the panels from *what the article argues*, and pull the numbers from the ones
+`code_example.py` actually prints, so the diagram and the code agree.
+
+**Never render a paragraph of prose into the diagram.** A wall of sentences inside a rectangle
+is not a diagram — if a point cannot be drawn, it belongs in `topic.md`, which already explains
+the article at length. The reader should understand the mechanism from the shapes before
+reading a single label.
 
 If the script fails, generate the Excalidraw JSON directly using this element format:
 - Rectangle: `{"id":"r1","type":"rectangle","x":100,"y":100,"width":300,"height":80,"strokeColor":"#1e1e1e","backgroundColor":"#a5d8ff","fillStyle":"solid","strokeWidth":2,"roughness":0,"opacity":100,"roundness":{"type":3},...}`
