@@ -294,15 +294,32 @@
   var PANES = ["overview", "diagram", "code", "articles"];
 
   var $ = function (id) { return document.getElementById(id); };
-  var pyodideReady = false;
 
-  /* ---- REPL setup ---- */
-  window.loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/" }).then(function (py) {
-    window.pyodide = py;
-    window.pyodideReady = true;
-  }).catch(function (e) {
-    console.warn("Pyodide failed to load:", e);
-  });
+  /* ---- REPL setup ----
+     pyodide.js is loaded with `defer`, so it can still be unparsed when this
+     script runs. Poll for the global rather than assume it exists, and never
+     let a CDN hiccup here take down routing/rendering below — this whole
+     block is best-effort and isolated in its own try/catch. */
+  window.pyodideReady = false;
+  try {
+    var pyodideAttempts = 0;
+    (function waitForPyodide() {
+      if (typeof loadPyodide !== "undefined") {
+        loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/" }).then(function (py) {
+          window.pyodide = py;
+          window.pyodideReady = true;
+        }).catch(function (e) {
+          console.warn("Pyodide failed to load:", e);
+        });
+      } else if (pyodideAttempts++ < 150) {   // ~15s before giving up
+        setTimeout(waitForPyodide, 100);
+      } else {
+        console.warn("Pyodide script never became available — REPL disabled, falling back to captured output.");
+      }
+    })();
+  } catch (e) {
+    console.warn("Pyodide setup threw:", e);
+  }
 
   function getCodeCache(sessionId) {
     var cached = localStorage.getItem("code_editor_" + sessionId);
