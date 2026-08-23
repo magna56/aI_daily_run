@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="The AI Commit">
+  <defs>
+    <linearGradient id="head" x1="28%" y1="18%" x2="78%" y2="86%">
+      <stop offset="0%" stop-color="#7dd3fc"/>
+      <stop offset="55%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="46%" r="50%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity=".42"/>
+      <stop offset="55%" stop-color="#38bdf8" stop-opacity=".12"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="230" fill="#111217"/>
+  <circle cx="596" cy="512" r="248" fill="url(#halo)"/>
+  <line x1="168" y1="512" x2="856" y2="512" stroke="#3a4148" stroke-width="44" stroke-linecap="round"/>
+  <circle cx="292" cy="512" r="42" fill="#2a3038"/>
+  <circle cx="292" cy="512" r="28" fill="#4b5563"/>
+  <circle cx="596" cy="512" r="132" fill="url(#head)"/>
+</svg>
