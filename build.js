@@ -436,6 +436,23 @@ function mdToHtml(body) {
   return html;
 }
 
+// Turns a title into a URL-safe slug for the canonical per-post path
+// (site/<id>-<slug>/index.html). Truncated at a hyphen boundary, never mid-word.
+function slugify(title, maxLen = 60) {
+  let s = stripMd(String(title))
+    .toLowerCase()
+    .replace(/['’‘`]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (s.length > maxLen) {
+    s = s.slice(0, maxLen);
+    const lastHyphen = s.lastIndexOf("-");
+    if (lastHyphen > maxLen * 0.5) s = s.slice(0, lastHyphen);
+    s = s.replace(/-+$/g, "");
+  }
+  return s;
+}
+
 function truncateWords(s, max) {
   s = s.trim();
   if (s.length <= max) return s;
@@ -486,8 +503,14 @@ function makeShellTemplate() {
   const tailAfter = ogMark.after.slice(noscriptIdx + NOSCRIPT_MARK.length);
 
   return function render(payload) {
-    const url = `${SITE_ORIGIN}/${payload.id}/`;
     const title = stripMd(payload.title);
+    // The canonical URL is <id>-<slug>/ — readable and keyword-bearing, e.g.
+    // 2026-08-23-s2-your-coding-agent-benchmark-score/. The bare <id>/ page
+    // (see main()) is also written and kept working for already-shared links,
+    // but its canonical tag points here too, so search engines consolidate on
+    // one URL instead of treating them as duplicate content.
+    const slugPath = `${payload.id}-${slugify(title)}`;
+    const url = `${SITE_ORIGIN}/${slugPath}/`;
     const pageTitle = `${title} — The AI Commit`;
     const description = truncateWords(stripMd(payload.insight) || title, 155);
 
@@ -540,17 +563,20 @@ function makeShellTemplate() {
       `</article>\n` +
       `</noscript>`;
 
-    return head + meta + middle + og + tailBefore + noscript + tailAfter;
+    return { html: head + meta + middle + og + tailBefore + noscript + tailAfter, slugPath };
   };
 }
 
-function writeSitemap(ids, cardsById) {
+function writeSitemap(ids, cardsById, slugPaths) {
+  // Only the canonical <id>-<slug> path is listed — the bare <id>/ page also
+  // exists (for already-shared links) but its own canonical tag points here,
+  // so it deliberately isn't a separate sitemap entry.
   const urls = [
     { loc: `${SITE_ORIGIN}/`, changefreq: "daily", priority: "1.0" },
     { loc: `${SITE_ORIGIN}/privacy.html`, changefreq: "monthly", priority: "0.3" },
     { loc: `${SITE_ORIGIN}/terms.html`, changefreq: "monthly", priority: "0.3" },
     ...ids.map((id) => ({
-      loc: `${SITE_ORIGIN}/${id}/`,
+      loc: `${SITE_ORIGIN}/${slugPaths[id]}/`,
       lastmod: cardsById[id].date,
       changefreq: "monthly",
       priority: "0.7",
@@ -601,6 +627,7 @@ function main() {
   // for why. Only needed when actually writing output, same as everything
   // else gated on !check.
   const renderShell = check ? null : makeShellTemplate();
+  const slugPaths = {};   // id -> canonical <id>-<slug> path, for the sitemap
 
   for (const id of ids) {
     const out = compile(id, journal, runner, { check });
@@ -608,9 +635,16 @@ function main() {
     cards.push(out.card);
     if (!check) {
       fs.writeFileSync(path.join(DATA_DIR, id + ".json"), JSON.stringify(out.payload));
-      const sessionDir = path.join(SITE, id);
-      fs.mkdirSync(sessionDir, { recursive: true });
-      fs.writeFileSync(path.join(sessionDir, "index.html"), renderShell(out.payload));
+      const { html, slugPath } = renderShell(out.payload);
+      slugPaths[id] = slugPath;
+      // The bare <id>/ page keeps already-shared/indexed links working; its
+      // canonical tag (baked into `html` above) points at the slug page, so
+      // both resolve but only the slug page is treated as the "real" one.
+      for (const dirName of [id, slugPath]) {
+        const dir = path.join(SITE, dirName);
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, "index.html"), html);
+      }
     }
   }
 
@@ -626,7 +660,7 @@ function main() {
     );
     const cardsById = {};
     cards.forEach((c) => { cardsById[c.id] = c; });
-    writeSitemap(cards.map((c) => c.id), cardsById);
+    writeSitemap(cards.map((c) => c.id), cardsById, slugPaths);
   }
 
   warnings.forEach((w) => console.warn("  warn: " + w));

@@ -1600,7 +1600,7 @@
   // load — never override it.
   (function () {
     if (location.hash) return;
-    var m = location.pathname.match(/\/(\d{4}-\d{2}-\d{2}(?:-s\d+)?)\/?$/);
+    var m = location.pathname.match(/\/(\d{4}-\d{2}-\d{2}(?:-s\d+)?)(?:-[a-z0-9-]+)?\/?$/);
     if (!m) return;
     history.replaceState(null, "", location.pathname);
     location.hash = "#" + m[1];
