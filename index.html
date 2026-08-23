@@ -732,9 +732,12 @@
 
   function ghSignIn() {
     var redirect = location.origin + location.pathname;
+    // public_repo: create a public repository with the session code + README.
+    // (Replaces the old gist-only flow — existing localStorage tokens with only
+    // the gist scope will fail publish and get bounced back through here.)
     var url = "https://github.com/login/oauth/authorize"
       + "?client_id=" + encodeURIComponent(GITHUB_CLIENT_ID)
-      + "&scope=gist"
+      + "&scope=public_repo"
       + "&redirect_uri=" + encodeURIComponent(redirect)
       + "&state=" + encodeURIComponent(location.hash);
     location.href = url;
@@ -788,22 +791,109 @@
       });
   }
 
-  // files: { filename: content, ... } — a gist has no real subdirectories
-  // (it's a flat file list), so a multi-file gist — a README plus the code —
-  // is the closest a Gist can get to "a little directory for this session".
-  function ghPublishGist(files, description) {
-    var apiFiles = {};
-    Object.keys(files).forEach(function (name) { apiFiles[name] = { content: files[name] }; });
-    return fetch("https://api.github.com/gists", {
+  // Create a public repo under the signed-in user, then land an initial commit
+  // with every file in `files` ({ path: content }) via the Git Data API — one
+  // commit containing README.md + the Python file, rather than N Contents-API
+  // round trips. Returns the repo JSON (html_url is what we open).
+  function ghApi(path, opts) {
+    opts = opts || {};
+    var headers = Object.assign({
+      "Authorization": "Bearer " + ghToken(),
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    }, opts.headers || {});
+    return fetch("https://api.github.com" + path, Object.assign({}, opts, { headers: headers }))
+      .then(function (r) {
+        return r.json().then(function (body) {
+          if (!r.ok) {
+            var msg = (body && body.message) || ("HTTP " + r.status);
+            // Old gist-scoped tokens (or revoked ones) can't create repos —
+            // signal the UI to forget them and re-auth with public_repo.
+            if (r.status === 401 || r.status === 403) {
+              var err = new Error("NEED_REAUTH:" + msg);
+              throw err;
+            }
+            throw new Error(msg);
+          }
+          return body;
+        }, function () {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return {};
+        });
+      });
+  }
+
+  function ghRepoName(sessionId, title) {
+    var raw = ("ai-commit-" + sessionId + "-" + slugify(title))
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+    return (raw || ("ai-commit-" + sessionId)).slice(0, 100).replace(/[._-]+$/, "");
+  }
+
+  function ghPublishRepo(repoName, description, files) {
+    return ghApi("/user/repos", {
       method: "POST",
-      headers: {
-        "Authorization": "Bearer " + ghToken(),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ description: description, public: false, files: apiFiles }),
-    }).then(function (r) {
-      if (!r.ok) return r.json().then(function (e) { throw new Error(e.message || ("HTTP " + r.status)); });
-      return r.json();
+      body: JSON.stringify({
+        name: repoName,
+        description: String(description || "").slice(0, 350),
+        private: false,
+        auto_init: false,
+        has_issues: false,
+        has_projects: false,
+        has_wiki: false,
+      }),
+    }).catch(function (err) {
+      // Name taken → retry once with a short unique suffix.
+      if (/already exists|name already exists/i.test(err.message || "")) {
+        var suffix = "-" + Date.now().toString(36).slice(-5);
+        var alt = (repoName.slice(0, 100 - suffix.length) + suffix).replace(/[._-]+$/, "");
+        return ghApi("/user/repos", {
+          method: "POST",
+          body: JSON.stringify({
+            name: alt,
+            description: String(description || "").slice(0, 350),
+            private: false,
+            auto_init: false,
+            has_issues: false,
+            has_projects: false,
+            has_wiki: false,
+          }),
+        });
+      }
+      throw err;
+    }).then(function (repo) {
+      var owner = repo.owner.login;
+      var name = repo.name;
+      var paths = Object.keys(files);
+      return Promise.all(paths.map(function (path) {
+        return ghApi("/repos/" + owner + "/" + name + "/git/blobs", {
+          method: "POST",
+          body: JSON.stringify({ content: files[path], encoding: "utf-8" }),
+        }).then(function (blob) {
+          return { path: path, mode: "100644", type: "blob", sha: blob.sha };
+        });
+      })).then(function (treeItems) {
+        return ghApi("/repos/" + owner + "/" + name + "/git/trees", {
+          method: "POST",
+          body: JSON.stringify({ tree: treeItems }),
+        });
+      }).then(function (tree) {
+        return ghApi("/repos/" + owner + "/" + name + "/git/commits", {
+          method: "POST",
+          body: JSON.stringify({
+            message: "Initial commit — code, README, and run output",
+            tree: tree.sha,
+          }),
+        });
+      }).then(function (commit) {
+        return ghApi("/repos/" + owner + "/" + name + "/git/refs", {
+          method: "POST",
+          body: JSON.stringify({ ref: "refs/heads/main", sha: commit.sha }),
+        }).then(function () { return repo; });
+      });
     });
   }
 
@@ -1406,7 +1496,7 @@
         '<div class="code-cta-copy">' +
           "<strong>Run it. Tweak it. Keep it.</strong>" +
           "<span>Runs in your browser — no API key, nothing to install. " +
-          "Save your version to your own GitHub in one click.</span>" +
+          "Save your version as a new GitHub repo (code + README with output) in one click.</span>" +
         "</div>" +
         '<button class="btn-publish" id="publishGh" title="' +
           (ghUser() ? "Publish as " + esc(ghUser().login) : "Sign in with GitHub, then publish") + '">' +
@@ -1494,38 +1584,53 @@
       ghLabel.textContent = "Publishing…";
 
       var title = plain(p.title);
-      var slug = slugify(title);
-      var codeFilename = slug + ".py";
+      var codeFilename = "code_example.py";
 
       var liveText = (liveOutputEl.querySelector(".terminal-output").textContent || "").trim();
-      var hasLiveRun = liveText && liveText.indexOf("(click Run") === -1 && liveText.indexOf("(output will appear") === -1;
+      var hasLiveRun = liveText && liveText.indexOf("(click Run") === -1 && liveText.indexOf("(output will appear") === -1
+        && liveText.indexOf("starting Python") === -1;
       var outputText = hasLiveRun ? liveText : (captured || "(no output captured)");
 
-      // Output stays here (it's the actual result — worth reading inline);
-      // the code does not — it's already right there as its own syntax-
-      // highlighted file, and repeating a few hundred lines of it just to
-      // bury the TL;DR/output under a wall of code helps nobody.
+      // Repo holds the runnable script as its own file; README carries the
+      // insight, a link back to the session, and the run output so someone
+      // landing on the repo can see the result without cloning.
       var readme = "# " + title + "\n\n"
-        + "**TL;DR:** " + (p.insight ? plain(p.insight) : "See " + codeFilename + ".") + "\n\n"
-        + "Published from [The AI Commit](https://theaicommit.com/#" + p.id + ") — "
+        + "**TL;DR:** " + (p.insight ? plain(p.insight) : "See `" + codeFilename + "`.") + "\n\n"
+        + "Published from [The AI Commit](https://theaicommit.com/#" + p.id + "/code) — "
         + (p.category ? p.category + ", " : "") + p.date + ".\n\n"
-        + "Code: [`" + codeFilename + "`](" + codeFilename + ")\n\n"
-        + "## Output\n\n```\n" + outputText.replace(/```/g, "\\`\\`\\`") + "\n```\n";
+        + "## Run\n\n"
+        + "```bash\npython3 " + codeFilename + "\n```\n\n"
+        + "## Output\n\n"
+        + "```\n" + outputText.replace(/```/g, "\\`\\`\\`") + "\n```\n\n"
+        + "## Code\n\n"
+        + "See [`" + codeFilename + "`](" + codeFilename + ").\n";
 
-      ghPublishGist(
-        { "README.md": readme, [codeFilename]: editorEl.value },
-        "The AI Commit — " + title
-      )
-        .then(function (gist) {
+      var repoName = ghRepoName(p.id, title);
+      var description = "The AI Commit — " + title;
+
+      ghPublishRepo(repoName, description, {
+        "README.md": readme,
+        [codeFilename]: editorEl.value,
+      })
+        .then(function (repo) {
           ghLabel.textContent = "Published ✓";
-          toast("Published to GitHub — opening your gist");
-          window.open(gist.html_url, "_blank", "noopener");
+          toast("Published — opening your new repo");
+          window.open(repo.html_url, "_blank", "noopener");
           setTimeout(function () { ghLabel.textContent = original; ghBtn.disabled = false; }, 2500);
         })
         .catch(function (err) {
           ghLabel.textContent = original;
           ghBtn.disabled = false;
-          toast("Publish failed: " + err.message);
+          var msg = (err && err.message) || String(err);
+          if (msg.indexOf("NEED_REAUTH:") === 0) {
+            // Token is missing public_repo (e.g. signed in under the old gist
+            // scope) — drop it and restart OAuth so the next land publishes.
+            ghSignOut();
+            toast("GitHub needs repo permission — signing in again…");
+            ghSignIn();
+            return;
+          }
+          toast("Publish failed: " + msg);
         });
     }
 
