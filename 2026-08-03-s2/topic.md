@@ -1,6 +1,7 @@
 # A Language Model on a 6502: BitNet Ternary Weights as Hardware-Aware Design
 
 **Category**: AI Hardware for Engineers
+**Tags**: quantization, from-scratch, transformers
 **Date**: 2026-08-03
 **Time to read**: ~10 minutes
 

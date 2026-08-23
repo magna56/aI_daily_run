@@ -1,6 +1,7 @@
 # Debate Training Reduces Reward Hacking in RLAIF
 
 **Category**: Applied Research
+**Tags**: training, reliability, paper
 **Date**: 2026-08-19
 **Time to read**: ~10 minutes
 **Source**: [arXiv:2608.17776](https://arxiv.org/abs/2608.17776) — Kenton, Janzer, Greig, Teh, Tyshchuk, Brown-Cohen, Edwards, Rajamanoharan, Siegel, Jaques, Shah (Google DeepMind, 18 Aug 2026)

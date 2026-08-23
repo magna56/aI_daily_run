@@ -1,6 +1,7 @@
 # Model Cascades in the Price-Collapse Era: Routing Between Flash and Frontier Tiers
 
 **Category**: New Models & APIs
+**Tags**: cost, latency, production
 **Date**: 2026-08-03
 **Time to read**: ~10 minutes
 

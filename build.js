@@ -69,6 +69,54 @@ const CATEGORIES = [
   "AI Safety & Alignment",
 ];
 
+// Reader-facing one-liners for the generated /topics/<slug>/ pages. These are
+// the pages' meta description and on-page blurb, so they address the reader
+// ("you") rather than describing the category to the generator — the skill's
+// own Category Tiers section is where the generator-facing definitions live.
+const CATEGORY_BLURBS = {
+  "Coding Agents & Productivity":
+    "Getting more out of the coding agents you already drive every day — Claude Code, Cursor, Codex, Gemini CLI: hooks, skills, subagents, context and cost control, and what this week's changelogs actually change about your workflow.",
+  "Building Agents & MCP":
+    "Authoring agent systems rather than operating them: tool schema design, MCP servers, orchestration libraries, SDKs, and the architecture decisions that decide whether an agent is debuggable.",
+  "AI Engineering Practices":
+    "Reviewing, testing and trusting agent-written code — migrations at scale, architecture patterns, and team workflows for codebases where most commits now start with a prompt.",
+  "Evals & Reliability":
+    "Does your AI feature actually work? App-level eval harnesses, catching regressions before users do, guardrails you ship, and output validation you can put in CI.",
+  "New Models & APIs":
+    "New model releases and what they change in practice — API differences, migration guides, pricing, context limits, and when routing to a cheaper model is the right call.",
+  "AI in Production":
+    "Running AI systems for real: deployment patterns, serving infrastructure, cost optimization, monitoring, and RAG at a scale where the naive version stops working.",
+  "Hands-on Techniques":
+    "The craft layer — fine-tuning, RAG pipelines, prompt and context engineering — explained with runnable code rather than diagrams of boxes.",
+  "Applied Research":
+    "Papers with working code and reproducible results, read for what they change about your engineering decisions rather than for the leaderboard number.",
+  "AI Hardware for Engineers":
+    "How to actually use the hardware you have or rent: picking an instance type, quantization you can run today, inference-speed wins, memory ceilings, and local-vs-hosted tradeoffs.",
+  "Multimodal Engineering":
+    "Vision, audio and video pipeline internals — how an image becomes tokens, what that costs, and what the model can actually see by the time it arrives.",
+  "AI Safety & Alignment":
+    "Alignment research, red-teaming findings and model behaviour studies, read by an engineer asking what it means for systems they ship.",
+};
+
+// Cross-cutting facets, deliberately NOT a restatement of CATEGORIES: a session
+// has exactly one category (what it is about) and several tags (what it touches).
+// A controlled list is the whole point — free-form tags drift into
+// fine-tuning / finetuning / Fine Tuning within a month and the facet stops
+// working. Adding a tag means editing this list first; build.js --check warns
+// on anything not here, and the skill is told to pick from it.
+const TAGS = [
+  // technique
+  "rag", "fine-tuning", "quantization", "caching", "context-engineering",
+  "prompt-engineering", "reranking", "distillation",
+  // concern
+  "cost", "latency", "reliability", "security", "benchmarks", "observability",
+  // surface
+  "agents", "mcp", "coding-agents", "multimodal", "embeddings",
+  "inference-serving", "training", "transformers",
+  // use-case / provenance
+  "from-scratch", "paper", "production", "interview",
+];
+
 // A session folder: a date, optionally suffixed for a second session that day.
 const SESSION_RE = /^\d{4}-\d{2}-\d{2}(-s\d+)?$/;
 const IMAGE_RE = /\.(png|jpe?g|gif|svg|webp)$/i;
@@ -271,6 +319,16 @@ function compile(id, journal, runner, opts) {
     warn(`${id}: category "${category}" is not one of the 10 rotation categories.`);
   }
 
+  // Tags are optional — sessions published before the facet existed have none,
+  // and an empty array is a valid state rather than a defect.
+  const tags = String(topic.meta.Tags || "")
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  for (const t of tags) {
+    if (!TAGS.includes(t)) warn(`${id}: tag "${t}" is not in the TAGS vocabulary in build.js.`);
+  }
+
   const date = topic.meta.Date || id.slice(0, 10);
   const assetDir = path.join(ASSET_DIR, id);
   const writing = !opts.check;
@@ -341,6 +399,7 @@ function compile(id, journal, runner, opts) {
     id,
     title: topic.title,
     category,
+    tags,
     date,
     meta: topic.meta,
     source,
@@ -355,8 +414,13 @@ function compile(id, journal, runner, opts) {
 
   const card = {
     id,
+    // The canonical per-post path, so the grid can render a REAL href instead
+    // of a hash-only click handler. Computed here (not inside the shell
+    // renderer) precisely so it reaches data/index.js and the cards.
+    slug: `${id}-${slugify(stripMd(topic.title))}`,
     title: topic.title,
     category,
+    tags,
     date,
     insight: payload.insight,
     minutes: readMinutes(topic.meta, topic.body),
@@ -502,82 +566,216 @@ function makeShellTemplate() {
   const tailBefore = ogMark.after.slice(0, noscriptIdx);
   const tailAfter = ogMark.after.slice(noscriptIdx + NOSCRIPT_MARK.length);
 
-  return function render(payload) {
-    const title = stripMd(payload.title);
-    // The canonical URL is <id>-<slug>/ — readable and keyword-bearing, e.g.
-    // 2026-08-23-s2-your-coding-agent-benchmark-score/. The bare <id>/ page
-    // (see main()) is also written and kept working for already-shared links,
-    // but its canonical tag points here too, so search engines consolidate on
-    // one URL instead of treating them as duplicate content.
-    const slugPath = `${payload.id}-${slugify(title)}`;
-    const url = `${SITE_ORIGIN}/${slugPath}/`;
-    const pageTitle = `${title} — The AI Commit`;
-    const description = truncateWords(stripMd(payload.insight) || title, 155);
-
+  /**
+   * One renderer for all three page kinds, because they differ only in their
+   * metadata block and their <noscript> body — every byte of CSS and JS is
+   * shared, which is what keeps the SPA identical whichever URL you enter by.
+   *
+   * spec: { pageTitle, description, url, ogType, jsonLd, noscriptBody }
+   */
+  return function render(spec) {
     const meta =
       `<!-- META:START -->\n` +
-      `<title>${escAttr(pageTitle)}</title>\n` +
-      `<meta name="description" content="${escAttr(description)}" />\n` +
-      `<link rel="canonical" href="${escAttr(url)}" />\n` +
+      `<title>${escAttr(spec.pageTitle)}</title>\n` +
+      `<meta name="description" content="${escAttr(spec.description)}" />\n` +
+      `<link rel="canonical" href="${escAttr(spec.url)}" />\n` +
       `<!-- META:END -->`;
 
-    const jsonLd = jsonLdSafe({
+    const og =
+      `<!-- OG:START -->\n` +
+      `<meta property="og:type" content="${escAttr(spec.ogType)}" />\n` +
+      `<meta property="og:site_name" content="The AI Commit" />\n` +
+      `<meta property="og:title" content="${escAttr(spec.pageTitle)}" />\n` +
+      `<meta property="og:description" content="${escAttr(spec.description)}" />\n` +
+      `<meta property="og:image" content="${SITE_ORIGIN}/og-image.png" />\n` +
+      `<meta property="og:image:width" content="1200" />\n` +
+      `<meta property="og:image:height" content="630" />\n` +
+      `<meta property="og:url" content="${escAttr(spec.url)}" />\n` +
+      `<meta name="twitter:card" content="summary_large_image" />\n` +
+      `<meta name="twitter:title" content="${escAttr(spec.pageTitle)}" />\n` +
+      `<meta name="twitter:description" content="${escAttr(spec.description)}" />\n` +
+      `<meta name="twitter:image" content="${SITE_ORIGIN}/og-image.png" />\n\n` +
+      `<script type="application/ld+json">\n${jsonLdSafe(spec.jsonLd)}\n</script>\n` +
+      `<!-- OG:END -->`;
+
+    const noscript = `<noscript>\n${spec.noscriptBody}</noscript>`;
+
+    let body = tailBefore + noscript + tailAfter;
+    // Exactly one <h1> per page, in BOTH the JS-rendered and raw-HTML views.
+    // The shared header ships a <p class="tagline">; only the homepage promotes
+    // it to the page's h1. Session and topic pages get their h1 from the
+    // article/topic title instead (noscript for crawlers, renderReader /
+    // renderTopicHead once JS runs), so the tagline must stay a <p> there.
+    if (spec.isHome) {
+      if (!body.includes(HOME_H1.from)) {
+        throw new Error(`index.html no longer contains ${HOME_H1.from} — the homepage h1 swap depends on that exact line.`);
+      }
+      body = body.replace(HOME_H1.from, HOME_H1.to);
+    }
+    return head + meta + middle + og + body;
+  };
+}
+
+const HOME_H1 = {
+  from: '<p class="tagline">A daily AI engineering lab for software engineers</p>',
+  to: '<h1 class="tagline">A daily AI engineering lab for software engineers</h1>',
+};
+
+const PUBLISHER = {
+  "@type": "Organization",
+  name: "The AI Commit",
+  url: SITE_ORIGIN + "/",
+  logo: `${SITE_ORIGIN}/icon-512.png`,
+};
+
+// One <li> linking to a session's canonical URL. The link graph these build is
+// the point: before this, a crawler could reach a session only via sitemap.xml,
+// because every on-page "link" was a JS click handler on a non-anchor element.
+function sessionLinkItem(card) {
+  return `<li><a href="/${escAttr(card.slug)}/">${escAttr(stripMd(card.title))}</a>` +
+    ` <span>${escAttr(card.date)}${card.category ? " · " + escAttr(card.category) : ""}</span></li>\n`;
+}
+
+// A session page: the article itself, plus a link back up to its topic page.
+function sessionPageSpec(payload, card) {
+  const title = stripMd(payload.title);
+  // The canonical URL is <id>-<slug>/ — readable and keyword-bearing. The bare
+  // <id>/ page (see main()) is also written and kept working for already-shared
+  // links, but its canonical tag points here too, so search engines consolidate
+  // on one URL instead of treating them as duplicate content.
+  const url = `${SITE_ORIGIN}/${card.slug}/`;
+  const description = truncateWords(stripMd(payload.insight) || title, 155);
+  const topicHref = payload.category ? `/topics/${slugify(payload.category)}/` : "";
+
+  return {
+    pageTitle: `${title} — The AI Commit`,
+    description,
+    url,
+    ogType: "article",
+    jsonLd: {
       "@context": "https://schema.org",
       "@type": "TechArticle",
       headline: title,
       description,
       datePublished: payload.date,
+      keywords: (payload.tags || []).join(", ") || undefined,
       url,
       mainEntityOfPage: url,
       image: `${SITE_ORIGIN}/og-image.png`,
-      publisher: {
-        "@type": "Organization",
-        name: "The AI Commit",
-        url: SITE_ORIGIN + "/",
-        logo: `${SITE_ORIGIN}/icon-512.png`,
-      },
-    });
-
-    const og =
-      `<!-- OG:START -->\n` +
-      `<meta property="og:type" content="article" />\n` +
-      `<meta property="og:site_name" content="The AI Commit" />\n` +
-      `<meta property="og:title" content="${escAttr(pageTitle)}" />\n` +
-      `<meta property="og:description" content="${escAttr(description)}" />\n` +
-      `<meta property="og:image" content="${SITE_ORIGIN}/og-image.png" />\n` +
-      `<meta property="og:image:width" content="1200" />\n` +
-      `<meta property="og:image:height" content="630" />\n` +
-      `<meta property="og:url" content="${escAttr(url)}" />\n` +
-      `<meta name="twitter:card" content="summary_large_image" />\n` +
-      `<meta name="twitter:title" content="${escAttr(pageTitle)}" />\n` +
-      `<meta name="twitter:description" content="${escAttr(description)}" />\n` +
-      `<meta name="twitter:image" content="${SITE_ORIGIN}/og-image.png" />\n\n` +
-      `<script type="application/ld+json">\n${jsonLd}\n</script>\n` +
-      `<!-- OG:END -->`;
-
-    const noscript =
-      `<noscript>\n` +
+      publisher: PUBLISHER,
+    },
+    noscriptBody:
       `<article>\n` +
       `<h1>${escAttr(title)}</h1>\n` +
       mdToHtml(payload.topic) +
-      `</article>\n` +
-      `</noscript>`;
-
-    return { html: head + meta + middle + og + tailBefore + noscript + tailAfter, slugPath };
+      (topicHref
+        ? `<p>More in this category: <a href="${escAttr(topicHref)}">${escAttr(payload.category)}</a></p>\n`
+        : "") +
+      `</article>\n`,
   };
 }
 
-function writeSitemap(ids, cardsById, slugPaths) {
+// A topic page: every session in one category, as real links.
+function topicPageSpec(category, cardsInCategory) {
+  const slug = slugify(category);
+  const url = `${SITE_ORIGIN}/topics/${slug}/`;
+  const description = truncateWords(
+    CATEGORY_BLURBS[category] || `Every ${category} session on The AI Commit.`, 155);
+
+  return {
+    pageTitle: `${category} — The AI Commit`,
+    description,
+    url,
+    ogType: "website",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: category,
+      description,
+      url,
+      isPartOf: { "@type": "WebSite", name: "The AI Commit", url: SITE_ORIGIN + "/" },
+      publisher: PUBLISHER,
+      mainEntity: {
+        "@type": "ItemList",
+        numberOfItems: cardsInCategory.length,
+        itemListElement: cardsInCategory.map((c, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          url: `${SITE_ORIGIN}/${c.slug}/`,
+          name: stripMd(c.title),
+        })),
+      },
+    },
+    noscriptBody:
+      `<main>\n` +
+      `<h1>${escAttr(category)}</h1>\n` +
+      `<p>${escAttr(CATEGORY_BLURBS[category] || "")}</p>\n` +
+      `<ul>\n${cardsInCategory.map(sessionLinkItem).join("")}</ul>\n` +
+      `<p><a href="/">All sessions</a></p>\n` +
+      `</main>\n`,
+  };
+}
+
+// The homepage: the site's own metadata, plus a crawlable index of every topic
+// page and every session — the entry point for the whole link graph.
+function homePageSpec(cards, categories) {
+  const description =
+    "Understand one real AI development in 30 minutes — a plain-English explanation, " +
+    "a diagram of the actual mechanism, and code that runs live in your browser.";
+
+  return {
+    isHome: true,
+    pageTitle: "The AI Commit — Daily AI Engineering Lab for Software Engineers",
+    description,
+    url: SITE_ORIGIN + "/",
+    ogType: "website",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "The AI Commit",
+      alternateName: "AI Commit",
+      description,
+      url: SITE_ORIGIN + "/",
+      publisher: PUBLISHER,
+    },
+    // No <h1> here: the visible tagline is promoted to the homepage's h1 (see
+    // HOME_H1), and a second one in the noscript index would compete with it
+    // for non-JS crawlers, which render noscript content.
+    noscriptBody:
+      `<main>\n` +
+      `<h2>Topics</h2>\n<ul>\n` +
+      categories.map((c) =>
+        `<li><a href="/topics/${escAttr(slugify(c))}/">${escAttr(c)}</a></li>\n`).join("") +
+      `</ul>\n` +
+      `<h2>All sessions</h2>\n<ul>\n${cards.map(sessionLinkItem).join("")}</ul>\n` +
+      `</main>\n`,
+  };
+}
+
+function writeSitemap(cards, categories) {
   // Only the canonical <id>-<slug> path is listed — the bare <id>/ page also
   // exists (for already-shared links) but its own canonical tag points here,
-  // so it deliberately isn't a separate sitemap entry.
+  // so it deliberately isn't a separate sitemap entry. Tags have no static
+  // pages (they're hash filters), so nothing to list for them either.
+  const newestIn = (cat) => cards
+    .filter((c) => c.category === cat)
+    .map((c) => c.date)
+    .sort()
+    .pop();
+
   const urls = [
     { loc: `${SITE_ORIGIN}/`, changefreq: "daily", priority: "1.0" },
+    ...categories.map((cat) => ({
+      loc: `${SITE_ORIGIN}/topics/${slugify(cat)}/`,
+      lastmod: newestIn(cat),
+      changefreq: "weekly",
+      priority: "0.8",
+    })),
     { loc: `${SITE_ORIGIN}/privacy.html`, changefreq: "monthly", priority: "0.3" },
     { loc: `${SITE_ORIGIN}/terms.html`, changefreq: "monthly", priority: "0.3" },
-    ...ids.map((id) => ({
-      loc: `${SITE_ORIGIN}/${slugPaths[id]}/`,
-      lastmod: cardsById[id].date,
+    ...cards.map((c) => ({
+      loc: `${SITE_ORIGIN}/${c.slug}/`,
+      lastmod: c.date,
       changefreq: "monthly",
       priority: "0.7",
     })),
@@ -627,7 +825,6 @@ function main() {
   // for why. Only needed when actually writing output, same as everything
   // else gated on !check.
   const renderShell = check ? null : makeShellTemplate();
-  const slugPaths = {};   // id -> canonical <id>-<slug> path, for the sitemap
 
   for (const id of ids) {
     const out = compile(id, journal, runner, { check });
@@ -635,12 +832,11 @@ function main() {
     cards.push(out.card);
     if (!check) {
       fs.writeFileSync(path.join(DATA_DIR, id + ".json"), JSON.stringify(out.payload));
-      const { html, slugPath } = renderShell(out.payload);
-      slugPaths[id] = slugPath;
+      const html = renderShell(sessionPageSpec(out.payload, out.card));
       // The bare <id>/ page keeps already-shared/indexed links working; its
       // canonical tag (baked into `html` above) points at the slug page, so
       // both resolve but only the slug page is treated as the "real" one.
-      for (const dirName of [id, slugPath]) {
+      for (const dirName of [id, out.card.slug]) {
         const dir = path.join(SITE, dirName);
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(path.join(dir, "index.html"), html);
@@ -656,11 +852,26 @@ function main() {
       path.join(DATA_DIR, "index.js"),
       banner +
       "window.CATEGORIES = " + JSON.stringify(CATEGORIES) + ";\n" +
+      "window.CATEGORY_BLURBS = " + JSON.stringify(CATEGORY_BLURBS) + ";\n" +
       "window.SESSIONS = " + JSON.stringify(cards, null, 2) + ";\n"
     );
-    const cardsById = {};
-    cards.forEach((c) => { cardsById[c.id] = c; });
-    writeSitemap(cards.map((c) => c.id), cardsById, slugPaths);
+    // Categories that actually have sessions, in CATEGORIES (tier) order so
+    // the topic index reads the same way the skill's rotation does.
+    const covered = CATEGORIES.filter((cat) => cards.some((c) => c.category === cat));
+
+    for (const cat of covered) {
+      const inCat = cards.filter((c) => c.category === cat);
+      const dir = path.join(SITE, "topics", slugify(cat));
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, "index.html"), renderShell(topicPageSpec(cat, inCat)));
+    }
+
+    // The homepage is generated here rather than copied by the Makefile, so it
+    // can carry the crawlable <noscript> index — same move already made for
+    // sitemap.xml. site/ exists by now: mkdirSync(DATA_DIR, {recursive:true}).
+    fs.writeFileSync(path.join(SITE, "index.html"), renderShell(homePageSpec(cards, covered)));
+
+    writeSitemap(cards, covered);
   }
 
   warnings.forEach((w) => console.warn("  warn: " + w));

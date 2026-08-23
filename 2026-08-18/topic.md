@@ -1,6 +1,7 @@
 # Prefill-Pressure Adaptive Scheduling: Why `max_num_batched_tokens` Has No Right Value
 
 **Category**: AI in Production
+**Tags**: inference-serving, latency, production
 **Date**: 2026-08-18
 **Time to read**: ~10 minutes
 

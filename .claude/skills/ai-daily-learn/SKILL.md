@@ -199,6 +199,7 @@ Write `~/ai_learning/YYYY-MM-DD/topic.md`:
 # [Topic Title]
 
 **Category**: [which of the 11 categories — exactly as written in the rotation list]
+**Tags**: [2-4 tags from the Tag Vocabulary below, comma-separated, lowercase]
 **Date**: YYYY-MM-DD
 **Time to read**: ~10 minutes
 
@@ -257,6 +258,28 @@ conference programme.
   audience — they are professionally suspicious of hype. Surprising *and true*.
 - Keep it under ~70 characters where you can; a name the reader can repeat beats a name that
   covers every nuance. The subtitle and the write-up carry the precision.
+
+**`**Tags**`** — the cross-cutting facet. A session has exactly one **category** (what it is
+*about*, and what decides the rotation) and 2-4 **tags** (what it *touches*). Tags are what let a
+reader who arrived for one article find the other four that share a concern with it, so pick them
+for what someone would plausibly filter by, not to describe the article exhaustively.
+
+- **Pick only from this vocabulary**, lowercase, comma-separated. The reader validates against it
+  and `build.js --check` warns on anything else:
+  - *technique* — `rag`, `fine-tuning`, `quantization`, `caching`, `context-engineering`,
+    `prompt-engineering`, `reranking`, `distillation`
+  - *concern* — `cost`, `latency`, `reliability`, `security`, `benchmarks`, `observability`
+  - *surface* — `agents`, `mcp`, `coding-agents`, `multimodal`, `embeddings`,
+    `inference-serving`, `training`, `transformers`
+  - *use-case / provenance* — `from-scratch`, `paper`, `production`, `interview`
+- **Never invent a tag inline.** If a session genuinely needs a facet that does not exist, add it
+  to the `TAGS` array in `build.js` *first*, then use it — otherwise the lint and this skill
+  disagree and the tag silently fails validation. A vocabulary that drifts into
+  `fine-tuning`/`finetuning`/`Fine Tuning` stops working as a filter, which is the whole point.
+- **Don't restate the category as a tag.** An "Evals & Reliability" session tagged `reliability`
+  adds nothing; tag it for what it *also* touches (`benchmarks`, `coding-agents`, `production`).
+- Use `paper` when the session is built on a paper — it pairs with the paper budget in Step 2 and
+  makes the Tier C share visible at a glance.
 
 **The reader.** A working software engineer who is *learning* AI and intends to apply it
 practically. Assume fluency in general software engineering — caching, padding, schedulers,

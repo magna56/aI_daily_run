@@ -1,6 +1,7 @@
 # Nobody Re-Tests Their RAG Chunk Size — One Grid Search Cut It 88%
 
 **Category**: Hands-on Techniques
+**Tags**: rag, benchmarks, cost
 **Date**: 2026-08-23
 **Time to read**: ~10 minutes
 

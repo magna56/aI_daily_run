@@ -1,6 +1,7 @@
 # Your Coding-Agent Benchmark Score Might Just Be a Bigger VM
 
 **Category**: Evals & Reliability
+**Tags**: benchmarks, coding-agents, production
 **Date**: 2026-08-23
 **Time to read**: ~10 minutes
 

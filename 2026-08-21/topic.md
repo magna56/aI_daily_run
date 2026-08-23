@@ -1,6 +1,7 @@
 # Pixels Are Not Tokens: Fixed Tiling vs. Native Resolution in VLM Input Pipelines
 
 **Category**: Multimodal Engineering
+**Tags**: multimodal, cost, inference-serving
 **Date**: 2026-08-21
 **Time to read**: ~10 minutes
 

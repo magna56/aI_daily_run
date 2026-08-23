@@ -260,7 +260,9 @@
 
   /* Cards */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 20px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; min-height: 220px; cursor: pointer; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+  /* .card is an <a> (a real href to the canonical URL), so it needs the link
+     defaults reset — colour and underline in particular. */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; min-height: 220px; cursor: pointer; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; color: inherit; text-decoration: none; }
   .card:hover, .card.kbd { transform: translateY(-6px); border-color: transparent; box-shadow: 0 8px 24px rgba(167,139,250,.28), 0 0 0 2px var(--accent); background: var(--card-hi); }
   .card-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
   .card-title { font-size: 16.5px; font-weight: 650; line-height: 1.32; margin: 0; }
@@ -283,6 +285,17 @@
   .catdot.cat-craft  { background: var(--cat-craft); }
   .catdot.cat-safety { background: var(--cat-safety); }
   .tag.day { font-family: var(--mono); background: rgba(255,255,255,.05); color: var(--muted); border-color: var(--line); }
+  /* Cross-cutting tag chips. A <button> inside the card's <a>, so it filters
+     instead of opening the session — the click handler stops it there. */
+  .topic-head { text-align: center; padding: 8px 0 24px; }
+  .topic-head h1, .topic-head h2 { font-size: clamp(22px, 3.4vw, 32px); margin: 12px 0 0; letter-spacing: -.02em; }
+  .topic-head .subtitle { margin-top: 12px; }
+  .topic-head .back { font-family: var(--mono); font-size: 12px; color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 7px; padding: 5px 10px; display: inline-block; }
+  .topic-head .back:hover { color: var(--ink); border-color: var(--accent); }
+  .tags.facets { margin: 0 0 12px; }
+  .tag.facet { font-family: var(--mono); background: transparent; color: var(--dim); border-color: var(--line); cursor: pointer; font-size: 10.5px; letter-spacing: .02em; }
+  .tag.facet:hover { color: var(--ink); border-color: var(--accent); background: rgba(255,255,255,.04); }
+  .tag.facet::before { content: "#"; opacity: .55; }
   /* The journal's key insight runs long by design — clamp on the card, full text in the reader. */
   .desc { color: var(--muted); font-size: 13.2px; line-height: 1.55; margin: 0 0 14px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
   .card-foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
@@ -500,7 +513,14 @@
   <!-- ============================ index view ============================ -->
   <div id="viewIndex">
     <header class="top">
-      <h1 class="title">THE AI COMMIT</h1>
+      <!-- The brand is deliberately NOT an <h1>: every page ships this header,
+           so a permanent brand h1 would give each article page two competing
+           topic signals. The tagline below is the homepage's h1 — build.js
+           swaps that one line to <h1> for the homepage only (see HOME_H1 in
+           build.js), leaving it a <p> on session and topic pages where the
+           article/topic title is the h1 instead. Both classes set explicit
+           margin/font-size, so the tag swap is visually identical. -->
+      <p class="title">THE AI COMMIT</p>
       <p class="kicker">read · see · run</p>
       <p class="tagline">A daily AI engineering lab for software engineers</p>
       <p class="subtitle">Understand one real AI development in 30 minutes — a plain-English explanation, a diagram of the actual mechanism, and code that runs live in your browser. No API key, no setup — just practical, hands-on learning.</p>
@@ -508,6 +528,10 @@
     </header>
 
     <div class="wrap">
+      <!-- Filled by route() on #topic/<slug> and #tag/<slug>, empty otherwise.
+           This carries the h1 for a topic page in the JS-rendered view; the
+           non-JS view gets its own h1 from the generated <noscript>. -->
+      <div id="topicHead"></div>
       <div class="stats" id="stats"></div>
       <hr class="sep" />
 
@@ -594,7 +618,7 @@
   };
   function famClass(cat) { return "cat-" + (CAT_FAMILY[cat] || "models"); }
   var CACHE = {};                                  // id -> fetched payload
-  var state = { q: "", cat: "", read: "", sort: "date-desc" };
+  var state = { q: "", cat: "", tag: "", read: "", sort: "date-desc" };
   var kbdIndex = -1;                               // keyboard-focused card
   var view = null;                                 // null = grid, else {id, pane}
   var PANES = ["overview", "diagram", "code", "articles"];
@@ -1025,6 +1049,32 @@
       return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
     });
 
+  // The h1 for a filtered view in the JS-rendered path. Cleared on the plain
+  // grid, where the homepage's own tagline h1 is already the page heading.
+  var BLURBS = window.CATEGORY_BLURBS || {};
+  // On the homepage document build.js promotes the tagline to the page's h1,
+  // so a topic filter applied *there* is a section within the site and takes an
+  // h2. On a generated /topics/<slug>/ page the tagline stays a <p>, so the
+  // topic name is that page's h1. Either way the document ends up with exactly
+  // one h1 — checked at boot rather than guessed per render.
+  var HEADER_HAS_H1 = !!document.querySelector("header.top h1");
+  function renderTopicHead(cat, tag) {
+    var el = $("topicHead");
+    if (!el) return;
+    if (!cat && !tag) { el.innerHTML = ""; return; }
+    var name = cat || "#" + tag;
+    var blurb = cat
+      ? (BLURBS[cat] || "")
+      : "Every session tagged " + name + ".";
+    var h = HEADER_HAS_H1 ? "h2" : "h1";
+    el.innerHTML =
+      '<div class="topic-head">' +
+        '<a class="back" href="' + SITE_ROOT + '/">← All sessions</a>' +
+        "<" + h + ">" + esc(name) + "</" + h + ">" +
+        (blurb ? '<p class="subtitle">' + esc(blurb) + "</p>" : "") +
+      "</div>";
+  }
+
   function renderPills() {
     var items = [{ v: "", l: "All", c: DATA.length }].concat(categories.map(function (c) {
       return { v: c, l: c, c: DATA.filter(function (s) { return s.category === c; }).length };
@@ -1040,10 +1090,12 @@
     var read = readSet();
     var rows = DATA.filter(function (s) {
       if (state.cat && s.category !== state.cat) return false;
+      if (state.tag && (s.tags || []).indexOf(state.tag) === -1) return false;
       if (state.read === "read" && !read.has(s.id)) return false;
       if (state.read === "unread" && read.has(s.id)) return false;
       if (!q) return true;
-      return (s.title + " " + s.insight + " " + s.category + " " + s.date).toLowerCase().indexOf(q) > -1;
+      return (s.title + " " + s.insight + " " + s.category + " " +
+              (s.tags || []).join(" ") + " " + s.date).toLowerCase().indexOf(q) > -1;
     });
     var sorters = {
       "date-desc": function (a, b) { return (b.date || "").localeCompare(a.date || ""); },
@@ -1061,7 +1113,7 @@
     var grid = $("grid");
 
     $("count").innerHTML = rows.length + " of " + DATA.length + " session" + (DATA.length === 1 ? "" : "s") +
-      (state.q || state.cat || state.read
+      (state.q || state.cat || state.tag || state.read
         ? ' <button class="reset" id="reset">clear filters</button>' : "");
 
     if (!rows.length) {
@@ -1069,8 +1121,12 @@
       return;
     }
 
+    // A real <a href> to the canonical URL, not a div with a click handler:
+    // crawlers can follow it, and middle-click / open-in-new-tab work like any
+    // other link. The click handler below still takes over for same-tab clicks,
+    // so in-app navigation stays instant and hash-based exactly as before.
     grid.innerHTML = rows.map(function (s, i) {
-      return '<article class="card" data-id="' + esc(s.id) + '" data-i="' + i + '" tabindex="0">' +
+      return '<a class="card" href="' + SITE_ROOT + "/" + esc(s.slug) + '/" data-id="' + esc(s.id) + '" data-i="' + i + '">' +
         '<div class="card-top">' +
           '<h3 class="card-title">' + esc(plain(s.title)) + "</h3>" +
           (read.has(s.id) ? '<span class="done" title="Read">✓</span>' : "") +
@@ -1080,6 +1136,11 @@
           '<span class="tag day">' + esc(s.date) + "</span>" +
         "</div>" +
         '<p class="desc">' + esc(plain(s.insight) || "Open to read the write-up.") + "</p>" +
+        ((s.tags && s.tags.length)
+          ? '<div class="tags facets">' + s.tags.map(function (t) {
+              return '<button class="tag facet" data-tag="' + esc(t) + '">' + esc(t) + "</button>";
+            }).join("") + "</div>"
+          : "") +
         '<div class="card-foot">' +
           '<div class="chips">' +
             chip(s.diagram, "diagram") +
@@ -1088,13 +1149,24 @@
           "</div>" +
           '<span class="mins">~' + s.minutes + " min</span>" +
         "</div>" +
-      "</article>";
+      "</a>";
     }).join("");
 
     Array.prototype.forEach.call(grid.querySelectorAll(".card"), function (el) {
-      el.addEventListener("click", function () { location.hash = el.getAttribute("data-id"); });
+      el.addEventListener("click", function (ev) {
+        // Let the browser handle new-tab/new-window intents natively.
+        if (ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
+        var facet = ev.target.closest ? ev.target.closest(".facet") : null;
+        if (facet) {   // a tag chip inside the card filters instead of opening it
+          ev.preventDefault();
+          location.hash = "tag/" + facet.getAttribute("data-tag");
+          return;
+        }
+        ev.preventDefault();
+        location.hash = el.getAttribute("data-id");
+      });
       el.addEventListener("keydown", function (ev) {
-        if (ev.key === "Enter") location.hash = el.getAttribute("data-id");
+        if (ev.key === "Enter") { ev.preventDefault(); location.hash = el.getAttribute("data-id"); }
       });
     });
     kbdIndex = -1;
@@ -1454,23 +1526,68 @@
   }
 
   /* ---- routing --------------------------------------------------------- */
+  // Session ids always start with a date, so the "topic/" and "tag/" prefixes
+  // are unambiguous and are checked first. Both render the GRID (a filtered
+  // view), not the reader — which is why they return a different shape.
   function parseHash() {
     var raw = decodeURIComponent(location.hash.replace(/^#/, "")).trim();
     if (!raw) return null;
     var parts = raw.split("/");
+    if (parts[0] === "topic") return parts[1] ? { topic: parts[1] } : null;
+    if (parts[0] === "tag") return parts[1] ? { tag: parts[1] } : null;
     return { id: parts[0], pane: parts[1] || "overview" };
+  }
+
+  function slugifyCat(s) {
+    return String(s).toLowerCase().replace(/['’‘`]/g, "")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+
+  function categoryFromSlug(slug) {
+    for (var i = 0; i < categories.length; i++) {
+      if (slugifyCat(categories[i]) === slug) return categories[i];
+    }
+    return null;
   }
 
   function route() {
     var target = parseHash();
     var idxEl = $("viewIndex"), rdEl = $("viewReader");
 
+    // #topic/<slug> and #tag/<slug> are filtered GRID views — they preset the
+    // same state the pills and chips already drive, so the filtering itself is
+    // untouched; all that is new is that it now has a shareable address.
+    if (target && (target.topic || target.tag)) {
+      var cat = target.topic ? categoryFromSlug(target.topic) : null;
+      if (target.topic && !cat) {
+        location.hash = "";
+        toast("No topic " + target.topic);
+        return;
+      }
+      view = null;
+      state.cat = cat || "";
+      state.tag = target.tag || "";
+      rdEl.classList.add("hidden");
+      idxEl.classList.remove("hidden");
+      document.title = (cat || ("#" + state.tag)) + " — The AI Commit";
+      renderTopicHead(cat, state.tag);
+      renderStats();
+      renderPills();
+      renderGrid();
+      window.scrollTo(0, 0);
+      return;
+    }
+
     if (!target || !byId(target.id)) {
       view = null;
+      state.cat = "";
+      state.tag = "";
       rdEl.classList.add("hidden");
       idxEl.classList.remove("hidden");
       document.title = "The AI Commit";
+      renderTopicHead(null, "");
       renderStats();
+      renderPills();
       renderGrid();
       if (target) toast("No session " + target.id);
       return;
@@ -1505,16 +1622,23 @@
   $("q").addEventListener("input", function () { state.q = this.value; renderGrid(); });
   $("sort").addEventListener("change", function () { state.sort = this.value; renderGrid(); });
   $("fRead").addEventListener("change", function () { state.read = this.value; renderGrid(); });
+  // Routed rather than applied directly, so a filtered view is shareable and
+  // matches the real /topics/<slug>/ page. route() sets state.cat and renders.
   $("pills").addEventListener("click", function (ev) {
     var b = ev.target.closest(".pill-btn");
     if (!b) return;
-    state.cat = b.getAttribute("data-cat");
-    renderPills(); renderGrid();
+    var cat = b.getAttribute("data-cat");
+    location.hash = cat ? "topic/" + slugifyCat(cat) : "";
+    if (!location.hash) route();   // clearing to "" fires no hashchange from "#"
   });
   $("count").addEventListener("click", function (ev) {
     if (ev.target.id !== "reset") return;
-    state.q = ""; state.cat = ""; state.read = "";
+    state.q = ""; state.read = "";
     $("q").value = ""; $("fRead").value = "";
+    // cat/tag live in the hash now, so clear them by routing rather than by
+    // assignment — otherwise the URL would keep claiming a filter that is gone.
+    if (location.hash) { location.hash = ""; return; }
+    state.cat = ""; state.tag = "";
     renderPills(); renderGrid();
   });
 
@@ -1600,6 +1724,12 @@
   // load — never override it.
   (function () {
     if (location.hash) return;
+    var t = location.pathname.match(/\/topics\/([a-z0-9-]+)\/?$/);
+    if (t) {
+      history.replaceState(null, "", location.pathname);
+      location.hash = "#topic/" + t[1];
+      return;
+    }
     var m = location.pathname.match(/\/(\d{4}-\d{2}-\d{2}(?:-s\d+)?)(?:-[a-z0-9-]+)?\/?$/);
     if (!m) return;
     history.replaceState(null, "", location.pathname);
