@@ -73,6 +73,7 @@
     --surface: #1b1c22; /* solid (non-transparent) popover surface — select options, toast */
     --accent: #a78bfa;
     --accent2: #c4b5fd;
+    --publish-ink: #17102b; /* text on the filled --accent publish button — 6.74:1 */
     --good: #6fd79a;
 
     /* Reading measure. One fixed px value (not `ch`, which is font-relative and
@@ -113,6 +114,7 @@
     --surface: #ffffff;
     --accent: #7c5cd9;
     --accent2: #6845c2;
+    --publish-ink: #ffffff; /* on the darker light-mode accent — 4.78:1 */
     --good: #137a44;
     --warn: #a3690a;
     --cat-models: #3987e5;  --cat-models-tx: #1668cb;
@@ -398,10 +400,34 @@
   .btn-repl:active { transform: scale(.98); }
   .btn-repl.running { opacity: .6; cursor: wait; }
   .btn-repl:disabled { opacity: .6; cursor: default; }
-  /* Now lives in .panel-head beside "copy" — that row's own .spacer already
-     handles pushing the button group to the right, so btn-gh needs no
-     margin of its own (stacking a second auto-margin here would fight the
-     spacer's and open an ugly gap between "copy" and this button). */
+  /* Publish CTA — a full-width bar ABOVE the code columns, not a quiet chip in
+     the panel header. This one sits outside .panel, so unlike the controls
+     inside it, it does NOT inherit the always-dark override and must work in
+     both themes: --publish-ink flips so the filled violet button keeps legible
+     text either way (6.7:1 dark, 4.8:1 light, both checked). */
+  .code-cta {
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    background: linear-gradient(90deg, rgba(167,139,250,.14), rgba(167,139,250,.05));
+    border: 1px solid rgba(167,139,250,.30);
+    border-radius: 12px; padding: 16px 20px; margin: 0 0 16px;
+  }
+  .code-cta-copy { display: flex; flex-direction: column; gap: 3px; min-width: 240px; flex: 1; }
+  .code-cta-copy strong { color: var(--ink); font-size: 15.5px; font-weight: 650; }
+  .code-cta-copy span { color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+  .btn-publish {
+    display: inline-flex; align-items: center; gap: 9px; flex: none;
+    appearance: none; border: 0; cursor: pointer;
+    background: var(--accent); color: var(--publish-ink);
+    font: inherit; font-size: 14.5px; font-weight: 650;
+    padding: 11px 20px; border-radius: 9px;
+    box-shadow: 0 3px 14px rgba(167,139,250,.28);
+    transition: transform .12s ease, box-shadow .15s ease, filter .15s ease;
+  }
+  .btn-publish:hover { filter: brightness(1.07); box-shadow: 0 5px 20px rgba(167,139,250,.42); transform: translateY(-1px); }
+  .btn-publish:active { transform: translateY(0); }
+  .btn-publish:disabled { opacity: .65; cursor: default; transform: none; box-shadow: none; }
+  .btn-publish svg { flex: none; }
+  @media (prefers-reduced-motion: reduce) { .btn-publish { transition: none; } .btn-publish:hover { transform: none; } }
   .terminal-pane { height: 100%; }
   .terminal-output { padding: 15px; overflow-y: auto; height: 70vh; font-family: var(--mono); font-size: 12.4px; line-height: 1.62; white-space: pre-wrap; word-wrap: break-word; }
   .terminal-out-ok { color: #cfcabf; }
@@ -1233,15 +1259,24 @@
     captured.split("\n").forEach(function (l) { widest = Math.max(widest, l.length); });
 
     el.innerHTML =
-      '<p class="runline">Run it yourself — edit and click Run</p>' +
+      '<div class="code-cta">' +
+        '<div class="code-cta-copy">' +
+          "<strong>Run it. Tweak it. Keep it.</strong>" +
+          "<span>Runs in your browser — no API key, nothing to install. " +
+          "Save your version to your own GitHub in one click.</span>" +
+        "</div>" +
+        '<button class="btn-publish" id="publishGh" title="' +
+          (ghUser() ? "Publish as " + esc(ghUser().login) : "Sign in with GitHub, then publish") + '">' +
+          '<svg viewBox="0 0 16 16" width="17" height="17" fill="currentColor" aria-hidden="true">' +
+            '<path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>' +
+          "</svg>" +
+          "<span>Publish to GitHub</span>" +
+        "</button>" +
+      "</div>" +
       '<div class="code-cols' + (widest > 84 ? " stacked" : "") + '">' +
         '<div class="panel">' +
           '<div class="panel-head">code_example.py<span class="spacer"></span>' +
-            '<button class="mini" id="copyCode">copy</button>' +
-            '<button class="mini btn-gh" id="publishGh" title="' +
-              (ghUser() ? "Publish as " + esc(ghUser().login) : "Sign in with GitHub, then publish") + '">' +
-              "Publish to GitHub" +
-            '</button></div>' +
+            '<button class="mini" id="copyCode">copy</button></div>' +
           '<div class="code-editor">' +
             '<textarea class="editor-textarea" id="codeEditor" spellcheck="false">' + esc(sourceToShow) + '</textarea>' +
             '<div class="editor-controls">' +
@@ -1308,8 +1343,12 @@
 
     function doGhPublish() {
       ghBtn.disabled = true;
-      var original = ghBtn.textContent;
-      ghBtn.textContent = "Publishing…";
+      // Write to the label span, never the button's textContent — the button
+      // now contains an inline <svg> GitHub mark, and setting textContent
+      // would silently delete it on the first click.
+      var ghLabel = ghBtn.querySelector("span");
+      var original = ghLabel.textContent;
+      ghLabel.textContent = "Publishing…";
 
       var title = plain(p.title);
       var slug = slugify(title);
@@ -1335,13 +1374,13 @@
         "The AI Commit — " + title
       )
         .then(function (gist) {
-          ghBtn.textContent = "Published ✓";
+          ghLabel.textContent = "Published ✓";
           toast("Published to GitHub — opening your gist");
           window.open(gist.html_url, "_blank", "noopener");
-          setTimeout(function () { ghBtn.textContent = original; ghBtn.disabled = false; }, 2500);
+          setTimeout(function () { ghLabel.textContent = original; ghBtn.disabled = false; }, 2500);
         })
         .catch(function (err) {
-          ghBtn.textContent = original;
+          ghLabel.textContent = original;
           ghBtn.disabled = false;
           toast("Publish failed: " + err.message);
         });
