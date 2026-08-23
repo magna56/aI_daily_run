@@ -101,6 +101,12 @@
 - **Code**: `2026-08-22/code_example.py` — prices a 60-turn session four ways with published claude-opus-5 rates and the documented cache multipliers (read 0.1x, write 1.25x). Reproduces cache thrashing losing to no caching at all ($31.67 vs $25.34), the 5.7x cost swing from *when* a 6,000-token read lands in a 60-turn session, a length sweep where subagent offload **loses 11% at 20 turns** and breaks even between turn 30 and 40 before saving 55% at 200 (subagents re-establish their own prefix — the win is proportional to turns remaining, not free), and the compaction cliff where the next turn costs 3.1x despite context shrinking to a quarter
 - **Articles**: 6 sources (Claude Code CHANGELOG 2.1.212–2.1.239 + Anthropic context-engineering + prompt-caching docs + the MCP roadmap published the same day + Cursor's 19 Aug cloud-agents release as cross-tool check + Willison on conceptual integrity as counterweight)
 
+## 2026-08-23-s2 — Your Coding-Agent Benchmark Score Might Just Be a Bigger VM
+- **Category**: Evals & Reliability
+- **Key insight**: A coding-agent leaderboard's gap between top models can be smaller than the swing caused by how much memory their evaluation containers were allowed to use. Anthropic moved one benchmark's score by 6 points just by changing a memory limit — using the exact same model the whole time. Below a certain point, extra memory only rescues runs that were unfairly killed; only past that point does the score start reflecting real ability.
+- **Code**: `2026-08-23-s2/code_example.py` — simulates the same two-phase pattern: below a 3x memory-headroom threshold, infra failures drop but success among completed runs stays flat (overlapping confidence intervals); crossing it, success jumps for real
+- **Articles**: 5 articles collected
+
 ## 2026-08-23 — Nobody Re-Tests Their RAG Chunk Size — One Grid Search Cut It 88%
 - **Category**: Hands-on Techniques
 - **Key insight**: Most teams pick chunk size, overlap, and top-k by feel and never revisit them. AutoRAG grid-searches each pipeline stage against a scorer that needs no model call, then freezes only the winner before sweeping the next stage. A real test on a small model found a config with identical retrieval quality that sent the model 88% fewer words of context.
