@@ -159,6 +159,7 @@ RESEND_API_KEY          # from resend.com — verify theaicommit.com as the send
 NEWSLETTER_SECRET       # random bearer token; same value in Keychain
                         #   account=wrangler  service=newsletter-secret-theaicommit
 NEWSLETTER_FROM         # optional, default The AI Commit <newsletter@theaicommit.com>
+NEWSLETTER_NOTIFY       # optional, default theaicommit@gmail.com — ping on each signup
 ```
 
 Without `RESEND_API_KEY`, signups still land in D1 (marked active). GitHub Pages has

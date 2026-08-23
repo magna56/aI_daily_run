@@ -10,6 +10,10 @@ export function fromAddress(env) {
   return (env && env.NEWSLETTER_FROM) || "The AI Commit <newsletter@theaicommit.com>";
 }
 
+export function ownerInbox(env) {
+  return (env && env.NEWSLETTER_NOTIFY) || "theaicommit@gmail.com";
+}
+
 export async function sendEmail(env, { to, subject, html, text }) {
   if (!mailConfigured(env)) {
     return { ok: false, skipped: true, error: "mail_not_configured" };
@@ -62,6 +66,27 @@ export function welcomeEmail({ site, unsub }) {
       "<p>You're on the list. When the next daily lab session publishes, you'll get one email with the title and a link — that's it.</p>" +
       '<p><a href="' + site + '" style="color:#a78bfa">Read the latest session →</a></p>' +
       '<p style="color:#857f70;font-size:13px"><a href="' + url + '" style="color:#857f70">Unsubscribe</a></p>'
+    ),
+  };
+}
+
+export function ownerSignupEmail({ email, status, counts }) {
+  const n = counts || { active: 0, pending: 0, unsubscribed: 0, total: 0 };
+  const line =
+    status === "pending"
+      ? email + " signed up and still needs to confirm."
+      : email + " is on the list.";
+  const tally =
+    "Active: " + n.active +
+    "  ·  pending: " + n.pending +
+    "  ·  unsubscribed: " + n.unsubscribed +
+    "  ·  total: " + n.total;
+  return {
+    subject: "Newsletter signup (" + n.active + " active) — " + email,
+    text: line + "\n\n" + tally,
+    html: wrap(
+      "<p>" + escapeHtml(line) + "</p>" +
+      "<p style=\"color:#9a9488\">" + escapeHtml(tally) + "</p>"
     ),
   };
 }

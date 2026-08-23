@@ -155,7 +155,8 @@
   :root[data-theme="light"] .prose em { color: #26221c; }
   :root[data-theme="light"] .insight { color: #1f2937; }
   :root[data-theme="light"] .pill-btn { color: #4a453b; }
-  :root[data-theme="light"] .course-invite { background: rgba(124,92,217,.08); border-color: rgba(124,92,217,.28); }
+  :root[data-theme="light"] .course-invite,
+  :root[data-theme="light"] .nl { background: rgba(124,92,217,.08); border-color: rgba(124,92,217,.28); }
   :root[data-theme="light"] .top-nav a:hover { border-color: rgba(0,0,0,.18); }
 
   /* The code/output panels and the captured-output fallback box keep their
@@ -572,9 +573,13 @@
   footer { text-align: center; color: var(--dim); font-size: 12.5px; margin-top: 50px; line-height: 1.7; }
   footer code { font-family: var(--mono); font-size: 11.5px; background: rgba(255,255,255,.05); padding: 1px 5px; border-radius: 4px; }
 
-  .nl { margin: 48px 0 0; padding: 22px 22px 20px; border: 1px solid var(--line); background: var(--card); border-radius: 12px; text-align: left; }
-  .nl .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent2); margin: 0 0 6px; }
-  .nl .lede { margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.55; }
+  .nl {
+    max-width: 720px; margin: 0 auto 28px; padding: 18px 20px 16px;
+    border: 1px solid rgba(167,139,250,.32); border-radius: 12px;
+    background: rgba(167,139,250,.08); text-align: left;
+  }
+  .nl .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent2); margin: 0 0 4px; }
+  .nl .lede { margin: 0 0 12px; color: var(--ink); font-size: 14.5px; line-height: 1.45; }
   .nl-row { display: flex; gap: 8px; flex-wrap: wrap; }
   .nl-row input[type=email] {
     flex: 1 1 200px; min-width: 0; font: inherit; font-size: 14.5px; color: var(--ink);
@@ -591,6 +596,7 @@
   .nl-status.ok { color: var(--accent2); }
   .nl-status.err { color: #f0a0a0; }
   .nl .fine { margin: 10px 0 0; font-size: 12px; color: var(--dim); }
+  .reader .nl { max-width: var(--measure); margin: 36px auto 0; }
 
   .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); background: var(--surface); border: 1px solid var(--line); color: var(--ink); font-size: 13px; padding: 10px 16px; border-radius: 9px; box-shadow: 0 10px 30px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; z-index: 50; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -640,6 +646,17 @@
            This carries the h1 for a topic page in the JS-rendered view; the
            non-JS view gets its own h1 from the generated <noscript>. -->
       <div id="topicHead"></div>
+      <form class="nl" id="nlHome" action="https://theaicommit.com/api/subscribe" method="post">
+        <p class="k">Newsletter</p>
+        <p class="lede">One email when a new daily session ships. No digest, no ads.</p>
+        <div class="nl-row">
+          <label class="nl-hp" aria-hidden="true">Leave blank <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+          <input type="email" name="email" required placeholder="you@work.com" autocomplete="email" />
+          <button type="submit">Subscribe</button>
+        </div>
+        <p class="nl-status" hidden></p>
+        <p class="fine">Unsubscribe anytime. <a href="/privacy.html">Privacy</a></p>
+      </form>
       <div class="course-invite" id="courseInvite">
         <div>
           <p class="k">New to this?</p>
@@ -672,18 +689,6 @@
       <div class="pills" id="pills"></div>
       <div class="count" id="count"></div>
       <div class="grid" id="grid"></div>
-
-      <form class="nl" id="nlForm" action="https://theaicommit.com/api/subscribe" method="post">
-        <p class="k">Newsletter</p>
-        <p class="lede">One email when a new daily session ships. No digest, no ads. Unsubscribe anytime.</p>
-        <div class="nl-row">
-          <label class="nl-hp" aria-hidden="true">Leave blank <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
-          <input id="nlEmail" type="email" name="email" required placeholder="you@work.com" autocomplete="email" />
-          <button type="submit" id="nlBtn">Subscribe</button>
-        </div>
-        <p class="nl-status" id="nlStatus" hidden></p>
-        <p class="fine">By subscribing you agree we can email you at that address. <a href="/privacy.html">Privacy</a></p>
-      </form>
 
       <footer>
         Keys: <code>/</code> search · <code>↑↓</code> or <code>j/k</code> move · <code>Enter</code> open<br />
@@ -1674,7 +1679,7 @@
         "</div>";
     }
 
-    $("viewReader").innerHTML = head + meta + trailBar + '<div class="pane" id="pane"></div>';
+    $("viewReader").innerHTML = head + meta + trailBar + '<div class="pane" id="pane"></div>' + newsletterMarkup();
     document.title = plain(p.title) + " — The AI Commit";
     renderPane(p, pane);
 
@@ -2216,30 +2221,43 @@
   })();
 
   /* ---- newsletter ------------------------------------------------------ */
+  function newsletterMarkup() {
+    return (
+      '<form class="nl" action="https://theaicommit.com/api/subscribe" method="post">' +
+        '<p class="k">Newsletter</p>' +
+        '<p class="lede">One email when a new daily session ships. No digest, no ads.</p>' +
+        '<div class="nl-row">' +
+          '<label class="nl-hp" aria-hidden="true">Leave blank <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>' +
+          '<input type="email" name="email" required placeholder="you@work.com" autocomplete="email" />' +
+          '<button type="submit">Subscribe</button>' +
+        "</div>" +
+        '<p class="nl-status" hidden></p>' +
+        '<p class="fine">Unsubscribe anytime. <a href="/privacy.html">Privacy</a></p>' +
+      "</form>"
+    );
+  }
   (function () {
-    var form = $("nlForm");
-    if (!form) return;
-    var status = $("nlStatus");
-    var btn = $("nlBtn");
-    var emailEl = $("nlEmail");
-    // GitHub Pages and local preview have no Functions. Always post to the
-    // live host so a signup from the mirror still lands in D1.
     var endpoint = (location.hostname === "theaicommit.com" || /\.pages\.dev$/.test(location.hostname))
       ? "/api/subscribe"
       : "https://theaicommit.com/api/subscribe";
 
-    function show(kind, text) {
-      status.hidden = false;
-      status.className = "nl-status " + (kind || "");
-      status.textContent = text;
-    }
-
-    form.addEventListener("submit", function (ev) {
+    document.addEventListener("submit", function (ev) {
+      var form = ev.target;
+      if (!form || !form.classList || !form.classList.contains("nl")) return;
       ev.preventDefault();
-      var email = (emailEl.value || "").trim();
+      var emailEl = form.querySelector('input[type=email]');
+      var btn = form.querySelector("button[type=submit]");
+      var status = form.querySelector(".nl-status");
+      var email = (emailEl && emailEl.value || "").trim();
       var honey = (form.elements.website && form.elements.website.value) || "";
       if (!email) return;
-      btn.disabled = true;
+      function show(kind, text) {
+        if (!status) return;
+        status.hidden = false;
+        status.className = "nl-status " + (kind || "");
+        status.textContent = text;
+      }
+      if (btn) btn.disabled = true;
       show("", "Sending…");
       fetch(endpoint, {
         method: "POST",
@@ -2259,7 +2277,7 @@
         .catch(function () {
           show("err", "Couldn't reach the signup. Try again from theaicommit.com, or email theaicommit@gmail.com.");
         })
-        .then(function () { btn.disabled = false; });
+        .then(function () { if (btn) btn.disabled = false; });
     });
   })();
 

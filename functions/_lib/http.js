@@ -97,3 +97,15 @@ export function isEmail(s) {
 export function newToken() {
   return crypto.randomUUID();
 }
+
+export async function subscriberCounts(db) {
+  const rows = await db.prepare(
+    "SELECT status, COUNT(*) AS n FROM subscribers GROUP BY status"
+  ).all();
+  const counts = { active: 0, pending: 0, unsubscribed: 0 };
+  for (const r of (rows && rows.results) || []) {
+    if (r.status in counts) counts[r.status] = Number(r.n) || 0;
+  }
+  counts.total = counts.active + counts.pending + counts.unsubscribed;
+  return counts;
+}

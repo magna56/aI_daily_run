@@ -3,8 +3,8 @@
 // pending until they hit /api/confirm; otherwise they go active immediately
 // so a missing API key never silently drops a signup.
 
-import { json, options, isEmail, newToken, nowIso, siteUrl } from "../_lib/http.js";
-import { mailConfigured, sendEmail, confirmEmail } from "../_lib/mail.js";
+import { json, options, isEmail, newToken, nowIso, siteUrl, subscriberCounts } from "../_lib/http.js";
+import { mailConfigured, sendEmail, confirmEmail, ownerInbox, ownerSignupEmail } from "../_lib/mail.js";
 
 export async function onRequestOptions(context) {
   return options(context.request);
@@ -59,8 +59,17 @@ export async function onRequestPost(context) {
     if (!sent.ok && !sent.skipped) {
       return json(request, { error: "mail_failed" }, 502);
     }
+    await notifyOwner(env, email, status);
     return json(request, { ok: true, message: "Check your email to confirm." });
   }
 
+  await notifyOwner(env, email, status);
   return json(request, { ok: true, message: "You're on the list. We'll email when a new daily session ships." });
+}
+
+async function notifyOwner(env, email, status) {
+  if (!mailConfigured(env)) return;
+  const counts = await subscriberCounts(env.DB);
+  const mail = ownerSignupEmail({ email, status, counts });
+  await sendEmail(env, { to: ownerInbox(env), ...mail });
 }

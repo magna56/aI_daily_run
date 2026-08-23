@@ -102,7 +102,9 @@ is Cloudflare Pages' native SPA-fallback. GitHub Pages ignores this file; it use
 **D1 + newsletter.** `wrangler.jsonc` binds D1 database `theaicommit`
 (`fa0d5d4b-8907-420f-956f-8fbbd8a854f2`) as `DB`. Schema is `db/schema.sql`
 (`subscribers`, `issues`). Pages Functions: `POST /api/subscribe`, `GET /api/confirm`,
-`GET /api/unsubscribe`, `POST /api/newsletter` (Bearer `NEWSLETTER_SECRET`). Mail goes
+`GET /api/unsubscribe`, `POST /api/newsletter` and `GET /api/stats` (Bearer
+`NEWSLETTER_SECRET`). A signup also emails `NEWSLETTER_NOTIFY` (default
+`theaicommit@gmail.com`) with the address and running counts. Mail goes
 through Resend (`RESEND_API_KEY`, optional `NEWSLETTER_FROM` / `PUBLIC_URL`). Without
 the Resend key, signups are still stored and marked active so an unset secret never
 drops an address. Same D1 is the place for later signup-adjacent features (comments,
