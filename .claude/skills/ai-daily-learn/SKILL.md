@@ -205,6 +205,10 @@ Write `~/ai_learning/YYYY-MM-DD/topic.md`:
 ## Explain Like I'm 5
 [3-5 sentences. ONE everyday analogy, zero jargon, no acronyms at all.]
 
+## The Problem
+[2-4 sentences. What was broken, wasteful, or unsolved before this — the actual pain that
+made someone go build it. See the rules below.]
+
 ## For a Software Engineer
 [3-5 short paragraphs or bullets. The bridge section — see the rules below.]
 
@@ -257,8 +261,9 @@ conference programme.
 **The reader.** A working software engineer who is *learning* AI and intends to apply it
 practically. Assume fluency in general software engineering — caching, padding, schedulers,
 quantization, compilers, batching, indexes, back-pressure. Do **not** assume fluency in AI
-internals, and do not assume they can decode an acronym from context. The three framing
-sections exist because the deep sections alone lose this reader.
+internals, and do not assume they can decode an acronym from context. The framing sections
+(Problem, For a Software Engineer, What This Means for You) exist because the deep sections
+alone lose this reader.
 
 **`## Explain Like I'm 5`** — leads the document deliberately, because a reader who bounces off
 paragraph one never reaches the good part.
@@ -266,6 +271,18 @@ paragraph one never reaches the good part.
 - Zero jargon and zero acronyms. If a term is unavoidable, you picked the wrong analogy.
 - 3-5 sentences. Land the *shape* of the problem, not the mechanism.
 - It must still be **true** — a simplification, never a fiction you walk back later.
+
+**`## The Problem`** — names the actual pain before the reader is shown the fix for it. A
+solution without its problem reads as cleverness for its own sake; this is what keeps a deep
+topic from feeling like showing off.
+- Name what was broken, wasteful, slow, expensive, or simply unsolved — concretely, with a
+  number if the source has one ("teams were losing 40% of their context window to padding").
+  Who had this problem, and what were they doing about it before (usually: something manual,
+  wasteful, or nothing).
+- This is the pain the paper/release exists to fix — not a restatement of the ELI5 analogy.
+  If you can't state the problem in plain terms, you don't understand the topic well enough
+  to write the rest of the session yet — go back to Step 3.
+- 2-4 sentences. This section motivates; `## What It Is` explains.
 
 **`## For a Software Engineer`** — the load-bearing section. Explain the topic using **generic
 engineering principles the reader already owns**, not AI ones.
