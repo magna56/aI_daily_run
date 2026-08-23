@@ -791,10 +791,11 @@
       });
   }
 
-  // Create a public repo under the signed-in user, then land an initial commit
-  // with every file in `files` ({ path: content }) via the Git Data API — one
-  // commit containing README.md + the Python file, rather than N Contents-API
-  // round trips. Returns the repo JSON (html_url is what we open).
+  // Create a public repo under the signed-in user, then write each file via
+  // the Contents API. The Git Data API (blobs/trees/commits) returns
+  // "Not Found" on a brand-new empty repo — it needs at least one commit
+  // first. Contents PUT works on empty repos and creates `main` for us.
+  // Returns the repo JSON (html_url is what we open).
   function ghApi(path, opts) {
     opts = opts || {};
     var headers = Object.assign({
@@ -810,9 +811,12 @@
             var msg = (body && body.message) || ("HTTP " + r.status);
             // Old gist-scoped tokens (or revoked ones) can't create repos —
             // signal the UI to forget them and re-auth with public_repo.
-            if (r.status === 401 || r.status === 403) {
-              var err = new Error("NEED_REAUTH:" + msg);
-              throw err;
+            // GitHub also sometimes answers 404 instead of 403 for missing
+            // scopes on /user/repos, so treat that the same when the body
+            // is the classic "Not Found".
+            if (r.status === 401 || r.status === 403 ||
+                (r.status === 404 && /not found/i.test(msg) && path === "/user/repos")) {
+              throw new Error("NEED_REAUTH:" + msg);
             }
             throw new Error(msg);
           }
@@ -824,6 +828,11 @@
       });
   }
 
+  function b64utf8(str) {
+    // btoa alone breaks on non-Latin1 (em-dashes, emoji in titles/output).
+    return btoa(unescape(encodeURIComponent(String(str))));
+  }
+
   function ghRepoName(sessionId, title) {
     var raw = ("ai-commit-" + sessionId + "-" + slugify(title))
       .toLowerCase()
@@ -833,67 +842,63 @@
     return (raw || ("ai-commit-" + sessionId)).slice(0, 100).replace(/[._-]+$/, "");
   }
 
-  function ghPublishRepo(repoName, description, files) {
-    return ghApi("/user/repos", {
-      method: "POST",
+  function ghPutFile(owner, repo, path, content, message) {
+    return ghApi("/repos/" + owner + "/" + repo + "/contents/" + path.split("/").map(encodeURIComponent).join("/"), {
+      method: "PUT",
       body: JSON.stringify({
-        name: repoName,
-        description: String(description || "").slice(0, 350),
-        private: false,
-        auto_init: false,
-        has_issues: false,
-        has_projects: false,
-        has_wiki: false,
+        message: message,
+        content: b64utf8(content),
       }),
-    }).catch(function (err) {
+    });
+  }
+
+  function ghPublishRepo(repoName, description, files) {
+    function create(name) {
+      return ghApi("/user/repos", {
+        method: "POST",
+        body: JSON.stringify({
+          name: name,
+          description: String(description || "").slice(0, 350),
+          private: false,
+          auto_init: false,
+          has_issues: false,
+          has_projects: false,
+          has_wiki: false,
+        }),
+      });
+    }
+
+    return create(repoName).catch(function (err) {
       // Name taken → retry once with a short unique suffix.
       if (/already exists|name already exists/i.test(err.message || "")) {
         var suffix = "-" + Date.now().toString(36).slice(-5);
         var alt = (repoName.slice(0, 100 - suffix.length) + suffix).replace(/[._-]+$/, "");
-        return ghApi("/user/repos", {
-          method: "POST",
-          body: JSON.stringify({
-            name: alt,
-            description: String(description || "").slice(0, 350),
-            private: false,
-            auto_init: false,
-            has_issues: false,
-            has_projects: false,
-            has_wiki: false,
-          }),
-        });
+        return create(alt);
       }
       throw err;
     }).then(function (repo) {
       var owner = repo.owner.login;
       var name = repo.name;
+      // README first so the repo homepage isn't an empty code file; then the
+      // script. Sequential so the second commit has a parent on `main`.
       var paths = Object.keys(files);
-      return Promise.all(paths.map(function (path) {
-        return ghApi("/repos/" + owner + "/" + name + "/git/blobs", {
-          method: "POST",
-          body: JSON.stringify({ content: files[path], encoding: "utf-8" }),
-        }).then(function (blob) {
-          return { path: path, mode: "100644", type: "blob", sha: blob.sha };
-        });
-      })).then(function (treeItems) {
-        return ghApi("/repos/" + owner + "/" + name + "/git/trees", {
-          method: "POST",
-          body: JSON.stringify({ tree: treeItems }),
-        });
-      }).then(function (tree) {
-        return ghApi("/repos/" + owner + "/" + name + "/git/commits", {
-          method: "POST",
-          body: JSON.stringify({
-            message: "Initial commit — code, README, and run output",
-            tree: tree.sha,
-          }),
-        });
-      }).then(function (commit) {
-        return ghApi("/repos/" + owner + "/" + name + "/git/refs", {
-          method: "POST",
-          body: JSON.stringify({ ref: "refs/heads/main", sha: commit.sha }),
-        }).then(function () { return repo; });
+      paths.sort(function (a, b) {
+        if (a === "README.md") return -1;
+        if (b === "README.md") return 1;
+        return a.localeCompare(b);
       });
+      var chain = Promise.resolve();
+      paths.forEach(function (path, i) {
+        chain = chain.then(function () {
+          return ghPutFile(
+            owner, name, path, files[path],
+            i === 0
+              ? "Initial commit — code, README, and run output"
+              : "Add " + path
+          );
+        });
+      });
+      return chain.then(function () { return repo; });
     });
   }
 
