@@ -28,7 +28,7 @@ check: ## Lint every session without writing anything (use in review/CI)
 
 site: build ## Assemble the publishable site/ folder
 	mkdir -p $(OUTPUT_DIR)
-	cp index.html 404.html about.html privacy.html terms.html manifest.json $(OUTPUT_DIR)/
+	cp index.html 404.html about.html privacy.html terms.html manifest.json robots.txt sitemap.xml $(OUTPUT_DIR)/
 	cp favicon.svg favicon-16.png favicon-32.png apple-touch-icon.png icon-192.png icon-512.png og-image.png $(OUTPUT_DIR)/
 	touch $(OUTPUT_DIR)/.nojekyll
 	echo "/*  /index.html  200" > $(OUTPUT_DIR)/_redirects

@@ -70,7 +70,10 @@ If the user provided a topic argument, use that. Otherwise:
    - `https://simonwillison.net/` — AI engineering blog (practical, tools-focused)
    - `https://www.latent.space/` — AI engineering podcast/blog
    - `https://huggingface.co/blog` — new models, tools, techniques
-   - `https://openai.com/blog` or `https://www.anthropic.com/research` — model provider updates
+   - `https://www.deeplearning.ai/the-batch/` — Andrew Ng's weekly roundup; strong for
+     research-to-practice framing and catching developments the harness-focused sources miss
+   - `https://openai.com/blog`, `https://www.anthropic.com/research`, or `https://x.ai/blog` —
+     model provider updates
    - For **Coding Agents & Productivity** specifically, these are the load-bearing ones:
      - `https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md` — the canonical
        Claude Code changelog (the docs.claude.com release-notes URL 301s here)
@@ -305,6 +308,9 @@ Write `~/ai_learning/YYYY-MM-DD/articles.md` with 3-5 curated articles from WebS
 ```
 
 Prioritize: primary source, best technical explanation, practical tutorial, industry analysis.
+`deeplearning.ai/the-batch` is a good candidate for the industry-analysis slot when it has
+covered the topic — it tends to connect a development to the broader research trend rather
+than just reporting the release.
 
 ### Step 9: Update the Journal
 
