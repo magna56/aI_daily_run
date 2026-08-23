@@ -28,7 +28,7 @@ check: ## Lint every session without writing anything (use in review/CI)
 
 site: build ## Assemble the publishable site/ folder
 	mkdir -p $(OUTPUT_DIR)
-	cp index.html 404.html privacy.html terms.html $(OUTPUT_DIR)/
+	cp index.html 404.html about.html privacy.html terms.html $(OUTPUT_DIR)/
 	touch $(OUTPUT_DIR)/.nojekyll
 	echo "/*  /index.html  200" > $(OUTPUT_DIR)/_redirects
 	@echo "==> Built $(OUTPUT_DIR)/"
