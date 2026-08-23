@@ -1,4 +1,4 @@
-# AutoRAG: Treating a RAG Pipeline Like a Hyperparameter Search, Not a Guess
+# Nobody Re-Tests Their RAG Chunk Size — One Grid Search Cut It 88%
 
 **Category**: Hands-on Techniques
 **Date**: 2026-08-23
@@ -11,6 +11,13 @@ forever, so instead you fix everything else, try several amounts of ingredient o
 tasted best, and only then move on to adjusting ingredient two around that winner. You never taste
 the full cross product of every combination — you taste your way there one ingredient at a time,
 carrying the best choice forward.
+
+## The Problem
+`chunk_size`, `overlap`, and `top_k` almost always get set once, early, by feel — and then nobody
+touches them again, because checking whether a different value actually helps means re-running the
+pipeline and having a human (or an expensive LLM judge) grade the outputs. That cost makes tuning
+feel optional, so teams ship a guess and never learn how much of their context budget it's wasting.
+The Red Hat demo found the guess was costing 88% of the context for zero retrieval benefit.
 
 ## For a Software Engineer
 This is a hyperparameter search problem, the same shape as tuning a JVM's GC flags or a database's
@@ -30,6 +37,22 @@ model **88% fewer context words** (1,367 → 165). The naive setting wasn't retr
 text — it was retrieving the same relevant text buried in far more padding. Monday-morning action:
 if you've never grid-swept `chunk_size` / `overlap` / `top_k` against a labeled eval set, you don't
 know whether your RAG pipeline's cost is buying you anything.
+
+## What This Means for You
+**When this matters**: you set `chunk_size`, `overlap`, or `top_k` once — during the demo, before
+you had real usage data — and haven't touched them since, or you're paying to send more context per
+query than a smaller retriever config would need.
+
+**How it affects you**: every extra word in a retrieved chunk is a word the model has to read, pay
+for, and potentially get distracted by. If your defaults are padding rather than signal, you're
+paying inference cost and eating context budget for no accuracy gain — and you have no way to know
+that without measuring it.
+
+**What to do about it**: build a 20-100 question labeled eval set for your own documents (question
++ which chunk should answer it), then grid-sweep `chunk_size`/`overlap`/`top_k` scored by
+`context_recall` and `MRR` alone — no LLM judge, no generation calls needed. If your current
+settings already sit near the Pareto frontier, you've confirmed the cost is earned; if not, you've
+found free savings.
 
 ## What It Is
 AutoRAG (Marker-Inc-Korea, arXiv:2410.20878) is an open-source framework that treats a
