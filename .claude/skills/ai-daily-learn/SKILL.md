@@ -3,13 +3,14 @@ name: ai-daily-learn
 description: >
   Daily 30-minute AI learning session for software engineers learning AI — from people who
   have used Claude or Cursor, to people who have shipped a small agent, to readers further
-  ahead. Searches latest AI news/research, picks a focused topic, and produces four companion
-  artifacts: an interactive visualizer, an Excalidraw diagram, a runnable
-  pure-Python code example, and curated articles with summaries.
+  ahead. Searches latest AI news/research, picks a focused topic, and produces five
+  artifacts: an interactive visualizer (required), an Excalidraw diagram, a runnable
+  pure-Python code example, and curated articles with summaries — the same five files
+  the reader shows as Overview / Visualize / Diagram / Code / Articles.
   Saves everything locally to
-  ~/ai_learning/YYYY-MM-DD/ and nowhere else — nothing is pushed anywhere. Use the sibling skill
-  ai-daily-learn-publish to also publish the session to GitHub. Tracks covered topics to avoid
-  repetition. Use when: "daily learn", "ai-daily-learn",
+    ~/ai_learning/YYYY-MM-DD/ and nowhere else — nothing is pushed anywhere. Use the sibling skill
+    ai-daily-learn-publish to also publish the session to GitHub. Tracks covered topics to avoid
+    repetition. Use when: "daily learn", "ai-daily-learn",
   "learn AI today", "what's new in AI", "AI learning session", "daily AI update", "teach me
   something about AI". Accepts optional topic argument: /ai-daily-learn "vision transformers".
 argument-hint: "[optional-topic]"
@@ -53,11 +54,16 @@ the math behind Z".
 - **Do not write today's session into `learn/`.** That tree is the evergreen
   two-day track (`#learn`). Daily sessions cite those chapters instead of
   re-teaching the whole on-ramp. Never pick a Learn slug as "today's article."
-- **Artifacts**: 5 files per session (topic.md, visualize.html, diagram.excalidraw,
-  code_example.py, articles.md)
+- **Artifacts**: all 5 files, every session — `topic.md`, `visualize.html` (required,
+  not a nice-to-have), `diagram.excalidraw`, `code_example.py`, `articles.md`. Read
+  [contract.md](contract.md) before writing. A folder that is only a write-up is not done.
+- **Visualizer**: read [visualize.md](visualize.md) and match the newest existing
+  `visualize.html` in this repo. The Visualize tab is empty without this file.
 - **Journal**: `~/ai_learning/journal.md` tracks all sessions
 - **Code**: Pure Python only — no API keys, no external services. Self-contained demos.
 - **Excalidraw**: Open at excalidraw.com (drag & drop)
+- **Cursor twin**: `.cursor/skills/ai-daily-learn/SKILL.md` runs this same spec from Cursor.
+  Edit this file (and visualize.md / contract.md) when the format changes.
 - **Scope**: local only. This skill writes to disk and stops — it does not commit, push, or
   publish anything. To publish as well, use `/ai-daily-learn-publish`, which runs this exact
   workflow and then pushes the session to GitHub.
@@ -469,13 +475,16 @@ If the script fails, generate the Excalidraw JSON directly using this element fo
 - Arrow: `{"id":"a1","type":"arrow","points":[[0,0],[100,0]],"startBinding":{"elementId":"r1"},"endBinding":{"elementId":"r2"},"endArrowhead":"arrow",...}`
 - Wrapper: `{"type":"excalidraw","version":2,"source":"https://excalidraw.com","elements":[...],"appState":{"viewBackgroundColor":"#ffffff"},"files":{}}`
 
-### Step 8: Generate visualize.html
+### Step 8: Generate visualize.html (required)
 
-Write `~/ai_learning/YYYY-MM-DD/visualize.html`: a custom interactive model of the article's
-central mechanism. This is not a decorated summary and not a copy of the Excalidraw diagram. The
-reader should be able to change one or two meaningful inputs and watch the article's claim emerge.
-Pull constants and headline results from `topic.md` and `code_example.py`; never invent data merely
-to make the interaction dramatic.
+**Do not skip this step.** A session without `visualize.html` has no Visualize tab.
+
+Read [visualize.md](visualize.md) and open the newest existing `visualize.html` in this repo
+before writing. Then write `~/ai_learning/YYYY-MM-DD/visualize.html`: a custom interactive
+model of the article's central mechanism. This is not a decorated summary and not a copy of
+the Excalidraw diagram. The reader should be able to change one or two meaningful inputs and
+watch the article's claim emerge. Pull constants and headline results from `topic.md` and
+`code_example.py`; never invent data merely to make the interaction dramatic.
 
 Use the interaction shape that fits the mechanism:
 - **Pipeline/budget** — sliders or toggles change flow, token use, latency, cost, or failure rate.
@@ -578,7 +587,20 @@ single most daunting thing on the page.
 - Test: could someone who has never opened the session read this and want to? If it instead reads
   like the conclusion of a paper they haven't read, cut it down.
 
-### Step 11: Present the Summary
+### Step 11: Validate today's folder
+
+From the repo root:
+
+```bash
+node build.js --check
+```
+
+Fix every warning that names today's id — missing `visualize.html`, missing viewport /
+`data-visualizer` / `adl-visualize-height`, external `fetch`/`<script src>`, invalid JS,
+unknown Category / Level / For / tag, no Hook, unrenderable diagram. Do not present the
+summary until today's id is clean.
+
+### Step 12: Present the Summary
 
 `~/ai_learning/` contains a reader that renders these five files as one page —
 interactive visualizer sandboxed and lazy-loaded, diagram pre-rendered to SVG, and code shown
@@ -610,6 +632,7 @@ Files created:
   ~/ai_learning/YYYY-MM-DD/articles.md        — pick one to deep-dive (~5 min)
 
 Saved locally only. To publish this session, run: /ai-daily-learn-publish
+  (Cursor: use the ai-daily-learn-publish skill)
 ```
 
 Keep the three `What you'll learn` bullets readable by someone who has not read the write-up

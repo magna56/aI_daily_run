@@ -21,15 +21,23 @@ the session workflow, so the two skills can never drift apart.
 
 ## Step A: Run the full session
 
-Execute the entire `ai-daily-learn` workflow, Steps 1 through 11, exactly as written:
+Execute the entire `ai-daily-learn` workflow, Steps 1 through 12, exactly as written:
 
 ```
 Skill(skill="tp-mcp-config:ai-daily-learn", args="<the topic argument, if the user gave one>")
 ```
 
-If the Skill tool is unavailable, read
-`~/.claude/plugins/tp-mcp-config/skills/ai-daily-learn/SKILL.md`
-(or `~/tp_claude/plugins/tp-mcp-config/skills/ai-daily-learn/SKILL.md`) and follow it directly.
+If the Skill tool is unavailable, read this checkout first:
+
+```
+./.claude/skills/ai-daily-learn/SKILL.md
+./.claude/skills/ai-daily-learn/visualize.md
+./.claude/skills/ai-daily-learn/contract.md
+```
+
+Fall back to `~/.claude/plugins/tp-mcp-config/skills/ai-daily-learn/SKILL.md` or
+`~/tp_claude/plugins/tp-mcp-config/skills/ai-daily-learn/SKILL.md` only if those
+are missing. Do not publish a session that lacks `visualize.html`.
 
 Note the exact session directory name it produced — `YYYY-MM-DD`, or `YYYY-MM-DD-s2` for a second
 session on the same day. Step B needs it.
@@ -82,7 +90,7 @@ git push origin HEAD:main
 
 ## Step C: Report
 
-Use the same summary block as `ai-daily-learn` Step 10, but replace its "Read it" block and
+Use the same summary block as `ai-daily-learn` Step 12, but replace its "Read it" block and
 closing line with the published deep link — that URL opens the rendered session directly and is
 the thing worth sharing:
 
