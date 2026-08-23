@@ -18,10 +18,11 @@ The format spec lives next to it so the two tools cannot drift.
 ## Read these first (mandatory)
 
 1. [SKILL.md](../../../.claude/skills/ai-daily-learn/SKILL.md) — topic pick, write-up, journal
-2. [visualize.md](../../../.claude/skills/ai-daily-learn/visualize.md) — Visualize pane (required)
-3. [contract.md](../../../.claude/skills/ai-daily-learn/contract.md) — five files + check
+2. [selection.md](../../../.claude/skills/ai-daily-learn/selection.md) — audience, sources, how to pick
+3. [visualize.md](../../../.claude/skills/ai-daily-learn/visualize.md) — Visualize pane (required)
+4. [contract.md](../../../.claude/skills/ai-daily-learn/contract.md) — five files + check
 
-Then execute that workflow, Steps 1–11, in this workspace (`/Users/mayuragnani/ai_learning`
+Then execute that workflow, Steps 1–12, in this workspace (`/Users/mayuragnani/ai_learning`
 or `$HOME/ai_learning`).
 
 ## Cursor notes

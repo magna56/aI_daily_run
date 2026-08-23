@@ -87,6 +87,10 @@ Note which categories and topics have been covered.
 
 ### Step 2: Select Today's Topic
 
+Read [selection.md](selection.md) before picking. Shortlist **three** candidates, score them
+on the audience gates (Monday action, mechanism, 30 minutes, primary source, not a repeat),
+and name the two losers in the final summary. Do not grab the first interesting link.
+
 If the user provided a topic argument, use that. Otherwise:
 
 1. Determine which **category** is due next — **by tier weight, not flat rotation** (see

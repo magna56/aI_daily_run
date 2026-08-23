@@ -31,6 +31,7 @@ If the Skill tool is unavailable, read this checkout first:
 
 ```
 ./.claude/skills/ai-daily-learn/SKILL.md
+./.claude/skills/ai-daily-learn/selection.md
 ./.claude/skills/ai-daily-learn/visualize.md
 ./.claude/skills/ai-daily-learn/contract.md
 ```
