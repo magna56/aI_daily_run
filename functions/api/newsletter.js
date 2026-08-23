@@ -53,7 +53,7 @@ export async function onRequestPost(context) {
   let failed = 0;
   if (mailConfigured(env)) {
     for (const row of list) {
-      const mail = issueEmail({ site, title, hook, url, unsub: row.unsub_token });
+      const mail = issueEmail({ site, title, hook, url, unsub: row.unsub_token, sessionId });
       const result = await sendEmail(env, { to: row.email, ...mail });
       if (result.ok) sent += 1;
       else failed += 1;
