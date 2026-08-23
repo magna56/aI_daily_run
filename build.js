@@ -390,6 +390,52 @@ function stripMd(s) {
     .replace(/\[([^\]]+)\]\([^)\s]*\)/g, "$1");
 }
 
+// Converts a topic.md body (## headings, prose paragraphs, "- " bullets — see
+// parseTopic) into plain semantic HTML for the ARTICLE_NOSCRIPT crawler
+// fallback. Not a general Markdown renderer: just enough structure (headings,
+// paragraphs, lists) for a non-JS crawler to read real content instead of an
+// empty shell. Wrapped continuation lines (both prose and multi-line bullets)
+// join onto the block they continue, matching how topic.md is actually wrapped.
+function mdToHtml(body) {
+  const lines = String(body || "").split("\n");
+  let html = "";
+  let para = [];
+  let list = [];
+  const flushPara = () => {
+    if (para.length) html += `<p>${escAttr(stripMd(para.join(" ")))}</p>\n`;
+    para = [];
+  };
+  const flushList = () => {
+    if (list.length) html += `<ul>${list.map((li) => `<li>${escAttr(stripMd(li))}</li>`).join("")}</ul>\n`;
+    list = [];
+  };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { flushPara(); flushList(); continue; }
+    const h = line.match(/^(#{2,3})\s+(.*)$/);
+    if (h) {
+      flushPara(); flushList();
+      const tag = h[1].length === 2 ? "h2" : "h3";
+      html += `<${tag}>${escAttr(stripMd(h[2]))}</${tag}>\n`;
+      continue;
+    }
+    const li = line.match(/^[-*]\s+(.*)$/);
+    if (li) {
+      flushPara();
+      list.push(li[1]);
+      continue;
+    }
+    if (list.length) {
+      list[list.length - 1] += " " + line;   // wrapped continuation of a bullet
+      continue;
+    }
+    para.push(line);
+  }
+  flushPara();
+  flushList();
+  return html;
+}
+
 function truncateWords(s, max) {
   s = s.trim();
   if (s.length <= max) return s;
@@ -431,7 +477,13 @@ function makeShellTemplate() {
   // everything after OG (the rest of <head> plus the entire <body>).
   const head = metaMark.before;
   const middle = ogMark.before;
-  const tail = ogMark.after;
+  const NOSCRIPT_MARK = "<!-- ARTICLE_NOSCRIPT -->";
+  const noscriptIdx = ogMark.after.indexOf(NOSCRIPT_MARK);
+  if (noscriptIdx === -1) {
+    throw new Error(`index.html is missing ${NOSCRIPT_MARK} — per-session page generation depends on it.`);
+  }
+  const tailBefore = ogMark.after.slice(0, noscriptIdx);
+  const tailAfter = ogMark.after.slice(noscriptIdx + NOSCRIPT_MARK.length);
 
   return function render(payload) {
     const url = `${SITE_ORIGIN}/${payload.id}/`;
@@ -480,7 +532,15 @@ function makeShellTemplate() {
       `<script type="application/ld+json">\n${jsonLd}\n</script>\n` +
       `<!-- OG:END -->`;
 
-    return head + meta + middle + og + tail;
+    const noscript =
+      `<noscript>\n` +
+      `<article>\n` +
+      `<h1>${escAttr(title)}</h1>\n` +
+      mdToHtml(payload.topic) +
+      `</article>\n` +
+      `</noscript>`;
+
+    return head + meta + middle + og + tailBefore + noscript + tailAfter;
   };
 }
 

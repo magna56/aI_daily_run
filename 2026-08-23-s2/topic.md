@@ -101,8 +101,8 @@ task-dependent rather than flat.
   container's memory ceiling, not by which model is more capable.
 - **The effect scales with how memory-hungry the benchmark's tasks are.** A parallel check on 227
   SWE-bench problems (10 samples each, up to 5x baseline RAM) found a real but much smaller
-  1.54-point lift — SWE-bench's typical task just doesn't touch memory as heavily as Terminal-
-  Bench's.
+  1.54-point lift — SWE-bench's typical task just doesn't touch memory as heavily as
+  Terminal-Bench's.
 - **Anthropic's own recommendation**: publish both memory numbers per task, not one pinned value;
   calibrate the headroom band so scores at the floor and ceiling of resource allocation land within
   noise of each other; and treat any public leaderboard gap under 3 points with active skepticism

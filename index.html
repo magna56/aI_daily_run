@@ -485,7 +485,13 @@
 </style>
 </head>
 <body>
-
+<!-- build.js replaces the bare ARTICLE_NOSCRIPT marker below (exact string
+     search, same as META:START above) with a <noscript> snapshot of the
+     session's article body on site/<id>/index.html, so crawlers that don't
+     execute JS still see real content instead of just this shell's meta
+     tags. Root index.html has no single session, so it keeps the marker
+     as-is here — an inert comment. -->
+<!-- ARTICLE_NOSCRIPT -->
   <button id="themeToggle" class="theme-toggle" aria-label="Switch to light theme" title="Switch theme">
     <svg class="i-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg class="i-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
