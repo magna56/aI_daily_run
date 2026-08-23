@@ -60,7 +60,7 @@ export function welcomeEmail({ site, unsub }) {
       "You're subscribed. One email when a new daily session ships.\n\nUnsubscribe anytime: " + url,
     html: wrap(
       "<p>You're on the list. When the next daily lab session publishes, you'll get one email with the title and a link — that's it.</p>" +
-      '<p><a href="' + site + '" style="color:#a78bfa">Read today's session →</a></p>' +
+      '<p><a href="' + site + '" style="color:#a78bfa">Read the latest session →</a></p>' +
       '<p style="color:#857f70;font-size:13px"><a href="' + url + '" style="color:#857f70">Unsubscribe</a></p>'
     ),
   };
