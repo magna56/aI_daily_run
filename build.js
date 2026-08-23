@@ -104,6 +104,22 @@ const CATEGORY_BLURBS = {
 const LEVELS = ["Start here", "Building", "Deeper"];
 const JOBS = ["Using tools", "Building agents", "Shipping AI", "How models work"];
 
+// Evergreen two-day track. Folders live under learn/<id>/; ids are the slugs
+// used in #learn/<id> and site/data/<id>.json. Order is the reading order.
+const LEARN_TRACK = [
+  "what-an-llm-does",
+  "tokens-and-sampling",
+  "prompting-that-holds-up",
+  "coding-agents-101",
+  "skills",
+  "retrieval",
+  "context-and-harness",
+  "the-agent-loop",
+  "reasoning-models",
+  "how-the-forward-pass-runs",
+  "the-coding-agent-harness",
+];
+
 // Cross-cutting facets, deliberately NOT a restatement of CATEGORIES: a session
 // has exactly one category (what it is about) and several tags (what it touches).
 // A controlled list is the whole point — free-form tags drift into
@@ -308,7 +324,8 @@ function rmrf(p) { fs.rmSync(p, { recursive: true, force: true }); }
 /* ---- per-session compile --------------------------------------------------- */
 
 function compile(id, journal, runner, opts) {
-  const dir = path.join(ROOT, id);
+  const dir = opts.dir || path.join(ROOT, id);
+  const kind = opts.kind || "daily";
   const topicRaw = readIfExists(path.join(dir, "topic.md"));
   if (!topicRaw) {
     warn(`${id}: no topic.md — skipping this folder.`);
@@ -335,7 +352,7 @@ function compile(id, journal, runner, opts) {
     if (!TAGS.includes(t)) warn(`${id}: tag "${t}" is not in the TAGS vocabulary in build.js.`);
   }
 
-  const date = topic.meta.Date || id.slice(0, 10);
+  const date = topic.meta.Date || (SESSION_RE.test(id) ? id.slice(0, 10) : "");
   const level = topic.meta.Level || "";
   const job = topic.meta.For || "";
   const hook = topic.meta.Hook || "";
@@ -463,7 +480,7 @@ function compile(id, journal, runner, opts) {
     date,
     meta: topic.meta,
     source,
-    insight: j["Key insight"] || "",
+    insight: j["Key insight"] || (kind === "learn" ? hook : ""),
     hook,
     level,
     job,
@@ -473,11 +490,13 @@ function compile(id, journal, runner, opts) {
     code,
     articles,
     images: images.sort(),
-    repo: `${REPO_BLOB}/${id}`,
+    kind,
+    repo: kind === "learn" ? `${REPO_BLOB}/learn/${id}` : `${REPO_BLOB}/${id}`,
   };
 
   const card = {
     id,
+    kind,
     // The canonical per-post path, so the grid can render a REAL href instead
     // of a hash-only click handler. Computed here (not inside the shell
     // renderer) precisely so it reaches data/index.js and the cards.
@@ -878,6 +897,12 @@ function main() {
     process.exit(1);
   }
 
+  const learnRoot = path.join(ROOT, "learn");
+  for (const slug of LEARN_TRACK) {
+    const topicPath = path.join(learnRoot, slug, "topic.md");
+    if (!fs.existsSync(topicPath)) warn(`learn/${slug}: missing topic.md — slot will be absent from the track.`);
+  }
+
   const journal = parseJournal(readIfExists(JOURNAL));
   for (const id of ids) if (!journal.has(id)) warn(`${id}: no journal.md entry — the card will fall back to the topic body.`);
 
@@ -894,22 +919,32 @@ function main() {
   // else gated on !check.
   const renderShell = check ? null : makeShellTemplate();
 
-  for (const id of ids) {
-    const out = compile(id, journal, runner, { check });
-    if (!out) continue;
+  function writeSession(out) {
     cards.push(out.card);
     if (!check) {
-      fs.writeFileSync(path.join(DATA_DIR, id + ".json"), JSON.stringify(out.payload));
+      fs.writeFileSync(path.join(DATA_DIR, out.card.id + ".json"), JSON.stringify(out.payload));
       const html = renderShell(sessionPageSpec(out.payload, out.card));
       // The bare <id>/ page keeps already-shared/indexed links working; its
       // canonical tag (baked into `html` above) points at the slug page, so
       // both resolve but only the slug page is treated as the "real" one.
-      for (const dirName of [id, out.card.slug]) {
+      for (const dirName of [out.card.id, out.card.slug]) {
         const dir = path.join(SITE, dirName);
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(path.join(dir, "index.html"), html);
       }
     }
+  }
+
+  for (const id of ids) {
+    const out = compile(id, journal, runner, { check });
+    if (out) writeSession(out);
+  }
+
+  for (const slug of LEARN_TRACK) {
+    const dir = path.join(learnRoot, slug);
+    if (!fs.existsSync(path.join(dir, "topic.md"))) continue;
+    const out = compile(slug, journal, runner, { check, dir, kind: "learn" });
+    if (out) writeSession(out);
   }
 
   const runStats = runner.finish();
@@ -923,6 +958,17 @@ function main() {
       "window.CATEGORY_BLURBS = " + JSON.stringify(CATEGORY_BLURBS) + ";\n" +
       "window.LEVELS = " + JSON.stringify(LEVELS) + ";\n" +
       "window.JOBS = " + JSON.stringify(JOBS) + ";\n" +
+      "window.LEARN_TRACK = " + JSON.stringify({
+        title: "Learn",
+        blurb: "Eleven sessions. Same format as the daily lab. Start here if the grid assumed too much.",
+        ids: LEARN_TRACK,
+        sessions: LEARN_TRACK.map((id) => {
+          const c = cards.find((x) => x.id === id);
+          return c
+            ? { id: c.id, title: c.title, hook: c.hook, slug: c.slug, minutes: c.minutes, level: c.level, job: c.job }
+            : { id };
+        }),
+      }) + ";\n" +
       "window.SESSIONS = " + JSON.stringify(cards, null, 2) + ";\n"
     );
     // Categories that actually have sessions, in CATEGORIES (tier) order so

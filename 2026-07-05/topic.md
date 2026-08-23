@@ -7,6 +7,22 @@
 **Hook**: The agent loop is a few hundred lines. The hard part is the tool names the model already expects.
 **Time to read**: ~10 minutes
 
+## Explain Like I'm 5
+
+You hire a helper who can only act by filling out forms — "read this file", "change these lines". The loop is simple: look, decide, fill a form, look again. The hard part is the form. If the helper was trained on *your company's* form and you hand them a different one, they keep writing the old field names. The work looks done. The form is invalid.
+
+## The Problem
+
+Anyone can write the observe-think-act loop in an afternoon. Teams then invent a nicer tool schema than the one the model was trained on, and newer models get *worse* at calling it. The failure is silent: extra fields, parse errors, retries that look like model flakiness.
+
+## For a Software Engineer
+
+This is vendor lock-in at the *behavior* layer, not the API layer. Matching `file_path` / `old_string` / `new_string` is closer to matching a public HTTP contract the other side already implements than to taste.
+
+## What This Means for You
+
+If this write-up assumed the loop: start at Learn → [The agent loop](#learn/the-agent-loop). Then come back. When you ship a tool, prefer the names the model already hits in Claude Code / Cursor, or write an adapter per provider.
+
 ## What It Is
 
 The past week produced two developments that together tell a cohesive story about the state
@@ -87,6 +103,8 @@ From llm-coding-agent's approach and the schema trap analysis:
 | Chain limit | Bounded execution; prevents infinite tool-calling loops |
 
 ## How It Connects to What You Know
+
+If the ReAct loop is still foggy, the Learn chapter [The agent loop](#learn/the-agent-loop) is the textbook; this post is the mid-2026 case study.
 
 You already understand the ReAct loop (observe-think-act) and how Claude Code implements it.
 llm-coding-agent is essentially a minimal ReAct agent with a fixed tool set — no planning phase,

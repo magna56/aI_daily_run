@@ -50,6 +50,9 @@ the math behind Z".
   workaround.
 - **Time budget**: 30 minutes of reading/coding material
 - **Output directory**: `~/ai_learning/YYYY-MM-DD/` (today's date)
+- **Do not write today's session into `learn/`.** That tree is the evergreen
+  two-day track (`#learn`). Daily sessions cite those chapters instead of
+  re-teaching the whole on-ramp. Never pick a Learn slug as "today's article."
 - **Artifacts**: 5 files per session (topic.md, visualize.html, diagram.excalidraw,
   code_example.py, articles.md)
 - **Journal**: `~/ai_learning/journal.md` tracks all sessions
@@ -244,7 +247,9 @@ do about it — see the rules below. REQUIRED on every session, including Tier C
 [Open with a short **Background first** paragraph, then the bullets — see the rules below.]
 
 ## How It Connects to What You Know
-[Connect to something they already ship — caches, CI, code review, HTTP — then to earlier sessions.]
+[Connect to something they already ship — caches, CI, code review, HTTP — then to earlier
+sessions. If this daily piece assumes a chapter (tokens, the agent loop, RAG, the harness),
+link the matching `learn/<slug>` page instead of re-teaching it.]
 
 ## Try It Yourself
 [Pointer to code_example.py and what it demonstrates]

@@ -8,6 +8,22 @@
 **Time to read**: ~10 minutes
 **Paper**: [arXiv:2607.07405](https://arxiv.org/abs/2607.07405) — Reddy, Challaram, Basu (July 8, 2026)
 
+## Explain Like I'm 5
+
+The helper fills out a form to book a flight. The form checker only asks "are the boxes the right type?" Nobody asks "is this booking even allowed?" The helper says done. The customer finds the mess.
+
+## The Problem
+
+Tool APIs validate *shape*. Business rules live in the prompt. Under a long chain the model forgets a rule and the tool happily executes. Most failures on the paper's airline bench were silent wrong-state, not crashes.
+
+## For a Software Engineer
+
+This is a CHECK constraint in front of the tool, not another LLM judge. `if passenger_count < 1: reject()` cannot be talked past. If the tool already self-enforces, the gate adds little — the authors showed that negative control.
+
+## What This Means for You
+
+If the agent loop is still new, read Learn → [The agent loop](#learn/the-agent-loop) first. On Monday: list the rules your tools will execute even when they should not, and put a function — not a paragraph — on that boundary.
+
 ## What It Is
 
 Tool-using LLM agents have a dangerous blind spot: **silent policy violations**. When an agent calls a tool (book a flight, cancel an order, modify a record), the tool typically validates the call's *format* — correct parameters, valid types — but not its *policy compliance*. The agent reasons about what to do, the tool executes what it's told, and nobody checks whether the action violates a business rule. The agent's self-report says "done!", the tool returned success, and the system is now in a wrong state that looks correct.
@@ -38,6 +54,8 @@ This matters for production agent systems because:
 - **Frontier models still benefit**: gpt-5.2 saw +10.4pp (P=0.020), confirming that even the best models fail to maintain policy compliance under complex multi-step scenarios
 
 ## How It Connects to What You Know
+
+Learn → [The agent loop](#learn/the-agent-loop) is the chapter; this paper is the check you put in front of the call.
 
 If you've built agent systems with Claude or other models, you've likely seen this exact failure mode: the model chains 5 tool calls correctly, but one of them violates a business rule that was stated in the system prompt but forgotten during execution. The typical response is "add it to the prompt" or "use a better model." This paper says: **stop trying to reason your way to compliance and just check mechanically.**
 

@@ -7,6 +7,22 @@
 **Hook**: Core code publishes the verbs. Plugins add the nouns — no fork required.
 **Time to read**: ~10 minutes
 
+## Explain Like I'm 5
+
+The core app only knows the *verbs*: "register a model", "register a tool". Other people ship *nouns* — this model, that tool — without editing the core. At startup the core asks installed packages "who signed up?" and calls every match.
+
+## The Problem
+
+A CLI that hard-codes OpenAI, then Anthropic, then Gemini becomes a merge queue. Every new provider is a core PR. The alternative is an interface the core publishes and plugins implement.
+
+## For a Software Engineer
+
+This is pytest's plugin idiom: named hooks, `@hookimpl` by function name, setuptools entry points. MCP is the same idea across a process boundary (JSON-RPC). Skills are the instruction-pack cousin — see Learn → [Skills](#learn/skills).
+
+## What This Means for You
+
+If you are still fuzzy on tools vs the model, start at Learn → [The agent loop](#learn/the-agent-loop). If you want an ecosystem instead of a fork, publish hook specs and discover implementations — do not import plugins by name.
+
 ## What It Is
 
 Simon Willison's [`llm`](https://llm.datasette.io/) is a small, wildly popular open-source CLI + Python library for talking to language models. `llm "explain this"` runs a prompt; everything — every prompt, response, token count, and tool call — is logged to a local SQLite database you can query later. It supports prompts, streaming, embeddings, fragments/attachments, templates, and tool calling, all from one binary you `pip install llm` (or `uvx llm`) and run offline against local models or remote APIs.
@@ -32,6 +48,8 @@ Concretely, `llm` defines a set of **hook specifications** (named extension poin
 - **Ordering & first-result hooks.** pluggy supports `tryfirst`/`trylast` and `firstresult` hooks (stop at first non-None) — useful when you want override rather than aggregate semantics.
 
 ## How It Connects to What You Know
+
+Learn → [Skills](#learn/skills) is the instruction-pack version of "don't fork the core." This post is the in-process plugin case study.
 
 You already build agents with tool schemas and dispatch loops. This is the *host-side* mirror of that: instead of a hard-coded tool table, the host publishes an interface (hook specs) and lets independently-shipped packages populate it at runtime. It's dependency inversion — the core depends on an abstraction (the hook name + signature), and plugins depend on that same abstraction, so neither depends on the other. If you've wired MCP servers into Claude, the mental model is identical: MCP is a *cross-process* plugin protocol (JSON-RPC + capability discovery); pluggy is the *in-process* version (Python entry points + name-matched callables). `register_tools` in `llm` and "list tools" in MCP are the same idea at different layers.
 

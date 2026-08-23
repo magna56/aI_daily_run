@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>The chat box isn't the agent — the repo is</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090c12;--panel:#121821;--edge:#2a3544;--ink:#edf4ff;--muted:#95a4b8;--lime:#bef264;--blue:#60a5fa;--orange:#fb923c;--pink:#f472b6;--bad:#f87171}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#101928 0,#090c12 42%);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,sans-serif}
+    main{max-width:1080px;margin:auto;padding:clamp(18px,4vw,36px)}
+    header{display:flex;justify-content:space-between;align-items:end;gap:22px;margin-bottom:18px}
+    h1{font-size:clamp(24px,4.4vw,40px);line-height:1.08;margin:6px 0}
+    .kicker{font:800 11px ui-monospace,monospace;letter-spacing:.16em;color:var(--lime);text-transform:uppercase}
+    .intro{max-width:460px;color:var(--muted)}
+    button{border:1px solid #435168;border-radius:9px;background:#192231;color:var(--ink);padding:9px 13px;font-weight:750;cursor:pointer}
+    button:hover{border-color:var(--lime)}
+    button:focus-visible,input:focus-visible{outline:3px solid #bef26466;outline-offset:2px}
+    .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+    .controls label{display:flex;align-items:center;gap:8px;border:1px solid var(--edge);border-radius:999px;padding:8px 12px;background:#101620}
+    .controls input{accent-color:var(--lime)}
+    .board{display:grid;grid-template-columns:1fr 1.1fr 1fr;gap:12px}
+    .col{border:1px solid var(--edge);border-radius:16px;background:var(--panel);padding:14px;min-width:0}
+    .col h2{font-size:13px;margin:0 0 10px;display:flex;justify-content:space-between}
+    .file{font:12px ui-monospace,monospace;padding:6px 8px;border-radius:8px;margin:4px 0;background:#151e29;border:1px solid var(--edge)}
+    .file.on{border-color:var(--blue);color:var(--blue)}
+    .file.block{border-color:#833;color:var(--bad)}
+    .file.write{border-color:#2f6;color:var(--lime)}
+    .bubble{background:#151e29;border-radius:10px;padding:10px;color:var(--muted);font-size:13px}
+    .log{font:12px/1.5 ui-monospace,monospace;color:#d5deea;white-space:pre-wrap}
+    .ask{margin-top:8px;padding:10px;border-radius:10px;background:#2a2110;border:1px solid var(--orange);color:var(--orange)}
+    .callout{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+    .callout div{padding:11px;border-radius:10px;background:#111925;color:var(--muted)}
+    .callout b{color:var(--ink);display:block}
+    @media(max-width:860px){header{display:block}.board,.callout{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<main data-visualizer="coding-agents-101">
+  <header>
+    <div>
+      <div class="kicker">Harness, not chat</div>
+      <h1>Chat sees the paste.<br>The agent sees the tree.</h1>
+    </div>
+    <p class="intro">Same request: “Add a timeout to retry and run the tests.” Toggle the surface, the briefing file, and whether writes must ask.</p>
+  </header>
+  <div class="controls">
+    <label><input type="radio" name="surf" value="chat" checked> Chat box</label>
+    <label><input type="radio" name="surf" value="agent"> Coding agent</label>
+    <label><input type="checkbox" id="brief" checked> CLAUDE.md loaded</label>
+    <label><input type="checkbox" id="ask" checked> Writes need approval</label>
+    <button type="button" id="reset">Reset</button>
+  </div>
+  <div class="board">
+    <section class="col">
+      <h2>Working tree <span>1</span></h2>
+      <div id="tree"></div>
+    </section>
+    <section class="col">
+      <h2>What the model can see <span>2</span></h2>
+      <div id="seen"></div>
+    </section>
+    <section class="col">
+      <h2>Proposed actions <span>3</span></h2>
+      <div id="acts"></div>
+    </section>
+  </div>
+  <div class="callout">
+    <div><b>Pick by whether the tree matters</b>Design questions stay in chat. Multi-file edits belong in the repo agent.</div>
+    <div><b>CLAUDE.md is onboarding</b>pnpm, test command, “never edit codegen/” — the briefing the paste box never gets.</div>
+    <div><b>Permissions are IAM</b>The model proposes. The harness allows, asks, or denies. Bypass is for throwaway sandboxes.</div>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const files = [
+    {path:"CLAUDE.md", kind:"brief", text:"pnpm (never npm). Do not edit codegen/. Tests: pnpm test"},
+    {path:"src/retry.py", kind:"src", text:"def retry(fn, n=3): return fn()"},
+    {path:"src/cli.py", kind:"src", text:"from retry import retry"},
+    {path:"codegen/api.py", kind:"gen", text:"TIMEOUT = 5  # generated"},
+    {path:"package.json", kind:"src", text:"packageManager: pnpm@9"}
+  ];
+  const $ = (id) => document.getElementById(id);
+  function surf() { return document.querySelector('input[name="surf"]:checked').value; }
+  function render() {
+    const agent = surf() === "agent";
+    const brief = $("brief").checked;
+    const ask = $("ask").checked;
+    $("brief").disabled = !agent;
+    $("ask").disabled = !agent;
+    $("tree").innerHTML = files.map((f) => {
+      let cls = "file";
+      if (agent && f.kind === "src") cls += " on";
+      if (agent && brief && f.kind === "brief") cls += " on";
+      if (!agent && f.path === "src/retry.py") cls += " on";
+      return `<div class="${cls}">${f.path}</div>`;
+    }).join("");
+    if (!agent) {
+      $("seen").innerHTML = `<div class="bubble">Pasted only:</div><pre class="log">${files[1].text}</pre>`;
+      $("acts").innerHTML = [
+        "Invent wait_and_retry() — repo already has retry()",
+        "Say: run npm test (package.json says pnpm)",
+        "Never sees src/cli.py callers"
+      ].map((t) => `<div class="file block">${t}</div>`).join("");
+      return;
+    }
+    const seen = files.filter((f) => f.kind === "src" || (brief && f.kind === "brief"));
+    $("seen").innerHTML = seen.map((f) => `<div class="file on">${f.path}<br><span style="color:var(--muted)">${f.text}</span></div>`).join("");
+    const writeRetry = !ask;
+    const writeGen = !brief && !ask;
+    let html = "";
+    html += `<div class="file on">READ package.json, src/retry.py, src/cli.py</div>`;
+    html += writeRetry
+      ? `<div class="file write">WRITE src/retry.py — allowed</div>`
+      : `<div class="ask">ASK: write src/retry.py? (approval required)</div>`;
+    if (!brief) {
+      html += writeGen
+        ? `<div class="file block">WRITE codegen/api.py — unbriefed “help”</div>`
+        : `<div class="ask">ASK: write codegen/api.py? (no CLAUDE.md to deny)</div>`;
+    } else {
+      html += `<div class="file block">WRITE codegen/api.py — DENY (CLAUDE.md)</div>`;
+    }
+    html += `<div class="file ${brief?"write":"block"}">SHELL ${brief?"pnpm":"npm"} test</div>`;
+    $("acts").innerHTML = html;
+  }
+  document.querySelectorAll('input').forEach((el) => el.addEventListener("change", render));
+  $("reset").addEventListener("click", () => {
+    document.querySelector('input[name="surf"][value="chat"]').checked = true;
+    $("brief").checked = true;
+    $("ask").checked = true;
+    render();
+  });
+  render();
+  const postHeight=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(postHeight).observe(document.documentElement);postHeight();
+})();
+</script>
+</body>
+</html>

@@ -16,9 +16,11 @@ code_example.py       # runnable, pure Python, no API keys
 articles.md          # 3-5 curated sources with summaries
 ```
 
-A `-s2` suffix (`2026-08-03-s2`) means a second session that day. `journal.md` is the running
-index: `## <id> — <Title>` blocks with `- **Key**: value` bullets, most importantly `Key insight`,
-which the reader uses as the card blurb.
+A `-s2` suffix (`2026-08-03-s2`) means a second session that day. `learn/<slug>/` is the
+evergreen two-day track (same five files, `**Kind**: Learn`) — curriculum, not today's news.
+`journal.md` is the running index of *daily* sessions: `## <id> — <Title>` blocks with
+`- **Key**: value` bullets, most importantly `Key insight`, which the reader uses as the
+card blurb. Learn cards use `Hook` instead.
 
 `build.js` compiles the session folders into `site/data/` (a small manifest plus one JSON payload
 per session); `index.html` is the reader SPA that loads that data. `site/` is build output, never
@@ -57,6 +59,8 @@ internals worth knowing before touching it:
 - `compile(id, ...)` builds two things per session: the full `payload` (written to
   `site/data/<id>.json`, fetched on demand) and a lightweight `card` (folded into
   `site/data/index.js` for the grid). This split keeps the grid fast as sessions accumulate.
+  Daily folders match `SESSION_RE`; `learn/<slug>/` is compiled in `LEARN_TRACK` order
+  with `kind: "learn"` and exported as `window.LEARN_TRACK` for `#learn`.
 - `REPO_BLOB` (env `ADL_REPO_BLOB`) controls where each session's "Files" link points — override
   it if this checkout's origin differs from the GitHub default baked into the script.
 - `visualize.html` is copied to `site/assets/<id>/` rather than embedded in the session payload.
@@ -111,4 +115,5 @@ which is ordered by tier — A/B/C — and is the validation source of truth; `D
 `Level` is `Start here` / `Building` / `Deeper`; `For` is `Using tools` / `Building agents` /
 `Shipping AI` / `How models work`; `Hook` is the one-line card blurb). Everything else is
 optional — a session missing a diagram or articles file simply shows fewer tabs in the reader.
-The unfiltered homepage pins every `Start here` session above the date-sorted rest of the grid.
+The unfiltered homepage pins every `Start here` session (daily and Learn) above the
+date-sorted rest of the grid. Latest is daily-only. The full track is `#learn`.

@@ -172,6 +172,8 @@ free room — which necessarily rewrites the prefix.
 
 ## How It Connects to What You Know
 
+If the words prefix, cache, and harness are still new, start at Learn → [Context and the harness](#learn/context-and-harness). This post is the changelog case study.
+
 The FrugalGPT cascade from the 2026-08-03 session optimised *which model* answers.
 This optimises *how much conversation* each answer has to carry, and the two
 compose: a cascade over a bloated transcript still re-reads the transcript at

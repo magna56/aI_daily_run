@@ -123,6 +123,8 @@ that's a score of 1/1, if it took until rank 3 that's 1/3, and 0 if it never sho
   window helps a small model use what it's given; it can't give the model reasoning it lacks.
 
 ## How It Connects to What You Know
+If chunk / retrieve / stuff-the-prompt is still fuzzy, start at Learn → [Retrieval](#learn/retrieval). This post is the "nobody re-tested chunk size" case study.
+
 This is the same move as replacing "eyeball the graph and pick a learning rate" with a proper
 hyperparameter sweep during training — except applied to the retrieval half of a RAG system, which
 usually gets none of that rigor because it's assumed to be a solved, one-time decision. It's also
