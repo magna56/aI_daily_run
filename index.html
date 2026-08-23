@@ -1528,11 +1528,21 @@
   }
 
   /* ---- reader ---------------------------------------------------------- */
+  // CACHE holds resolved payloads; INFLIGHT holds the promise while the fetch is
+  // still open. Both are needed: on a real per-session page, route() runs twice
+  // in quick succession at boot — once from the path->hash bootstrap's
+  // hashchange, once from ghHandleOAuthReturn().then(route). Caching only the
+  // *result* meant the second call started a duplicate fetch of the same ~54KB
+  // payload before the first had landed.
+  var INFLIGHT = {};
   function load(id) {
     if (CACHE[id]) return Promise.resolve(CACHE[id]);
-    return fetch(SITE_ROOT + "/data/" + encodeURIComponent(id) + ".json")
+    if (INFLIGHT[id]) return INFLIGHT[id];
+    INFLIGHT[id] = fetch(SITE_ROOT + "/data/" + encodeURIComponent(id) + ".json")
       .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function (p) { CACHE[id] = p; return p; });
+      .then(function (p) { CACHE[id] = p; delete INFLIGHT[id]; return p; })
+      .catch(function (e) { delete INFLIGHT[id]; throw e; });   // let a retry work
+    return INFLIGHT[id];
   }
 
   function availablePanes(p) {
