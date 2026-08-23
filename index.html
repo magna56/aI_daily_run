@@ -398,7 +398,10 @@
   .btn-repl:active { transform: scale(.98); }
   .btn-repl.running { opacity: .6; cursor: wait; }
   .btn-repl:disabled { opacity: .6; cursor: default; }
-  .btn-gh { margin-left: auto; }
+  /* Now lives in .panel-head beside "copy" — that row's own .spacer already
+     handles pushing the button group to the right, so btn-gh needs no
+     margin of its own (stacking a second auto-margin here would fight the
+     spacer's and open an ugly gap between "copy" and this button). */
   .terminal-pane { height: 100%; }
   .terminal-output { padding: 15px; overflow-y: auto; height: 70vh; font-family: var(--mono); font-size: 12.4px; line-height: 1.62; white-space: pre-wrap; word-wrap: break-word; }
   .terminal-out-ok { color: #cfcabf; }
@@ -1221,16 +1224,16 @@
       '<div class="code-cols' + (widest > 84 ? " stacked" : "") + '">' +
         '<div class="panel">' +
           '<div class="panel-head">code_example.py<span class="spacer"></span>' +
-            '<button class="mini" id="copyCode">copy</button></div>' +
+            '<button class="mini" id="copyCode">copy</button>' +
+            '<button class="mini btn-gh" id="publishGh" title="' +
+              (ghUser() ? "Publish as " + esc(ghUser().login) : "Sign in with GitHub, then publish") + '">' +
+              "Publish to GitHub" +
+            '</button></div>' +
           '<div class="code-editor">' +
             '<textarea class="editor-textarea" id="codeEditor" spellcheck="false">' + esc(sourceToShow) + '</textarea>' +
             '<div class="editor-controls">' +
               '<button class="btn-repl" id="runCode">Run</button>' +
               '<button class="btn-repl" id="resetCode">Reset</button>' +
-              '<button class="btn-repl btn-gh" id="publishGh" title="' +
-                (ghUser() ? "Publish as " + esc(ghUser().login) : "Sign in with GitHub, then publish") + '">' +
-                "Publish to GitHub" +
-              '</button>' +
             '</div>' +
           '</div>' +
         "</div>" +
@@ -1303,11 +1306,15 @@
       var hasLiveRun = liveText && liveText.indexOf("(click Run") === -1 && liveText.indexOf("(output will appear") === -1;
       var outputText = hasLiveRun ? liveText : (captured || "(no output captured)");
 
+      // Output stays here (it's the actual result — worth reading inline);
+      // the code does not — it's already right there as its own syntax-
+      // highlighted file, and repeating a few hundred lines of it just to
+      // bury the TL;DR/output under a wall of code helps nobody.
       var readme = "# " + title + "\n\n"
         + "**TL;DR:** " + (p.insight ? plain(p.insight) : "See " + codeFilename + ".") + "\n\n"
         + "Published from [The AI Commit](https://theaicommit.com/#" + p.id + ") — "
         + (p.category ? p.category + ", " : "") + p.date + ".\n\n"
-        + "## Code\n\n```python\n" + editorEl.value.replace(/```/g, "\\`\\`\\`") + "\n```\n\n"
+        + "Code: [`" + codeFilename + "`](" + codeFilename + ")\n\n"
         + "## Output\n\n```\n" + outputText.replace(/```/g, "\\`\\`\\`") + "\n```\n";
 
       ghPublishGist(
