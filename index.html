@@ -594,6 +594,14 @@
      from https://github.com/settings/applications). */
   var GITHUB_CLIENT_ID = "Ov23lidE2UufeMgoVZj7";
 
+  // Set right before redirecting to GitHub when the user clicked "Publish to
+  // GitHub" while signed out, and consumed by renderCode() once the Code tab
+  // for that same session re-renders after the round trip — this is what
+  // makes sign-in-then-publish feel like ONE action instead of two: click
+  // once, get redirected, come back, and it just publishes rather than
+  // requiring a second click now that you happen to be signed in.
+  var ghAutoPublishSession = null;
+
   function ghToken() { return localStorage.getItem("gh_token"); }
   function ghUser() { try { return JSON.parse(localStorage.getItem("gh_user") || "null"); } catch (e) { return null; } }
   function ghSignOut() { localStorage.removeItem("gh_token"); localStorage.removeItem("gh_user"); }
@@ -610,13 +618,16 @@
 
   // Runs once at boot: if we just landed back from GitHub's authorize page,
   // there's a ?code= in the URL. Exchange it, remember who signed in, restore
-  // the hash the user was actually on (GitHub's redirect drops it), and strip
-  // ?code=/&state= from the address bar so a refresh doesn't re-exchange it.
+  // the hash the user was actually on (GitHub's redirect drops it) — and if
+  // that hash points at a Code tab, arm the auto-publish flag so renderCode()
+  // finishes the job without another click. Strip ?code=/&state= from the
+  // address bar either way so a refresh doesn't re-exchange it.
   function ghHandleOAuthReturn() {
     var params = new URLSearchParams(location.search);
     var code = params.get("code");
     if (!code) return Promise.resolve(false);
     var state = params.get("state") || "";
+    var stateParts = state.replace(/^#/, "").split("/");
 
     return fetch("/api/github/token", {
       method: "POST",
@@ -638,7 +649,12 @@
       .then(function (u) {
         if (u && u.login) localStorage.setItem("gh_user", JSON.stringify({ login: u.login, avatar: u.avatar_url }));
         history.replaceState(null, "", location.pathname + state);
-        toast("Signed in to GitHub as " + (u && u.login ? u.login : "you") + " — click Publish to GitHub again");
+        if (stateParts[1] === "code" && stateParts[0]) {
+          ghAutoPublishSession = stateParts[0];
+          toast("Signed in as " + (u && u.login ? u.login : "you") + " — publishing…");
+        } else {
+          toast("Signed in to GitHub as " + (u && u.login ? u.login : "you"));
+        }
         return true;
       })
       .catch(function (err) {
@@ -648,18 +664,19 @@
       });
   }
 
-  function ghPublishGist(filename, content, description) {
+  // files: { filename: content, ... } — a gist has no real subdirectories
+  // (it's a flat file list), so a multi-file gist — a README plus the code —
+  // is the closest a Gist can get to "a little directory for this session".
+  function ghPublishGist(files, description) {
+    var apiFiles = {};
+    Object.keys(files).forEach(function (name) { apiFiles[name] = { content: files[name] }; });
     return fetch("https://api.github.com/gists", {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + ghToken(),
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        description: description,
-        public: false,
-        files: { [filename]: { content: content } },
-      }),
+      body: JSON.stringify({ description: description, public: false, files: apiFiles }),
     }).then(function (r) {
       if (!r.ok) return r.json().then(function (e) { throw new Error(e.message || ("HTTP " + r.status)); });
       return r.json();
@@ -722,6 +739,11 @@
       .replace(/\*\*([^*]+)\*\*/g, "$1")
       .replace(/(^|\W)\*([^*]+)\*(?=\W|$)/g, "$1$2")
       .replace(/\[([^\]]+)\]\([^)\s]*\)/g, "$1");
+  }
+  function slugify(title, maxLen) {
+    var s = String(title || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    if (s.length > (maxLen || 48)) s = s.slice(0, maxLen || 48).replace(/-+$/, "");
+    return s || "session";
   }
   function byId(id) { for (var i = 0; i < DATA.length; i++) if (DATA[i].id === id) return DATA[i]; return null; }
   function host(url) { try { return new URL(url).hostname.replace(/^www\./, ""); } catch (e) { return ""; } }
@@ -1207,7 +1229,7 @@
               '<button class="btn-repl" id="resetCode">Reset</button>' +
               '<button class="btn-repl btn-gh" id="publishGh" title="' +
                 (ghUser() ? "Publish as " + esc(ghUser().login) : "Sign in with GitHub, then publish") + '">' +
-                (ghUser() ? "Publish to GitHub" : "Sign in with GitHub") +
+                "Publish to GitHub" +
               '</button>' +
             '</div>' +
           '</div>' +
@@ -1267,12 +1289,31 @@
     });
 
     var ghBtn = $("publishGh");
-    ghBtn.addEventListener("click", function () {
-      if (!ghToken()) { ghSignIn(); return; }
+
+    function doGhPublish() {
       ghBtn.disabled = true;
       var original = ghBtn.textContent;
       ghBtn.textContent = "Publishing…";
-      ghPublishGist(p.id + "_code_example.py", editorEl.value, "The AI Commit — " + plain(p.title))
+
+      var title = plain(p.title);
+      var slug = slugify(title);
+      var codeFilename = slug + ".py";
+
+      var liveText = (liveOutputEl.querySelector(".terminal-output").textContent || "").trim();
+      var hasLiveRun = liveText && liveText.indexOf("(click Run") === -1 && liveText.indexOf("(output will appear") === -1;
+      var outputText = hasLiveRun ? liveText : (captured || "(no output captured)");
+
+      var readme = "# " + title + "\n\n"
+        + "**TL;DR:** " + (p.insight ? plain(p.insight) : "See " + codeFilename + ".") + "\n\n"
+        + "Published from [The AI Commit](https://theaicommit.com/#" + p.id + ") — "
+        + (p.category ? p.category + ", " : "") + p.date + ".\n\n"
+        + "## Code\n\n```python\n" + editorEl.value.replace(/```/g, "\\`\\`\\`") + "\n```\n\n"
+        + "## Output\n\n```\n" + outputText.replace(/```/g, "\\`\\`\\`") + "\n```\n";
+
+      ghPublishGist(
+        { "README.md": readme, [codeFilename]: editorEl.value },
+        "The AI Commit — " + title
+      )
         .then(function (gist) {
           ghBtn.textContent = "Published ✓";
           toast("Published to GitHub — opening your gist");
@@ -1284,7 +1325,20 @@
           ghBtn.disabled = false;
           toast("Publish failed: " + err.message);
         });
+    }
+
+    ghBtn.addEventListener("click", function () {
+      if (!ghToken()) { ghSignIn(); return; }
+      doGhPublish();
     });
+
+    // Landed back here right after signing in specifically to publish this
+    // session (see ghHandleOAuthReturn) — finish the job without making the
+    // user click twice for what felt like one action.
+    if (ghAutoPublishSession === p.id && ghToken()) {
+      ghAutoPublishSession = null;
+      doGhPublish();
+    }
   }
 
   /* articles: link cards, grouped by the headings the session used */
