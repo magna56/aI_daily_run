@@ -68,7 +68,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script defer src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+<!-- Pyodide is NOT loaded here. Booting it costs ~12MB (wasm + stdlib) on every
+     page view, including the homepage and every article whose Code pane is
+     never opened — 99% of the site's bandwidth for a feature most visits don't
+     use. It is now fetched on demand by ensurePyodide() the first time someone
+     actually opens a Code pane or hits Run. -->
 <style>
   :root {
     --bg: #111217;
@@ -625,30 +629,54 @@
 
   var $ = function (id) { return document.getElementById(id); };
 
-  /* ---- REPL setup ----
-     pyodide.js is loaded with `defer`, so it can still be unparsed when this
-     script runs. Poll for the global rather than assume it exists, and never
-     let a CDN hiccup here take down routing/rendering below — this whole
-     block is best-effort and isolated in its own try/catch. */
+  /* ---- REPL setup (lazy) ----
+     Pyodide is ~12MB of wasm + stdlib. Loading it eagerly meant every visit —
+     the homepage included, where there is no code at all — paid for a Python
+     runtime most readers never invoke. ensurePyodide() injects the script and
+     boots the runtime on first real need instead: opening a Code pane warms it
+     in the background, and pressing Run awaits the same promise.
+
+     One promise is cached and reused, so concurrent callers share a single
+     download. Failure is non-fatal by design: the captured output rendered at
+     build time is always present, so a CDN hiccup costs the REPL, not the page. */
+  var PYODIDE_INDEX = "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/";
+  var pyodidePromise = null;
   window.pyodideReady = false;
-  try {
-    var pyodideAttempts = 0;
-    (function waitForPyodide() {
-      if (typeof loadPyodide !== "undefined") {
-        loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/" }).then(function (py) {
+
+  // The label is rendered once with the pane but the runtime now arrives later,
+  // so it has to be refreshed when the promise settles rather than left stale.
+  function pyodideNoteText() {
+    return window.pyodideReady ? "Pyodide ✓" : (pyodidePromise ? "Pyodide loading…" : "Pyodide loads on first Run");
+  }
+  function refreshPyodideNote() {
+    var n = document.getElementById("pyodideNote");
+    if (n) n.textContent = pyodideNoteText();
+  }
+
+  function ensurePyodide() {
+    if (pyodidePromise) return pyodidePromise;
+    pyodidePromise = new Promise(function (resolve, reject) {
+      var s = document.createElement("script");
+      s.src = PYODIDE_INDEX + "pyodide.js";
+      s.onload = function () {
+        if (typeof loadPyodide === "undefined") return reject(new Error("pyodide.js loaded but loadPyodide is missing"));
+        loadPyodide({ indexURL: PYODIDE_INDEX }).then(function (py) {
           window.pyodide = py;
           window.pyodideReady = true;
-        }).catch(function (e) {
-          console.warn("Pyodide failed to load:", e);
-        });
-      } else if (pyodideAttempts++ < 150) {   // ~15s before giving up
-        setTimeout(waitForPyodide, 100);
-      } else {
-        console.warn("Pyodide script never became available — REPL disabled, falling back to captured output.");
-      }
-    })();
-  } catch (e) {
-    console.warn("Pyodide setup threw:", e);
+          refreshPyodideNote();
+          resolve(py);
+        }, reject);
+      };
+      s.onerror = function () { reject(new Error("could not fetch pyodide.js")); };
+      document.head.appendChild(s);
+    });
+    pyodidePromise.catch(function (e) {
+      console.warn("Pyodide failed to load — REPL disabled, captured output still shown:", e);
+      pyodidePromise = null;   // let a later Run retry rather than fail forever
+      refreshPyodideNote();
+    });
+    refreshPyodideNote();
+    return pyodidePromise;
   }
 
   function getCodeCache(sessionId) {
@@ -791,13 +819,22 @@
   }
 
   async function runPython(code, outputEl, sessionId) {
-    if (!window.pyodideReady) {
-      outputEl.textContent = "Python interpreter is loading... try again in a moment.";
-      return;
-    }
-
     setCodeCache(sessionId, code);
     var term = outputEl.querySelector(".terminal-output") || outputEl;
+
+    // First Run on a cold page pays for the runtime download (~12MB), so say so
+    // rather than showing a silent "running..." for several seconds.
+    if (!window.pyodideReady) {
+      term.innerHTML = '<span class="terminal-out-run">> starting Python (one-time ~12MB download)…</span>';
+      try {
+        await ensurePyodide();
+      } catch (e) {
+        term.innerHTML = '<span class="terminal-out-err">> could not start Python: ' + esc(e.message) +
+          '\n> the captured output above was produced at build time and is unaffected.</span>';
+        return;
+      }
+    }
+
     term.innerHTML = '<span class="terminal-out-run">> running...</span>';
 
     try {
@@ -1269,7 +1306,11 @@
     var el = $("pane");
     if (pane === "overview") { el.innerHTML = '<div class="prose">' + md(p.topic) + "</div>"; return; }
     if (pane === "diagram") { renderDiagram(el, p); return; }
-    if (pane === "code") { renderCode(el, p); return; }
+    // Opening the Code pane is the strongest signal someone may hit Run, so
+    // start the runtime download now, in the background. Nothing awaits this —
+    // the pane renders immediately with its build-time captured output either
+    // way, and runPython() awaits the same cached promise if Run comes first.
+    if (pane === "code") { ensurePyodide(); renderCode(el, p); return; }
     renderArticles(el, p);
   }
 
@@ -1389,7 +1430,7 @@
         "</div>" +
         '<div class="panel">' +
           '<div class="panel-head">output<span class="spacer"></span>' +
-            '<span class="pyodide-note">' + (window.pyodideReady ? 'Pyodide ✓' : 'Pyodide loading…') + '</span></div>' +
+            '<span class="pyodide-note" id="pyodideNote">' + pyodideNoteText() + '</span></div>' +
           '<div id="liveOutput" class="terminal-pane">' +
             '<div class="terminal-output"><span class="terminal-out-run">(click Run to see output here)</span></div>' +
           '</div>' +
