@@ -156,7 +156,6 @@
   :root[data-theme="light"] .insight { color: #1f2937; }
   :root[data-theme="light"] .pill-btn { color: #4a453b; }
   :root[data-theme="light"] .course-invite { background: rgba(124,92,217,.08); border-color: rgba(124,92,217,.28); }
-  :root[data-theme="light"] .reader .nl { background: rgba(0,0,0,.03); }
   :root[data-theme="light"] .top-nav a:hover { border-color: rgba(0,0,0,.18); }
 
   /* The code/output panels and the captured-output fallback box keep their
@@ -600,11 +599,10 @@
   .nl .lede { margin: 0 0 10px; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
   .nl .fine { margin: 8px 0 0; font-size: 12px; color: var(--dim); }
   .reader .nl {
-    max-width: var(--measure); margin: 36px auto 0; padding: 16px 16px 14px;
-    border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+    max-width: var(--measure); margin: 8px auto 22px; padding: 0;
+    border: none; background: none;
   }
-  .reader .nl-row { display: flex; gap: 8px; flex-wrap: wrap; }
-  .reader .nl-row button { color: var(--ink); }
+  .reader .nl-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
   .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); background: var(--surface); border: 1px solid var(--line); color: var(--ink); font-size: 13px; padding: 10px 16px; border-radius: 9px; box-shadow: 0 10px 30px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; z-index: 50; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -1669,6 +1667,7 @@
       (p.insight && pane === "overview"
         ? '<div class="insight"><span class="k">Key insight</span>' + md(p.insight).replace(/^<p>|<\/p>$/g, "") + "</div>"
         : "");
+    var signup = pane === "overview" ? newsletterMarkup() : "";
 
     var li = learnIndex(p.id);
     var trailBar = "";
@@ -1685,7 +1684,7 @@
         "</div>";
     }
 
-    $("viewReader").innerHTML = head + meta + trailBar + '<div class="pane" id="pane"></div>' + newsletterMarkup();
+    $("viewReader").innerHTML = head + meta + signup + trailBar + '<div class="pane" id="pane"></div>';
     document.title = plain(p.title) + " — The AI Commit";
     renderPane(p, pane);
 
@@ -2229,16 +2228,14 @@
   /* ---- newsletter ------------------------------------------------------ */
   function newsletterMarkup() {
     return (
-      '<form class="nl" action="https://theaicommit.com/api/subscribe" method="post">' +
-        '<p class="k">Newsletter</p>' +
-        '<p class="lede">One email when a new daily session ships. No digest, no ads.</p>' +
+      '<form class="nl nl-home" action="https://theaicommit.com/api/subscribe" method="post">' +
         '<div class="nl-row">' +
+          '<span class="nl-label">Daily email</span>' +
           '<label class="nl-hp" aria-hidden="true">Leave blank <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>' +
           '<input type="email" name="email" required placeholder="you@email.com" autocomplete="email" />' +
           '<button type="submit">Subscribe</button>' +
         "</div>" +
         '<p class="nl-status" hidden></p>' +
-        '<p class="fine">Unsubscribe anytime. <a href="/privacy.html">Privacy</a></p>' +
       "</form>"
     );
   }
