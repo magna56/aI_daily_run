@@ -370,6 +370,8 @@
   .btn-repl:hover { color: var(--accent2); border-color: rgba(167,139,250,.45); }
   .btn-repl:active { transform: scale(.98); }
   .btn-repl.running { opacity: .6; cursor: wait; }
+  .btn-repl:disabled { opacity: .6; cursor: default; }
+  .btn-gh { margin-left: auto; }
   .terminal-pane { height: 100%; }
   .terminal-output { padding: 15px; overflow-y: auto; height: 70vh; font-family: var(--mono); font-size: 12.4px; line-height: 1.62; white-space: pre-wrap; word-wrap: break-word; }
   .terminal-out-ok { color: #cfcabf; }
@@ -553,6 +555,88 @@
 
   function clearCodeCache(sessionId) {
     localStorage.removeItem("code_editor_" + sessionId);
+  }
+
+  /* ---- GitHub sign-in + publish (Code tab "Publish to GitHub") ----------
+     Stateless OAuth: the code->token exchange happens in a Cloudflare Pages
+     Function (functions/api/github/token.js) — the only place the client
+     secret ever exists. The resulting token lives in localStorage on the
+     client, same as everything else this site stores; there is no server-
+     side session or database. Signing out just forgets the token locally —
+     it does not revoke it on GitHub's side (the user can do that themselves
+     from https://github.com/settings/applications). */
+  var GITHUB_CLIENT_ID = "Ov23lidE2UufeMgoVZj7";
+
+  function ghToken() { return localStorage.getItem("gh_token"); }
+  function ghUser() { try { return JSON.parse(localStorage.getItem("gh_user") || "null"); } catch (e) { return null; } }
+  function ghSignOut() { localStorage.removeItem("gh_token"); localStorage.removeItem("gh_user"); }
+
+  function ghSignIn() {
+    var redirect = location.origin + location.pathname;
+    var url = "https://github.com/login/oauth/authorize"
+      + "?client_id=" + encodeURIComponent(GITHUB_CLIENT_ID)
+      + "&scope=gist"
+      + "&redirect_uri=" + encodeURIComponent(redirect)
+      + "&state=" + encodeURIComponent(location.hash);
+    location.href = url;
+  }
+
+  // Runs once at boot: if we just landed back from GitHub's authorize page,
+  // there's a ?code= in the URL. Exchange it, remember who signed in, restore
+  // the hash the user was actually on (GitHub's redirect drops it), and strip
+  // ?code=/&state= from the address bar so a refresh doesn't re-exchange it.
+  function ghHandleOAuthReturn() {
+    var params = new URLSearchParams(location.search);
+    var code = params.get("code");
+    if (!code) return Promise.resolve(false);
+    var state = params.get("state") || "";
+
+    return fetch("/api/github/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code }),
+    })
+      .then(function (r) {
+        if (!r.ok && r.status === 404) throw new Error("not available on this host (try theaicommit.com)");
+        return r.json();
+      })
+      .then(function (data) {
+        if (data.error || !data.access_token) throw new Error(data.error_description || data.error || "sign-in failed");
+        localStorage.setItem("gh_token", data.access_token);
+        return fetch("https://api.github.com/user", {
+          headers: { "Authorization": "Bearer " + data.access_token },
+        });
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (u) {
+        if (u && u.login) localStorage.setItem("gh_user", JSON.stringify({ login: u.login, avatar: u.avatar_url }));
+        history.replaceState(null, "", location.pathname + state);
+        toast("Signed in to GitHub as " + (u && u.login ? u.login : "you") + " — click Publish to GitHub again");
+        return true;
+      })
+      .catch(function (err) {
+        history.replaceState(null, "", location.pathname + state);
+        toast("GitHub sign-in failed: " + err.message);
+        return false;
+      });
+  }
+
+  function ghPublishGist(filename, content, description) {
+    return fetch("https://api.github.com/gists", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + ghToken(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        description: description,
+        public: false,
+        files: { [filename]: { content: content } },
+      }),
+    }).then(function (r) {
+      if (!r.ok) return r.json().then(function (e) { throw new Error(e.message || ("HTTP " + r.status)); });
+      return r.json();
+    });
   }
 
   function parseRequires(sourceCode) {
@@ -1094,6 +1178,10 @@
             '<div class="editor-controls">' +
               '<button class="btn-repl" id="runCode">Run</button>' +
               '<button class="btn-repl" id="resetCode">Reset</button>' +
+              '<button class="btn-repl btn-gh" id="publishGh" title="' +
+                (ghUser() ? "Publish as " + esc(ghUser().login) : "Sign in with GitHub, then publish") + '">' +
+                (ghUser() ? "Publish to GitHub" : "Sign in with GitHub") +
+              '</button>' +
             '</div>' +
           '</div>' +
         "</div>" +
@@ -1136,6 +1224,26 @@
 
     editorEl.addEventListener("input", function () {
       setCodeCache(p.id, editorEl.value);
+    });
+
+    var ghBtn = $("publishGh");
+    ghBtn.addEventListener("click", function () {
+      if (!ghToken()) { ghSignIn(); return; }
+      ghBtn.disabled = true;
+      var original = ghBtn.textContent;
+      ghBtn.textContent = "Publishing…";
+      ghPublishGist(p.id + "_code_example.py", editorEl.value, "The AI Commit — " + plain(p.title))
+        .then(function (gist) {
+          ghBtn.textContent = "Published ✓";
+          toast("Published to GitHub — opening your gist");
+          window.open(gist.html_url, "_blank", "noopener");
+          setTimeout(function () { ghBtn.textContent = original; ghBtn.disabled = false; }, 2500);
+        })
+        .catch(function (err) {
+          ghBtn.textContent = original;
+          ghBtn.disabled = false;
+          toast("Publish failed: " + err.message);
+        });
     });
   }
 
@@ -1299,7 +1407,10 @@
   } else {
     renderPills();
   }
-  route();
+  // On a plain load this resolves immediately (no ?code= present). Returning
+  // from GitHub's authorize page, it must finish BEFORE route() — it restores
+  // the original hash (GitHub's redirect strips it) that route() reads.
+  ghHandleOAuthReturn().then(route);
 })();
 </script>
 </body>

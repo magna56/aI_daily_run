@@ -30,6 +30,8 @@ site: build ## Assemble the publishable site/ folder
 	mkdir -p $(OUTPUT_DIR)
 	cp index.html 404.html about.html privacy.html terms.html manifest.json robots.txt sitemap.xml $(OUTPUT_DIR)/
 	cp favicon.svg favicon-16.png favicon-32.png apple-touch-icon.png icon-192.png icon-512.png og-image.png $(OUTPUT_DIR)/
+	cp -R functions $(OUTPUT_DIR)/
+	@echo "note: functions/ (the GitHub OAuth token exchange) only runs on Cloudflare Pages — GitHub Pages has no serverless functions, so that mirror will 404 on /api/*"
 	touch $(OUTPUT_DIR)/.nojekyll
 	echo "/*  /index.html  200" > $(OUTPUT_DIR)/_redirects
 	@echo "==> Built $(OUTPUT_DIR)/"

@@ -41,21 +41,36 @@
 <div class="wrap">
   <a class="back" href="/">← The AI Commit</a>
   <h1>Privacy Policy</h1>
-  <p class="updated">Last updated 2026-08-22</p>
+  <p class="updated">Last updated 2026-08-23</p>
 
   <p>The AI Commit (theaicommit.com) is a solo, personal project. This page explains
-  plainly what data the site touches and what it doesn't — there's not much of either,
-  because the site currently has no accounts, no sign-up, and no ads.</p>
+  plainly what data the site touches and what it doesn't. There's no account system of
+  our own, no email/password sign-up, and no ads — the one exception is optional GitHub
+  sign-in, described below, which you never have to use to read or run anything here.</p>
 
   <h2>What we collect</h2>
-  <p>Nothing is sent to us. The two things the site stores are kept entirely in your
-  own browser via <code>localStorage</code> and never transmitted anywhere:</p>
+  <p>Nothing is sent to us or stored on a server we control. Everything the site stores
+  is kept entirely in your own browser via <code>localStorage</code>:</p>
   <ul>
     <li><strong>Reading progress</strong> — which sessions you've marked as read, so the
     grid can show you what's new. Per-browser, never leaves your device.</li>
     <li><strong>Code editor edits</strong> — if you modify a <code>code_example.py</code>
     in the interactive Run panel, your edit is cached locally for 24 hours so a refresh
     doesn't lose it. Same as above: local only, expires automatically.</li>
+    <li><strong>GitHub sign-in</strong> — the Code tab has an optional "Publish to GitHub"
+    button that creates a private Gist of your (possibly edited) copy of a code example
+    in your own GitHub account. Signing in uses GitHub's standard OAuth flow: after you
+    authorize, GitHub sends a one-time code that a small serverless function
+    (Cloudflare Pages Function) exchanges for an access token — that exchange is the
+    only server-side step, and the function does not log, store, or retain anything;
+    it forwards the code and returns the token. The resulting token and your GitHub
+    username are then kept in your browser's <code>localStorage</code>, exactly like
+    the two items above — not in a cookie, not in a database of ours. Publishing a gist
+    calls GitHub's API directly from your browser using that token; we never see the
+    gist's content. Sign out anytime from the Code tab to remove the token from your
+    browser (this doesn't revoke it on GitHub's side — do that from
+    <a href="https://github.com/settings/applications" target="_blank" rel="noopener">github.com/settings/applications</a>
+    if you want to fully revoke access).</li>
   </ul>
 
   <h2>What our host sees</h2>
@@ -68,7 +83,9 @@
 
   <h2>No cookies, no tracking, no ads</h2>
   <p>We don't set cookies, run analytics scripts, embed third-party trackers, or serve
-  ads. The only client-side storage is the <code>localStorage</code> described above.</p>
+  ads. The only client-side storage is the <code>localStorage</code> described above —
+  including the GitHub sign-in state, which is a token in <code>localStorage</code>,
+  not a cookie or a session we track.</p>
 
   <h2>Running code in your browser</h2>
   <p>The Code tab lets you execute <code>code_example.py</code> directly in your browser
@@ -84,9 +101,10 @@
 
   <h2>If this changes</h2>
   <div class="note">
-  We're actively developing sign-up, comments, and a newsletter. If and when those ship,
-  they will involve real data collection (an email address, at minimum), and this policy
-  will be updated accordingly — before those features go live, not after.
+  We're actively developing comments and a newsletter, which will need an email address
+  at minimum — that's a real account system, distinct from the optional, sign-in-only-if-
+  you-want-it GitHub publish feature above. This policy will be updated before those
+  ship, not after.
   </div>
 
   <h2>Contact</h2>
