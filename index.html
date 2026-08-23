@@ -39,6 +39,22 @@
     --accent: #38bdf8;
     --accent2: #7dd3fc;
     --good: #6fd79a;
+
+    /* Reading measure. One fixed px value (not `ch`, which is font-relative and
+       made .insight and .prose disagree) so every text block shares an edge. */
+    --measure: 640px;
+
+    /* Category families. The 11 rotation categories collapse into 5 conceptual
+       groups, because no categorical palette gets 11 hues a reader can actually
+       tell apart — 5 is learnable ("orange = infrastructure"). Steps are the
+       dataviz reference palette's validated dark slots; the -tx variants are
+       lightened so chip labels clear WCAG AA 4.5:1 against their OWN tinted
+       background (the base hues only cleared it against the bare page). */
+    --cat-models: #3987e5;  --cat-models-tx: #428ce6;
+    --cat-infra:  #d95926;  --cat-infra-tx:  #dc6637;
+    --cat-agents: #d55181;  --cat-agents-tx: #d9618d;
+    --cat-craft:  #199e70;  --cat-craft-tx:  #199e70;
+    --cat-safety: #c98500;  --cat-safety-tx: #c98500;
     --warn: #ffc879;
     --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -106,6 +122,25 @@
   .pill-btn .c { opacity: .6; font-family: var(--mono); font-size: 11px; margin-left: 6px; }
   .pill-btn.active .c { opacity: .8; }
 
+  /* Below ~640px, 12 wrapped pills cost 4 rows (~360px) before any session is
+     visible — measured on a 390px viewport, that's 1.4 screens of nothing but
+     filters. A horizontally-scrollable single row (the iOS App Store category-
+     chip pattern) keeps the same control in ~50px; the right-edge fade signals
+     there's more to scroll. */
+  @media (max-width: 640px) {
+    .pills {
+      display: flex; flex-wrap: nowrap; gap: 8px; justify-content: flex-start;
+      width: auto; max-width: none; border: none; border-radius: 0;
+      overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+      margin: 0 -24px 22px; padding: 2px 24px 6px;
+      mask-image: linear-gradient(90deg, #000 90%, transparent);
+      -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent);
+    }
+    .pills::-webkit-scrollbar { display: none; }
+    .pill-btn { flex: none; border: 1px solid var(--line); border-radius: 999px; }
+    .pill-btn + .pill-btn { border-left: 1px solid var(--line); }
+  }
+
   .count { text-align: center; color: var(--dim); font-family: var(--mono); font-size: 12.5px; margin-bottom: 18px; }
   .count .reset { margin-left: 10px; color: var(--accent); cursor: pointer; border: 0; background: none; font: inherit; font-size: 12.5px; }
 
@@ -119,7 +154,20 @@
   .done { flex-shrink: 0; color: var(--good); font-size: 15px; line-height: 1.2; }
   .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
   .tag { font-size: 11px; border-radius: 6px; padding: 3px 8px; border: 1px solid transparent; white-space: nowrap; }
-  .tag.cat { background: rgba(56,189,248,.12); color: var(--accent2); border-color: rgba(56,189,248,.25); }
+  .tag.cat-models { background: rgba(57,135,229,.13); color: var(--cat-models-tx); border-color: rgba(57,135,229,.3); }
+  .tag.cat-infra  { background: rgba(217,89,38,.13);  color: var(--cat-infra-tx);  border-color: rgba(217,89,38,.3); }
+  .tag.cat-agents { background: rgba(213,81,129,.13); color: var(--cat-agents-tx); border-color: rgba(213,81,129,.3); }
+  .tag.cat-craft  { background: rgba(25,158,112,.13); color: var(--cat-craft-tx);  border-color: rgba(25,158,112,.3); }
+  .tag.cat-safety { background: rgba(201,133,0,.15);  color: var(--cat-safety-tx); border-color: rgba(201,133,0,.32); }
+  /* Small solid dot beside "Category" in the reader meta strip — same family
+     color as the card tag, so the color vocabulary learned while browsing
+     the grid carries into the reading view. */
+  .catdot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .catdot.cat-models { background: var(--cat-models); }
+  .catdot.cat-infra  { background: var(--cat-infra); }
+  .catdot.cat-agents { background: var(--cat-agents); }
+  .catdot.cat-craft  { background: var(--cat-craft); }
+  .catdot.cat-safety { background: var(--cat-safety); }
   .tag.day { font-family: var(--mono); background: rgba(255,255,255,.05); color: var(--muted); border-color: var(--line); }
   /* The journal's key insight runs long by design — clamp on the card, full text in the reader. */
   .desc { color: var(--muted); font-size: 13.2px; line-height: 1.55; margin: 0 0 14px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
@@ -158,19 +206,30 @@
   .share .k { color: var(--dim); text-transform: uppercase; font-size: 10.5px; letter-spacing: .05em; }
   .share a { border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; color: var(--muted); }
   .share a:hover { color: var(--accent2); border-color: rgba(56,189,248,.45); text-decoration: none; }
-  .insight { background: rgba(56,189,248,.07); border: 1px solid rgba(56,189,248,.22); border-left: 3px solid var(--accent); border-radius: 8px; padding: 14px 18px; margin: 18px 0 26px; color: #cfe6f2; font-size: 14px; line-height: 1.65; }
+  /* Reading column. One shared measure for every text block on Overview so the
+     eye tracks a single column edge; Diagram/Code panes stay full-width since
+     they are tools, not prose. ~68ch keeps lines in the comfortable 45-75
+     character range (it was running 103 before, left-aligned in a 1152px area
+     with ~370px of dead space beside it). */
+  /* Capped, NOT centered — left-aligned to the same edge as the header/tabs
+     above, so the reading column doesn't float disconnected from them. */
+  .insight, .prose, .rmeta, .share { max-width: var(--measure); }
+  .insight { background: rgba(56,189,248,.07); border: 1px solid rgba(56,189,248,.22); border-left: 3px solid var(--accent); border-radius: 8px; padding: 16px 20px; margin-top: 18px; margin-bottom: 30px; color: #cfe6f2; font-size: 15.5px; line-height: 1.7; }
   .insight .k { display: block; color: var(--accent2); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
   .pane { padding: 22px 0 0; }
 
   /* Prose */
-  .prose { color: #cfcabf; font-size: 15px; line-height: 1.75; max-width: 780px; }
-  .prose h2 { font-size: 19px; margin: 32px 0 10px; color: var(--accent2); }
+  .prose { color: #d5d0c6; font-size: 17px; line-height: 1.75; }
+  /* Headings get more space above than below, so each one binds to the text it
+     introduces instead of floating between two blocks. */
+  .prose h2 { font-size: 21px; margin: 42px 0 12px; color: var(--accent2); letter-spacing: -.01em; }
   .prose > :first-child { margin-top: 0; }
-  .prose em { color: #ded9cf; font-style: italic; }
-  .prose h3, .prose h4 { font-size: 15.5px; margin: 24px 0 8px; color: var(--ink); }
-  .prose p { margin: 0 0 14px; }
-  .prose ul, .prose ol { margin: 0 0 14px; padding-left: 22px; }
-  .prose li { margin: 6px 0; }
+  .prose em { color: #e6e1d7; font-style: italic; }
+  .prose strong { color: var(--ink); font-weight: 650; }
+  .prose h3, .prose h4 { font-size: 16.5px; margin: 30px 0 8px; color: var(--ink); }
+  .prose p { margin: 0 0 17px; }
+  .prose ul, .prose ol { margin: 0 0 17px; padding-left: 22px; }
+  .prose li { margin: 8px 0; }
   .prose code { font-family: var(--mono); font-size: 12.8px; background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; }
   .prose pre { background: #0d0e12; border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow: auto; }
   .prose pre code { background: none; padding: 0; font-size: 12.5px; }
@@ -327,6 +386,19 @@
 
   var DATA = (window.SESSIONS || []).slice();
   var ROTATION = window.CATEGORIES || [];
+
+  // The 11 rotation categories collapse into 5 colored families — no
+  // categorical palette gives 11 hues a reader can tell apart, and 5 is
+  // learnable ("orange = infrastructure") in a way 11 never would be.
+  var CAT_FAMILY = {
+    "New Models & APIs": "models", "Applied Research": "models", "Multimodal Engineering": "models",
+    "AI Hardware for Engineers": "infra", "AI in Production": "infra",
+    "Agent Frameworks & Tools": "agents",
+    "Coding Agents & Productivity": "craft", "Open Source Tools": "craft",
+    "AI Engineering Practices": "craft", "Hands-on Techniques": "craft",
+    "AI Safety & Testing": "safety",
+  };
+  function famClass(cat) { return "cat-" + (CAT_FAMILY[cat] || "craft"); }
   var CACHE = {};                                  // id -> fetched payload
   var state = { q: "", cat: "", read: "", sort: "date-desc" };
   var kbdIndex = -1;                               // keyboard-focused card
@@ -706,7 +778,7 @@
           (read.has(s.id) ? '<span class="done" title="Read">✓</span>' : "") +
         "</div>" +
         '<div class="tags">' +
-          (s.category ? '<span class="tag cat">' + esc(s.category) + "</span>" : "") +
+          (s.category ? '<span class="tag cat ' + famClass(s.category) + '">' + esc(s.category) + "</span>" : "") +
           '<span class="tag day">' + esc(s.date) + "</span>" +
         "</div>" +
         '<p class="desc">' + esc(plain(s.insight) || "Open to read the write-up.") + "</p>" +
@@ -789,7 +861,7 @@
 
     var meta =
       '<div class="rmeta">' +
-        (p.category ? '<span><span class="k">Category</span>' + esc(p.category) + "</span>" : "") +
+        (p.category ? '<span><span class="k">Category</span><span class="catdot ' + famClass(p.category) + '"></span>' + esc(p.category) + "</span>" : "") +
         '<span><span class="k">Date</span>' + esc(p.date) + "</span>" +
         (p.meta["Time to read"] ? '<span><span class="k">Read</span>' + esc(p.meta["Time to read"]) + "</span>" : "") +
         (p.source && p.source.url
