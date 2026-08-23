@@ -132,6 +132,23 @@
   :root[data-theme="light"] .insight { color: #1f2937; }
   :root[data-theme="light"] .pill-btn { color: #4a453b; }
 
+  /* The code/output panels and the captured-output fallback box keep their
+     own fixed dark background in every theme (see the comment above), but
+     everything inside them — the editor text, Run/Reset/Publish buttons,
+     panel-head labels, syntax highlighting — was still reading --ink/--muted/
+     --dim/--line off the PAGE theme. In light mode that resolved to near-
+     black text and a near-black border, both landing on the still-dark panel
+     background: illegible. Re-declaring the dark-mode values scoped to these
+     containers fixes every descendant that reads var(--ink) etc. at once,
+     rather than patching each selector individually. */
+  :root[data-theme="light"] .panel,
+  :root[data-theme="light"] .fallback {
+    --ink: #e7e2d8;
+    --muted: #9a9488;
+    --dim: #857f70;
+    --line: rgba(255,255,255,.10);
+  }
+
   .theme-toggle {
     position: fixed; top: 16px; right: 16px; z-index: 30;
     display: flex; align-items: center; justify-content: center;
@@ -337,11 +354,14 @@
   .code-cols { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); gap: 18px; align-items: start; }
   /* Output that draws ASCII charts needs the full width or it scrolls sideways. */
   .code-cols.stacked { grid-template-columns: 1fr; }
-  /* Cap each pane when stacked so neither one pushes the other below the fold. */
-  .code-cols.stacked .editor-textarea, .code-cols.stacked .terminal-output { height: 40vh; }
+  /* Cap the (read-only, scrollable) output pane when stacked so it doesn't
+     push the editor below the fold — the editor itself is exempt: it grows
+     with content (see .editor-textarea and autoGrow()), so a fixed cap here
+     would fight that and re-introduce the cramped-while-typing problem. */
+  .code-cols.stacked .terminal-output { height: 40vh; }
   @media (max-width: 940px) {
     .code-cols { grid-template-columns: 1fr; }
-    .code-cols .editor-textarea, .code-cols .terminal-output { height: 40vh; }
+    .code-cols .terminal-output { height: 40vh; }
   }
   .panel { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #0d0e12; }
   .panel-head { display: flex; align-items: center; gap: 10px; padding: 9px 13px; background: rgba(255,255,255,.03); border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
@@ -363,7 +383,14 @@
      static code/output panels used, so this reads as one screen, not a
      scroll-through-three-panes stack. */
   .code-editor { display: flex; flex-direction: column; height: 100%; }
-  .editor-textarea { font-family: var(--mono); font-size: 12.4px; background: #0d0e12; color: var(--ink); border: none; padding: 15px; resize: none; line-height: 1.62; border-radius: 0; width: 100%; height: 70vh; }
+  /* Grows with content (see the JS autoGrow() call) instead of a fixed height
+     that forces scrolling inside a small box while typing. No max-height: a
+     capped height sounds safer but every real example here runs 100-400
+     lines, so any viewport-relative cap gets hit almost immediately and the
+     "auto-grow" never actually shows more than a screenful — the page itself
+     scrolls for a long file, same as any other tall page content, rather
+     than nesting a second scrollbar inside it. */
+  .editor-textarea { font-family: var(--mono); font-size: 12.4px; background: #0d0e12; color: var(--ink); border: none; padding: 15px; resize: none; line-height: 1.62; border-radius: 0; width: 100%; min-height: 300px; overflow-y: hidden; }
   .editor-textarea:focus { outline: 1px solid var(--accent); }
   .editor-controls { display: flex; gap: 8px; padding: 9px 13px; border-top: 1px solid var(--line); background: rgba(255,255,255,.03); }
   .btn-repl { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--ink); border-radius: 6px; padding: 6px 16px; font: inherit; font-family: var(--mono); font-size: 12px; cursor: pointer; transition: all .15s; }
@@ -1203,6 +1230,17 @@
     var copyBtn = $("copyCode");
     var liveOutputEl = $("liveOutput");
 
+    // Grows the textarea to fit its content (up to the CSS max-height, past
+    // which it scrolls as before) instead of a fixed height that forces
+    // scrolling while reading or typing. "auto" first so shrinking (e.g.
+    // after Reset onto a shorter file) is measured correctly too — scrollHeight
+    // only ever grows unless the height is reset first.
+    function autoGrow() {
+      editorEl.style.height = "auto";
+      editorEl.style.height = editorEl.scrollHeight + "px";
+    }
+    autoGrow();
+
     runBtn.addEventListener("click", function () {
       runBtn.classList.add("running");
       var code = editorEl.value;
@@ -1214,6 +1252,7 @@
     resetBtn.addEventListener("click", function () {
       editorEl.value = p.code.source;
       clearCodeCache(p.id);
+      autoGrow();
       liveOutputEl.querySelector(".terminal-output").innerHTML = '<span class="terminal-out-run">(output will appear here when you click Run)</span>';
     });
 
@@ -1224,6 +1263,7 @@
 
     editorEl.addEventListener("input", function () {
       setCodeCache(p.id, editorEl.value);
+      autoGrow();
     });
 
     var ghBtn = $("publishGh");
