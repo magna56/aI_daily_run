@@ -104,32 +104,6 @@ const CATEGORY_BLURBS = {
 const LEVELS = ["Start here", "Building", "Deeper"];
 const JOBS = ["Using tools", "Building agents", "Shipping AI", "How models work"];
 
-// Three short paths on the homepage. Order inside each path is the reading
-// order, not the publish date. Keep each path to a handful of sessions.
-const LEARNING_PATHS = [
-  {
-    id: "tools",
-    verb: "Use it",
-    title: "Claude or Cursor is already open",
-    blurb: "Why yesterday's chat is costing you today.",
-    ids: ["2026-08-22", "2026-07-04", "2026-07-13"],
-  },
-  {
-    id: "agents",
-    verb: "Build it",
-    title: "You're wiring an agent",
-    blurb: "The loop is easy. The names and the checks are not.",
-    ids: ["2026-07-05", "2026-07-09", "2026-07-17"],
-  },
-  {
-    id: "how-it-works",
-    verb: "Take it apart",
-    title: "See what the chat box hides",
-    blurb: "An adapter, an image, a busy GPU — no paper voice required.",
-    ids: ["2026-07-26", "2026-08-21", "2026-08-18"],
-  },
-];
-
 // Cross-cutting facets, deliberately NOT a restatement of CATEGORIES: a session
 // has exactly one category (what it is about) and several tags (what it touches).
 // A controlled list is the whole point — free-form tags drift into
@@ -330,23 +304,6 @@ function readMinutes(meta, body) {
 }
 
 function rmrf(p) { fs.rmSync(p, { recursive: true, force: true }); }
-
-function learningPathsForReader(cards) {
-  const byId = new Map(cards.map((c) => [c.id, c]));
-  return LEARNING_PATHS.map((p) => ({
-    id: p.id,
-    verb: p.verb,
-    title: p.title,
-    blurb: p.blurb,
-    ids: p.ids,
-    sessions: p.ids.map((id) => {
-      const c = byId.get(id);
-      return c
-        ? { id: c.id, title: c.title, hook: c.hook, slug: c.slug, minutes: c.minutes, level: c.level }
-        : { id };
-    }),
-  }));
-}
 
 /* ---- per-session compile --------------------------------------------------- */
 
@@ -966,7 +923,6 @@ function main() {
       "window.CATEGORY_BLURBS = " + JSON.stringify(CATEGORY_BLURBS) + ";\n" +
       "window.LEVELS = " + JSON.stringify(LEVELS) + ";\n" +
       "window.JOBS = " + JSON.stringify(JOBS) + ";\n" +
-      "window.LEARNING_PATHS = " + JSON.stringify(learningPathsForReader(cards)) + ";\n" +
       "window.SESSIONS = " + JSON.stringify(cards, null, 2) + ";\n"
     );
     // Categories that actually have sessions, in CATEGORIES (tier) order so

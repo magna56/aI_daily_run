@@ -111,4 +111,4 @@ which is ordered by tier — A/B/C — and is the validation source of truth; `D
 `Level` is `Start here` / `Building` / `Deeper`; `For` is `Using tools` / `Building agents` /
 `Shipping AI` / `How models work`; `Hook` is the one-line card blurb). Everything else is
 optional — a session missing a diagram or articles file simply shows fewer tabs in the reader.
-The homepage also ships three short reading paths from `LEARNING_PATHS` in `build.js`.
+The unfiltered homepage pins every `Start here` session above the date-sorted rest of the grid.
