@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="theme-color" content="#111217" />
-<title>AI Daily Learn</title>
+<title>The AI Commit</title>
 <meta name="description" content="Daily 30-minute AI learning sessions — topic, diagram, runnable code and further reading, in one place." />
 <script defer src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
 <style>
@@ -256,7 +256,7 @@
   <!-- ============================ index view ============================ -->
   <div id="viewIndex">
     <header class="top">
-      <h1 class="title">AI DAILY LEARN</h1>
+      <h1 class="title">THE AI COMMIT</h1>
       <p class="kicker">read · see · run</p>
       <p class="subtitle">Thirty focused minutes a day on what is new in AI. Every session is a topic, a diagram, a runnable example with its output, and the reading behind it.</p>
       <p class="trust">Picked daily from papers, changelogs, and engineering blogs from the last 48 hours — not a content calendar. Every session links its real sources, and every code example runs live in your browser so you can check it yourself. <a href="/about.html">How sessions get made →</a></p>
@@ -757,7 +757,7 @@
       }).join("") + "</div></div>";
 
     var shareUrl = location.origin + location.pathname + "#" + p.id;
-    var shareTitle = plain(p.title) + " — AI Daily Learn";
+    var shareTitle = plain(p.title) + " — The AI Commit";
     var share =
       '<div class="share">' +
         '<span class="k">Share</span>' +
@@ -784,7 +784,7 @@
         : "");
 
     $("viewReader").innerHTML = head + meta + '<div class="pane" id="pane"></div>';
-    document.title = plain(p.title) + " — AI Daily Learn";
+    document.title = plain(p.title) + " — The AI Commit";
     renderPane(p, pane);
 
     $("back").addEventListener("click", function () { location.hash = ""; });
@@ -993,7 +993,7 @@
       view = null;
       rdEl.classList.add("hidden");
       idxEl.classList.remove("hidden");
-      document.title = "AI Daily Learn";
+      document.title = "The AI Commit";
       renderStats();
       renderGrid();
       if (target) toast("No session " + target.id);
