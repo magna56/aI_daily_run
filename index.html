@@ -236,6 +236,26 @@
     border-radius: 999px; padding: 8px 14px; white-space: nowrap;
   }
   .course-invite a:hover { filter: brightness(1.08); }
+  .mlc-invite {
+    max-width: 720px; margin: -12px auto 28px; padding: 16px 18px;
+    border: 1px solid var(--line); border-radius: 12px;
+    background: var(--card);
+  }
+  .mlc-invite .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 0 0 4px; }
+  .mlc-invite .row { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .mlc-invite p { margin: 0; color: var(--ink); font-size: 14.5px; line-height: 1.45; max-width: 460px; }
+  .mlc-invite .topics { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .mlc-invite .topics a {
+    font-family: var(--mono); font-size: 11.5px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; text-decoration: none;
+  }
+  .mlc-invite .topics a:hover { color: var(--ink); border-color: rgba(167,139,250,.45); }
+  .mlc-invite .go {
+    font-family: var(--mono); font-size: 12.5px; font-weight: 650;
+    color: var(--accent2); text-decoration: none; white-space: nowrap;
+  }
+  .mlc-invite .go:hover { color: var(--ink); }
+  :root[data-theme="light"] .mlc-invite { background: rgba(0,0,0,.03); }
   body.on-learn .tagline,
   body.on-learn .subtitle,
   body.on-learn .trust,
@@ -243,7 +263,8 @@
   body.on-learn .controls,
   body.on-learn .pills,
   body.on-learn .count,
-  body.on-learn .course-invite { display: none; }
+  body.on-learn .course-invite,
+  body.on-learn .mlc-invite { display: none; }
   .lessons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
   .lesson {
     display: flex; align-items: baseline; gap: 14px;
@@ -684,6 +705,23 @@
           <p>AI basics — 11 short lessons, in order. Separate from the daily lab below.</p>
         </div>
         <a href="#learn">Start the basics →</a>
+      </div>
+      <div class="mlc-invite" id="mlcInvite">
+        <div class="row">
+          <div>
+            <p class="k">Intermediate basics</p>
+            <p>Interactive primers you can poke at — math, live training, honest outputs. Separate from the daily lab.</p>
+          </div>
+          <a class="go" href="https://mlconcepts.viveksingh-heritage.workers.dev/" target="_blank" rel="noopener">ML Concepts →</a>
+        </div>
+        <div class="topics">
+          <a href="https://mlconcepts.viveksingh-heritage.workers.dev/" target="_blank" rel="noopener">LoRA</a>
+          <a href="https://mlconcepts.viveksingh-heritage.workers.dev/" target="_blank" rel="noopener">Self-Attention</a>
+          <a href="https://mlconcepts.viveksingh-heritage.workers.dev/" target="_blank" rel="noopener">Calibration</a>
+          <a href="https://mlconcepts.viveksingh-heritage.workers.dev/" target="_blank" rel="noopener">Embeddings</a>
+          <a href="https://mlconcepts.viveksingh-heritage.workers.dev/" target="_blank" rel="noopener">Build an LLM</a>
+          <a href="https://mlconcepts.viveksingh-heritage.workers.dev/" target="_blank" rel="noopener">Agents in Prod</a>
+        </div>
       </div>
       <div class="stats" id="stats"></div>
       <hr class="sep" />
