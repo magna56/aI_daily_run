@@ -43,6 +43,7 @@ Current setup:
 | Label | `com.mayuragnani.ai-daily-learn` |
 | Fires at | **11:00** daily |
 | Runner | `.claude/skills/ai-daily-learn-publish/scripts/run_daily.sh` |
+| Model | **Opus**, always (`--model opus`, pinned in `run_daily.sh`) |
 | Logs | `~/ai_learning/.logs/run.log` (and `run.err.log`) |
 
 ```bash

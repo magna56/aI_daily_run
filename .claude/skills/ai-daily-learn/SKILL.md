@@ -28,6 +28,13 @@ the math behind Z".
 
 ## Session Parameters
 
+- **Model**: this session should run on Opus — the most capable model available, not whatever
+  happens to be active. The unattended daily job pins this itself (`run_daily.sh` passes
+  `--model opus`), so this only matters for a manually-invoked run: if you can tell the active
+  model is something else (e.g. the user has been on Sonnet or Haiku earlier in the
+  conversation), say so before generating and suggest `/model opus` — a skill invocation cannot
+  force a live model switch mid-session, so this has to be a flag-and-ask, not a silent
+  workaround.
 - **Time budget**: 30 minutes of reading/coding material
 - **Output directory**: `~/ai_learning/YYYY-MM-DD/` (today's date)
 - **Artifacts**: 4 files per session (topic.md, diagram.excalidraw, code_example.py, articles.md)

@@ -50,7 +50,12 @@ PROMPT="/ai-daily-learn-publish"
 
 # Scoped allowlist rather than --dangerously-skip-permissions: the job needs to
 # read the web, write into ~/ai_learning, and shell out to the two helper scripts.
+# --model opus: session generation should always run on the most capable model,
+# regardless of whatever a prior interactive session last had active — that
+# state doesn't carry over to an unattended launchd run anyway, so this is the
+# one place that setting can be pinned reliably.
 "$CLAUDE" -p "$PROMPT" \
+  --model opus \
   --allowed-tools WebSearch WebFetch Read Write Edit Bash Glob Grep Skill \
   --permission-mode acceptEdits
 rc=$?
