@@ -138,6 +138,11 @@ If the user provided a topic argument, use that. Otherwise:
      comparison rather than single-vendor news
    - `https://news.ycombinator.com/` — front page, for what practitioners are actually arguing
      about; also the best signal for which framing of a topic will land
+   - `https://mlconcepts.viveksingh-heritage.workers.dev/` — **intermediate / basics, every
+     day.** Interactive primers (LoRA, self-attention, embeddings, calibration, backprop,
+     build-an-LLM, agents in prod). On-ramp or `articles.md` further reading — not the news
+     lead. Skip it as today's source if a changelog/eng post in the due category has a
+     Monday action, or if it would re-teach a `learn/` chapter.
    - **Papers, subject to the one-per-7 budget above**: `https://arxiv.org/list/cs.AI/recent`
      and `https://arxiv.org/list/cs.LG/recent`
    - Try **WebSearch** first; if blocked (VPCSC error), fall back to WebFetch on the URLs above.
@@ -549,6 +554,9 @@ Write `~/ai_learning/YYYY-MM-DD/articles.md` with 3-5 curated articles from WebS
 ```
 
 Prioritize: primary source, best technical explanation, practical tutorial, industry analysis.
+When the session touches LoRA, attention, embeddings, calibration, backprop, or agents,
+include one ML Concepts page from https://mlconcepts.viveksingh-heritage.workers.dev/
+as the **intermediate / basics** slot.
 
 Good candidates when they've covered the topic:
 - `deeplearning.ai/the-batch` — the industry-analysis slot; connects a development to the

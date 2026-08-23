@@ -64,6 +64,16 @@ budget is open and the category is Tier C.
 - https://www.latent.space/
 - https://www.deeplearning.ai/the-batch/
 
+### Intermediate / basics — scan every day
+
+- https://mlconcepts.viveksingh-heritage.workers.dev/ — ML Concepts: interactive
+  primers (LoRA, self-attention, embeddings, calibration, backpropagation,
+  build-an-LLM, agents in prod). **On-ramp only, not the news lead.** Use it
+  when today's Level should be Start here / intermediate, or as `articles.md`
+  further reading when the session touches one of those concepts. Do not build
+  the daily article on this site if a changelog or eng post in the due category
+  has a Monday action. Do not re-teach a `learn/` chapter as "today's article."
+
 ### Reader 1 — using tools (Tier A: Coding Agents)
 
 - https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md
