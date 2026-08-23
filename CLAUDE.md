@@ -6,10 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A personal daily AI-learning log plus the static site ("the reader") that renders it. Each
 `YYYY-MM-DD/` folder is one 30-minute session — the source of truth, never generated from the
-site — containing up to four peer files:
+site — containing up to five peer files:
 
 ```
 topic.md            # H1 title, **Key**: value metadata block, then ## sections
+visualize.html       # standalone interactive model, lazy-loaded in a restricted iframe
 diagram.excalidraw   # Excalidraw scene JSON
 code_example.py       # runnable, pure Python, no API keys
 articles.md          # 3-5 curated sources with summaries
@@ -58,6 +59,10 @@ internals worth knowing before touching it:
   `site/data/index.js` for the grid). This split keeps the grid fast as sessions accumulate.
 - `REPO_BLOB` (env `ADL_REPO_BLOB`) controls where each session's "Files" link points — override
   it if this checkout's origin differs from the GitHub default baked into the script.
+- `visualize.html` is copied to `site/assets/<id>/` rather than embedded in the session payload.
+  The reader creates its iframe only when Visualize opens and uses `sandbox="allow-scripts"`
+  without same-origin/popups/forms. Keep each artifact self-contained (inline CSS/JS/data, no
+  external requests) and preserve its `adl-visualize-height` postMessage contract.
 
 **`lib/runner.js`** executes each `code_example.py` in a throwaway temp cwd (never dirties the
 repo), with a 60s timeout, `MPLBACKEND=Agg`, and prefers `.venv/bin/python3` over system Python.

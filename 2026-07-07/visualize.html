@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Listwise vs Pointwise RAG Pruning</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0d0c17;--panel:#171526;--line:#37314e;--text:#f4f0ff;--muted:#aaa2c2;--point:#ff9b73;--list:#9b8cff;--good:#61dfb2;--dim:#565066}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#171127 0,#0d0c17 48%);color:var(--text);font:15px/1.45 ui-sans-serif,system-ui,sans-serif}[data-visualizer]{max-width:1160px;margin:auto;padding:clamp(18px,4vw,42px)}
+    .eyebrow{color:#b8aaff;text-transform:uppercase;letter-spacing:.14em;font-size:12px;font-weight:800}h1{font-size:clamp(25px,4vw,42px);line-height:1.08;margin:4px 0 8px}.lede{color:var(--muted);max-width:790px;margin:0 0 22px}
+    .controls{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:16px;align-items:end;border:1px solid var(--line);background:#141222;border-radius:14px;padding:16px}label{font-weight:700}output{float:right;color:#c5baff;font-variant-numeric:tabular-nums}input[type=range]{display:block;width:100%;accent-color:var(--list);margin-top:9px}.reset{padding:9px 14px;border-radius:9px;border:1px solid #645a7d;background:transparent;color:var(--text);font-weight:700;cursor:pointer}.reset:hover,.reset:focus-visible{outline:none;border-color:#b8aaff}
+    .compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.strategy{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:16px}.strategy.point{border-top:3px solid var(--point)}.strategy.list{border-top:3px solid var(--list)}.strategy h2{font-size:18px;margin:0}.sub{color:var(--muted);font-size:13px;margin:3px 0 14px}.chunks{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}.chunk{aspect-ratio:1;border-radius:4px;background:var(--dim);display:grid;place-items:center;font-size:9px;font-weight:800;color:#171526}.chunk.keep{background:var(--good)}.chunk.dup{box-shadow:inset 0 0 0 2px var(--point)}.chunk.gap{background:var(--point)}.legend{display:flex;flex-wrap:wrap;gap:10px;color:var(--muted);font-size:11px;margin-top:10px}.key{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px}
+    .scorecard{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:16px}.panel{border:1px solid var(--line);background:#141222;border-radius:14px;padding:16px}.panel h2{font-size:15px;margin:0 0 12px}.rows{display:grid;gap:12px}.row{display:grid;grid-template-columns:78px 1fr 48px;gap:10px;align-items:center}.track{height:10px;border-radius:99px;background:#28243a;overflow:hidden}.bar{height:100%;border-radius:99px;transition:width .2s}.pointbar{background:var(--point)}.listbar{background:var(--list)}.value{text-align:right;font-variant-numeric:tabular-nums;font-weight:800}
+    .plane{position:relative;height:190px;border-left:1px solid #756d8b;border-bottom:1px solid #756d8b;margin:10px 8px 24px 36px;background:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:25% 25%}.axis-y{position:absolute;transform:rotate(-90deg);left:-63px;top:76px;color:var(--muted);font-size:11px}.axis-x{position:absolute;bottom:-23px;left:40%;color:var(--muted);font-size:11px}.dot{position:absolute;width:17px;height:17px;border-radius:50%;transform:translate(-50%,50%);border:3px solid #fff;transition:left .2s,bottom .2s}.dot.point{background:var(--point)}.dot.list{background:var(--list)}.dot span{position:absolute;white-space:nowrap;left:16px;top:-8px;color:var(--text);font-size:11px}.takeaway{color:var(--muted);margin:10px 0 0}.takeaway strong{color:var(--good)}
+    @media(max-width:800px){.controls{grid-template-columns:1fr 1fr}.compare,.scorecard{grid-template-columns:1fr}}@media(max-width:480px){.controls{grid-template-columns:1fr}.chunks{grid-template-columns:repeat(5,1fr)}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer>
+  <div class="eyebrow">20 chunks · 3-part question</div>
+  <h1>Can a chunk earn its place in the set?</h1>
+  <p class="lede">Pointwise scoring sees each query–chunk pair alone. Listwise grading sees coverage gaps and duplicates across the full candidate set, then pays a 15% pruning overhead before generation.</p>
+  <section class="controls" aria-label="Pruning controls">
+    <label>Pointwise threshold <output id="pwOut" for="pw">0.50</output><input id="pw" type="range" min="30" max="80" step="10" value="50"></label>
+    <label>Listwise grade floor <output id="lwOut" for="lw">CONTRIBUTING</output><input id="lw" type="range" min="3" max="5" step="1" value="4"></label>
+    <label>Redundant chunks <output id="dupOut" for="dups">2</output><input id="dups" type="range" min="0" max="6" step="1" value="2"></label>
+    <button class="reset" id="reset" type="button">Reset</button>
+  </section>
+  <section class="compare">
+    <article class="strategy point"><h2>Pointwise reranker</h2><p class="sub">Independent normalized relevance; duplicates look essential.</p><div class="chunks" id="pwChunks" aria-label="Pointwise kept chunks"></div><div class="legend"><span><i class="key" style="background:var(--good)"></i>kept</span><span><i class="key" style="background:var(--dim)"></i>pruned</span><span><i class="key" style="background:transparent;border:2px solid var(--point)"></i>duplicate</span></div></article>
+    <article class="strategy list"><h2>Listwise LLM pruner</h2><p class="sub">Five-level grades; top 2 bypass grading as a safety floor.</p><div class="chunks" id="lwChunks" aria-label="Listwise kept chunks"></div><div class="legend"><span><i class="key" style="background:var(--good)"></i>kept</span><span><i class="key" style="background:var(--point)"></i>coverage gap</span><span><i class="key" style="background:transparent;border:2px solid var(--point)"></i>duplicate</span></div></article>
+  </section>
+  <section class="scorecard">
+    <div class="panel"><h2>Outcome after pruning</h2><div class="rows">
+      <div class="row"><span>PW recall</span><div class="track"><div class="bar pointbar" id="pwRecall"></div></div><span class="value" id="pwRecallV"></span></div>
+      <div class="row"><span>LW recall</span><div class="track"><div class="bar listbar" id="lwRecall"></div></div><span class="value" id="lwRecallV"></span></div>
+      <div class="row"><span>PW cost</span><div class="track"><div class="bar pointbar" id="pwCost"></div></div><span class="value" id="pwCostV"></span></div>
+      <div class="row"><span>LW cost</span><div class="track"><div class="bar listbar" id="lwCost"></div></div><span class="value" id="lwCostV"></span></div>
+    </div><p class="takeaway" id="takeaway"></p></div>
+    <div class="panel"><h2>Cost–recall position</h2><div class="plane"><span class="axis-y">recall ↑</span><span class="axis-x">cost →</span><div class="dot point" id="pwDot"><span>pointwise</span></div><div class="dot list" id="lwDot"><span>listwise</span></div></div>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const gradeNames={3:"SUPPORTING",4:"CONTRIBUTING",5:"ESSENTIAL"};
+  const base=[
+    {g:5,p:[0]},{g:5,p:[1]},{g:5,p:[2]},{g:4,p:[0,1]},{g:4,p:[1,2]},
+    {g:3,p:[0]},{g:3,p:[1]},{g:3,p:[2]},{g:3,p:[0]},{g:3,p:[1]},
+    {g:3,p:[2]},{g:2,p:[]},{g:2,p:[]},{g:2,p:[]},{g:2,p:[]},
+    {g:1,p:[]},{g:1,p:[]},{g:1,p:[]},{g:1,p:[]},{g:1,p:[]}
+  ];
+  const $=s=>document.querySelector(s), controls={pw:$("#pw"),lw:$("#lw"),dups:$("#dups")};
+  function scenario(){
+    const n=+controls.dups.value, chunks=base.map((c,i)=>({id:i,g:c.g,p:c.p.slice(),dup:false}));
+    for(let i=0;i<n;i++){const idx=5+i;chunks[idx]={id:idx,g:3,p:[i%3],dup:true,of:i%3}}
+    return chunks;
+  }
+  function pointwise(chunks){
+    const t=+controls.pw.value/100;
+    return chunks.map(c=>({...c,score:c.dup?1:c.g/5,keep:(c.dup?1:c.g/5)>=t}));
+  }
+  function listwise(chunks){
+    const sorted=chunks.slice().sort((a,b)=>(b.dup?5:b.g)-(a.dup?5:a.g)||a.id-b.id), floor=+controls.lw.value, covered=new Set(), seen=new Set();
+    sorted.forEach((c,i)=>{
+      if(i<2){c.keep=true;c.display=c.g;c.p.forEach(x=>covered.add(x));seen.add(c.id);return}
+      let grade=c.g;
+      if(c.dup&&seen.has(c.of))grade=2;
+      else if(c.p.some(x=>!covered.has(x)))grade=5;
+      c.display=grade;c.keep=grade>=floor;
+      if(c.keep){c.p.forEach(x=>covered.add(x));seen.add(c.id)}
+    });
+    return chunks;
+  }
+  function metrics(chunks, overhead){
+    const kept=chunks.filter(c=>c.keep), covered=new Set();kept.forEach(c=>c.p.forEach(x=>covered.add(x)));
+    return {kept:kept.length,recall:covered.size/3,cost:(kept.length+20*overhead)/20};
+  }
+  function blocks(target,chunks){
+    target.innerHTML=chunks.map(c=>`<span class="chunk ${c.keep?"keep":""} ${c.dup?"dup":""}" title="Chunk ${c.id}: grade ${c.g}${c.dup?", redundant":""}">${c.id}</span>`).join("");
+  }
+  function render(){
+    const raw=scenario(), pw=pointwise(raw.map(c=>({...c,p:c.p.slice()}))), lw=listwise(raw.map(c=>({...c,p:c.p.slice()})));
+    const pm=metrics(pw,0), lm=metrics(lw,.15);
+    blocks($("#pwChunks"),pw);blocks($("#lwChunks"),lw);
+    $("#pwOut").textContent=(+controls.pw.value/100).toFixed(2);$("#lwOut").textContent=gradeNames[controls.lw.value];$("#dupOut").textContent=controls.dups.value;
+    [["pwRecall",pm.recall],["lwRecall",lm.recall],["pwCost",pm.cost],["lwCost",lm.cost]].forEach(([id,v])=>{$("#"+id).style.width=Math.min(100,v*100)+"%"});
+    $("#pwRecallV").textContent=Math.round(pm.recall*100)+"%";$("#lwRecallV").textContent=Math.round(lm.recall*100)+"%";
+    $("#pwCostV").textContent=Math.round(pm.cost*100)+"%";$("#lwCostV").textContent=Math.round(lm.cost*100)+"%";
+    [["pwDot",pm],["lwDot",lm]].forEach(([id,m])=>{const e=$("#"+id);e.style.left=Math.min(100,m.cost*100)+"%";e.style.bottom=Math.max(0,m.recall*100)+"%"});
+    const redundantPW=pw.filter(c=>c.keep&&c.dup).length, redundantLW=lw.filter(c=>c.keep&&c.dup).length;
+    $("#takeaway").innerHTML=`Pointwise keeps <strong>${redundantPW}</strong> duplicates; listwise keeps <strong>${redundantLW}</strong>. Net listwise savings: <strong>${Math.round((1-lm.cost)*100)}%</strong> after pruner cost.`;
+  }
+  Object.values(controls).forEach(c=>c.addEventListener("input",render));
+  $("#reset").addEventListener("click",()=>{controls.pw.value=50;controls.lw.value=4;controls.dups.value=2;render()});
+  render();
+  const report=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(report).observe(document.documentElement);report();
+})();
+</script>
+</body>
+</html>

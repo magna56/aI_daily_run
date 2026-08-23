@@ -7,14 +7,14 @@
                                node build.js --no-run   (skip executing examples)
 
    Session folders are the source of truth and are never modified: /ai-daily-learn
-   writes YYYY-MM-DD/{topic.md,diagram.excalidraw,code_example.py,articles.md} and
+   writes YYYY-MM-DD/{topic.md,visualize.html,diagram.excalidraw,code_example.py,articles.md} and
    this script adapts to whatever is there. Older sessions are missing a diagram
    or an articles file, and that is a warning, not an error.
 
    Output:
      site/data/index.js      window.SESSIONS + window.CATEGORIES — the card grid
      site/data/<id>.json     one session's full payload, fetched when opened
-     site/assets/<id>/       diagram.excalidraw + any images, for download/display
+     site/assets/<id>/       visualize.html + diagram.excalidraw + any images
      site/<id>/index.html    real, independently-crawlable per-session page — root
                               index.html with the META/OG blocks swapped for that
                               session's own title/description/canonical/JSON-LD;
@@ -29,6 +29,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const vm = require("vm");
 
 const { renderExcalidrawSVG } = require("./lib/excalidraw-svg");
 const { createRunner } = require("./lib/runner");
@@ -378,6 +379,52 @@ function compile(id, journal, runner, opts) {
   else warn(`${id}: no articles.md.`);
   const articleCount = (articles || []).reduce((n, g) => n + g.items.length, 0);
 
+  /* interactive visualizer -> isolated standalone HTML, loaded only when its
+     pane opens. It stays out of the JSON payload so the grid/session read path
+     pays zero bytes for an interaction the reader may never use. */
+  let visualize = null;
+  const visualizePath = path.join(dir, "visualize.html");
+  if (fs.existsSync(visualizePath)) {
+    const html = fs.readFileSync(visualizePath, "utf8");
+    if (!/<html[\s>]/i.test(html) || !/<title>[^<]+<\/title>/i.test(html)) {
+      warn(`${id}: visualize.html must be a complete document with a <title>.`);
+    } else {
+      let valid = true;
+      if (!/name=["']viewport["']/i.test(html)) {
+        warn(`${id}: visualize.html has no viewport meta tag.`);
+      }
+      if (!/data-visualizer/i.test(html)) {
+        warn(`${id}: visualize.html has no data-visualizer root marker.`);
+      }
+      if (!/adl-visualize-height/.test(html)) {
+        warn(`${id}: visualize.html does not report its height to the reader.`);
+      }
+      if (/<script[^>]+\bsrc\s*=|<link[^>]+\bhref\s*=|\b(fetch|XMLHttpRequest|WebSocket)\s*\(/i.test(html)) {
+        warn(`${id}: visualize.html references external resources or network APIs.`);
+      }
+      const scripts = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/gi)]
+        .filter((m) => !/\bjson\b/i.test(m[1]) && m[2].trim());
+      for (let i = 0; i < scripts.length; i++) {
+        try {
+          new vm.Script(scripts[i][2], { filename: `${id}/visualize.html#script-${i + 1}` });
+        } catch (e) {
+          warn(`${id}: visualize.html has invalid JavaScript — ${e.message}`);
+          valid = false;
+          break;
+        }
+      }
+      if (valid) {
+        visualize = { file: `assets/${id}/visualize.html` };
+        if (writing) {
+          fs.mkdirSync(assetDir, { recursive: true });
+          fs.copyFileSync(visualizePath, path.join(assetDir, "visualize.html"));
+        }
+      }
+    }
+  } else {
+    warn(`${id}: no visualize.html.`);
+  }
+
   /* images that already sit in the session folder (a script's saved chart) */
   const images = [];
   for (const name of fs.readdirSync(dir)) {
@@ -406,6 +453,7 @@ function compile(id, journal, runner, opts) {
     insight: j["Key insight"] || "",
     topic: topic.body,
     diagram,
+    visualize,
     code,
     articles,
     images: images.sort(),
@@ -425,6 +473,7 @@ function compile(id, journal, runner, opts) {
     insight: payload.insight,
     minutes: readMinutes(topic.meta, topic.body),
     diagram: !!diagram,
+    visualize: !!visualize,
     code: !!code,
     articles: articleCount,
     codeLines: code ? code.lines : 0,
@@ -888,6 +937,7 @@ function main() {
   }
   console.log(
     `Wrote site/data for ${cards.length} session(s) — ` +
+    `${cards.filter((c) => c.visualize).length} visualizer(s), ` +
     `${cards.filter((c) => c.diagram).length} diagram(s), ` +
     `${withOutput} with captured output ` +
     `(${runStats.executed} run, ${runStats.reused} cached)` +

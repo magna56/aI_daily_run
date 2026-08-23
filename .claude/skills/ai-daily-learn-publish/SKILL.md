@@ -2,7 +2,7 @@
 name: ai-daily-learn-publish
 description: >
   Runs a full AI Daily Learn session AND publishes it live. Identical to ai-daily-learn — same
-  topic selection, same four artifacts in ~/ai_learning/YYYY-MM-DD/ — but afterwards commits the
+  topic selection, same five artifacts in ~/ai_learning/YYYY-MM-DD/ — but afterwards commits the
   session and pushes it straight to main on magna56/aI_daily_run (no branch, no PR), then rebuilds
   and republishes the reader to theaicommit.com (Cloudflare Pages, primary) and
   magna56.github.io/aI_daily_run (GitHub Pages, mirror). This is what the automated 11:00 daily
@@ -21,7 +21,7 @@ the session workflow, so the two skills can never drift apart.
 
 ## Step A: Run the full session
 
-Execute the entire `ai-daily-learn` workflow, Steps 1 through 10, exactly as written:
+Execute the entire `ai-daily-learn` workflow, Steps 1 through 11, exactly as written:
 
 ```
 Skill(skill="tp-mcp-config:ai-daily-learn", args="<the topic argument, if the user gave one>")
@@ -93,7 +93,7 @@ Source:  https://github.com/magna56/aI_daily_run
 ```
 
 theaicommit.com is the primary link to share — it's the one with the real domain, the GitHub
-sign-in/Publish-to-Gist feature (GitHub Pages has no serverless functions, so that button 404s on
+sign-in/Publish-to-Repo feature (GitHub Pages has no serverless functions, so that button 404s on
 the mirror), and the light/dark toggle. The GitHub Pages mirror exists as a free fallback if
 Cloudflare is ever down.
 

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Truncated Jump Sampling Explorer</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090d18;--panel:#111827;--line:#26334c;--text:#e8eefc;--muted:#95a3bd;--blue:#70a5ff;--cyan:#54e6d2;--orange:#ffb454;--red:#ff6b81}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 70% 0,#162342 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.45 system-ui,sans-serif}
+    [data-visualizer]{max-width:1100px;margin:auto;padding:clamp(16px,3vw,32px)}
+    header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:20px}h1{font-size:clamp(22px,4vw,36px);line-height:1.1;margin:0 0 8px}p{margin:0;color:var(--muted);max-width:720px}
+    button{border:1px solid var(--line);background:#172135;color:var(--text);padding:9px 14px;border-radius:9px;cursor:pointer;font:inherit}button:hover,button:focus-visible{border-color:var(--blue);outline:none}
+    .grid{display:grid;grid-template-columns:minmax(230px,.72fr) minmax(0,1.5fr);gap:16px}.card{background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-radius:15px;padding:18px}
+    .controls{display:grid;gap:19px}.control-head{display:flex;justify-content:space-between;gap:10px}.value{color:var(--cyan);font-variant-numeric:tabular-nums;font-weight:700}input[type=range]{width:100%;accent-color:var(--cyan)}
+    .ticks{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}.formula{padding:12px;border-radius:10px;background:#0a1120;color:var(--cyan);font:13px ui-monospace,monospace}.hint{font-size:12px;color:var(--muted)}
+    .stage{display:grid;grid-template-rows:auto 1fr;min-height:420px}.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:8px}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+    canvas{width:100%;height:355px;display:block;border-radius:10px;background:#0a101d}
+    .metrics{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metric strong{display:block;font-size:clamp(20px,3vw,29px);font-variant-numeric:tabular-nums}.metric span{color:var(--muted);font-size:12px}.metric.accent strong{color:var(--cyan)}
+    .meter{height:6px;background:#273248;border-radius:99px;margin-top:9px;overflow:hidden}.meter i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--orange),var(--cyan));border-radius:inherit}
+    @media(max-width:730px){header{display:block}header button{margin-top:14px}.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}canvas{height:310px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer>
+  <header><div><h1>Stop integrating. Jump.</h1><p>Truncated Jump Sampling runs only a fraction of the diffusion ODE, then decodes the clean endpoint directly from the intermediate state. Move the truncation point to expose the speed–decodability tradeoff.</p></div><button id="reset" type="button">Reset</button></header>
+  <section class="grid">
+    <div class="card controls">
+      <div><div class="control-head"><label for="gamma">Integration fraction γ</label><output class="value" id="gammaOut" for="gamma"></output></div><input id="gamma" type="range" min="20" max="100" step="1" value="70"><div class="ticks"><span>early jump</span><span>full ODE</span></div></div>
+      <div><div class="control-head"><label for="steps">Baseline ODE steps K</label><output class="value" id="stepsOut" for="steps"></output></div><input id="steps" type="range" min="10" max="80" step="5" value="50"><div class="ticks"><span>10</span><span>80</span></div></div>
+      <div class="formula" aria-label="Decoder formula">x̂₀ = xₜ + (1 − t) · vθ(xₜ,t)</div>
+      <p class="hint">The blue path is the full ODE. Orange marks where integration stops; the cyan segment is the closed-form jump. Five red crosses are the target data modes.</p>
+    </div>
+    <div class="card stage">
+      <div class="legend"><span><i class="dot" style="background:var(--blue)"></i>ODE trajectory</span><span><i class="dot" style="background:var(--orange)"></i>truncate</span><span><i class="dot" style="background:var(--cyan)"></i>decode jump</span></div>
+      <canvas id="plot" role="img" aria-label="A deterministic diffusion trajectory with a movable truncation point and decoded endpoint"></canvas>
+    </div>
+    <div class="metrics">
+      <div class="card metric"><span>Neural evaluations</span><strong id="nfe"></strong><div class="meter"><i id="nfeBar"></i></div></div>
+      <div class="card metric accent"><span>Compute saved</span><strong id="saved"></strong></div>
+      <div class="card metric"><span>Endpoint uncertainty U(t*)</span><strong id="uncertainty"></strong><div class="meter"><i id="uncBar"></i></div></div>
+      <div class="card metric"><span>Decoder quality proxy</span><strong id="quality"></strong></div>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $=s=>document.querySelector(s), gamma=$("#gamma"), steps=$("#steps"), canvas=$("#plot"), ctx=canvas.getContext("2d");
+  const centers=[[2,2],[-2,2],[-2,-2],[2,-2],[0,0]];
+  function pathPoint(u){
+    const x=-3.15+5.15*u+.65*Math.sin(u*Math.PI*1.7)*(1-u);
+    const y=-.65+2.65*u+1.05*Math.sin(u*Math.PI*2.15)*(1-u);
+    return [x,y];
+  }
+  function draw(){
+    const dpr=Math.min(devicePixelRatio||1,2), r=canvas.getBoundingClientRect();
+    canvas.width=Math.max(1,Math.round(r.width*dpr)); canvas.height=Math.max(1,Math.round(r.height*dpr)); ctx.setTransform(dpr,0,0,dpr,0,0);
+    const w=r.width,h=r.height,pad=28, sx=x=>pad+(x+4.5)/9*(w-pad*2), sy=y=>h-pad-(y+4.5)/9*(h-pad*2);
+    ctx.clearRect(0,0,w,h); ctx.strokeStyle="#1b2840";ctx.lineWidth=1;
+    for(let n=-4;n<=4;n+=2){ctx.beginPath();ctx.moveTo(sx(n),sy(-4.5));ctx.lineTo(sx(n),sy(4.5));ctx.stroke();ctx.beginPath();ctx.moveTo(sx(-4.5),sy(n));ctx.lineTo(sx(4.5),sy(n));ctx.stroke()}
+    const K=+steps.value, g=+gamma.value/100, k=Math.ceil(g*K), u=k/K, trunc=pathPoint(u), target=[2,2];
+    ctx.strokeStyle="#70a5ff";ctx.lineWidth=2;ctx.beginPath();
+    for(let i=0;i<=K;i++){const q=pathPoint(i/K); i?ctx.lineTo(sx(q[0]),sy(q[1])):ctx.moveTo(sx(q[0]),sy(q[1]))}ctx.stroke();
+    centers.forEach(c=>{ctx.strokeStyle="#ff6b81";ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(sx(c[0])-5,sy(c[1])-5);ctx.lineTo(sx(c[0])+5,sy(c[1])+5);ctx.moveTo(sx(c[0])+5,sy(c[1])-5);ctx.lineTo(sx(c[0])-5,sy(c[1])+5);ctx.stroke()});
+    const t=1-u, err=.85*t*t, angle=1.1, decoded=[target[0]+err*Math.cos(angle),target[1]+err*Math.sin(angle)];
+    ctx.setLineDash([7,5]);ctx.strokeStyle="#54e6d2";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(sx(trunc[0]),sy(trunc[1]));ctx.lineTo(sx(decoded[0]),sy(decoded[1]));ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle="#ffb454";ctx.beginPath();ctx.arc(sx(trunc[0]),sy(trunc[1]),7,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#54e6d2";ctx.beginPath();ctx.arc(sx(decoded[0]),sy(decoded[1]),7,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#95a3bd";ctx.font="12px system-ui";ctx.fillText("noise  t=1",sx(-3.15)+8,sy(-.65)+4);ctx.fillText("clean  t=0",sx(2)+9,sy(2)-9);
+    const nfe=g===1?K:k+1, saved=Math.max(0,1-nfe/K), uncertainty=t*t, quality=Math.max(0,100*(1-.42*uncertainty));
+    $("#gammaOut").textContent=g.toFixed(2);$("#stepsOut").textContent=K+" steps";$("#nfe").textContent=nfe+" / "+K;$("#saved").textContent=Math.round(saved*100)+"%";$("#uncertainty").textContent=uncertainty.toFixed(3);$("#quality").textContent=Math.round(quality)+"%";
+    $("#nfeBar").style.width=(nfe/K*100)+"%";$("#uncBar").style.width=(uncertainty*100)+"%";
+  }
+  gamma.addEventListener("input",draw);steps.addEventListener("input",draw);$("#reset").addEventListener("click",()=>{gamma.value=70;steps.value=50;draw()});
+  new ResizeObserver(draw).observe(canvas);
+  new ResizeObserver(()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*")).observe(document.documentElement);
+  draw();
+})();
+</script>
+</body>
+</html>

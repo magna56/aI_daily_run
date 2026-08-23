@@ -2,8 +2,9 @@
 name: ai-daily-learn
 description: >
   Daily 30-minute AI learning session for senior engineers. Searches latest AI news/research,
-  picks a focused topic, and produces three artifacts: an Excalidraw visual diagram, a runnable
-  pure-Python code example, and curated articles with summaries. Saves everything locally to
+  picks a focused topic, and produces four companion artifacts: an interactive visualizer, an
+  Excalidraw diagram, a runnable pure-Python code example, and curated articles with summaries.
+  Saves everything locally to
   ~/ai_learning/YYYY-MM-DD/ and nowhere else — nothing is pushed anywhere. Use the sibling skill
   ai-daily-learn-publish to also publish the session to GitHub. Tracks covered topics to avoid
   repetition. Use when: "daily learn", "ai-daily-learn",
@@ -37,7 +38,8 @@ the math behind Z".
   workaround.
 - **Time budget**: 30 minutes of reading/coding material
 - **Output directory**: `~/ai_learning/YYYY-MM-DD/` (today's date)
-- **Artifacts**: 4 files per session (topic.md, diagram.excalidraw, code_example.py, articles.md)
+- **Artifacts**: 5 files per session (topic.md, visualize.html, diagram.excalidraw,
+  code_example.py, articles.md)
 - **Journal**: `~/ai_learning/journal.md` tracks all sessions
 - **Code**: Pure Python only — no API keys, no external services. Self-contained demos.
 - **Excalidraw**: Open at excalidraw.com (drag & drop)
@@ -434,7 +436,51 @@ If the script fails, generate the Excalidraw JSON directly using this element fo
 - Arrow: `{"id":"a1","type":"arrow","points":[[0,0],[100,0]],"startBinding":{"elementId":"r1"},"endBinding":{"elementId":"r2"},"endArrowhead":"arrow",...}`
 - Wrapper: `{"type":"excalidraw","version":2,"source":"https://excalidraw.com","elements":[...],"appState":{"viewBackgroundColor":"#ffffff"},"files":{}}`
 
-### Step 8: Write articles.md
+### Step 8: Generate visualize.html
+
+Write `~/ai_learning/YYYY-MM-DD/visualize.html`: a custom interactive model of the article's
+central mechanism. This is not a decorated summary and not a copy of the Excalidraw diagram. The
+reader should be able to change one or two meaningful inputs and watch the article's claim emerge.
+Pull constants and headline results from `topic.md` and `code_example.py`; never invent data merely
+to make the interaction dramatic.
+
+Use the interaction shape that fits the mechanism:
+- **Pipeline/budget** — sliders or toggles change flow, token use, latency, cost, or failure rate.
+- **Matrix/representation** — heatmaps, quantization grids, bit counts, or compression state.
+- **Decision/eval** — policy toggles change accepted/rejected actions, score, or confound.
+- **Search/serving** — sweep a threshold or load and show the winner/inversion/frontier.
+- **Agent/tool system** — enable components and trace discovery, dispatch, validation, or trust.
+
+Hard artifact contract:
+- Complete standalone HTML/CSS/vanilla JavaScript; no React/JSX, package install, CDN, API key,
+  fetch/XHR/WebSocket, external font, external image, or other network dependency.
+- Include `<!doctype html>`, `<title>`, viewport metadata, and one root with
+  `data-visualizer="<session-id>"`.
+- Include this restrictive CSP:
+  `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'`.
+- Match the reader's dark visual language, but make the interaction topic-specific. Include a
+  clear mechanism, live numerical readout, concise state explanation, meaningful controls, and
+  Reset. Use deterministic seeded data where simulation is needed.
+- Controls must be labelled and keyboard-accessible; layout must work on a phone; honor
+  `prefers-reduced-motion`; cap timers/loops and clean them up.
+- Report height initially and whenever layout changes:
+
+```javascript
+function reportHeight() {
+  parent.postMessage({
+    type: "adl-visualize-height",
+    height: document.documentElement.scrollHeight
+  }, "*");
+}
+addEventListener("load", reportHeight);
+new ResizeObserver(reportHeight).observe(document.documentElement);
+```
+
+Run a JavaScript syntax check before considering the artifact complete. The reader loads it only
+when the Visualize pane opens, inside `sandbox="allow-scripts"` without same-origin, popups, forms,
+or storage access.
+
+### Step 9: Write articles.md
 
 Write `~/ai_learning/YYYY-MM-DD/articles.md` with 3-5 curated articles from WebSearch:
 
@@ -471,7 +517,7 @@ Same spirit as the source rule in Step 2: **favour engineering write-ups, docs a
 over papers** here too. The `## Papers` block is optional — use it when a paper genuinely is the
 primary source, not to make the list look rigorous.
 
-### Step 9: Update the Journal
+### Step 10: Update the Journal
 
 Append to `~/ai_learning/journal.md`:
 
@@ -498,10 +544,11 @@ drifting into 200-word jargon walls; that is the single most daunting thing on t
 - Test: could someone who has never opened the session read this and want to? If it instead reads
   like the conclusion of a paper they haven't read, cut it down.
 
-### Step 10: Present the Summary
+### Step 11: Present the Summary
 
-`~/ai_learning/` contains a reader that renders these four files as one page —
-diagram pre-rendered to SVG, code shown beside its captured output. Point the user
+`~/ai_learning/` contains a reader that renders these five files as one page —
+interactive visualizer sandboxed and lazy-loaded, diagram pre-rendered to SVG, and code shown
+beside its captured output. Point the user
 at that, not at the raw files, since the `.excalidraw` is unreadable on its own.
 
 ```
@@ -519,10 +566,11 @@ What you'll learn:
 
 Read it:
   cd ~/ai_learning && make serve      then open http://127.0.0.1:8000/#YYYY-MM-DD
-    Overview → Diagram → Code (with output) → Articles, ~30 min end to end
+    Overview → Visualize → Diagram → Code (with output) → Articles, ~30 min end to end
 
 Files created:
   ~/ai_learning/YYYY-MM-DD/topic.md           — the write-up (~10 min)
+  ~/ai_learning/YYYY-MM-DD/visualize.html     — interactive mechanism; standalone and sandboxed
   ~/ai_learning/YYYY-MM-DD/diagram.excalidraw — rendered in the reader; drop into excalidraw.com to edit
   ~/ai_learning/YYYY-MM-DD/code_example.py    — Run: python3 ~/ai_learning/YYYY-MM-DD/code_example.py (~15 min)
   ~/ai_learning/YYYY-MM-DD/articles.md        — pick one to deep-dive (~5 min)
@@ -538,6 +586,7 @@ mechanism. The summary is an invitation to read, not a compressed version of the
 
 - WebSearch returns nothing → broaden search terms, fall back to known interesting topic
 - Code example needs API → write a pure Python simulation instead
+- Visualizer cannot model the full system → model the smallest mechanism that proves the key claim
 - Excalidraw script fails → generate JSON inline (see Step 7 fallback)
 - Journal corrupted → recreate with header, note the reset
 
