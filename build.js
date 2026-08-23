@@ -15,6 +15,11 @@
      site/data/index.js      window.SESSIONS + window.CATEGORIES — the card grid
      site/data/<id>.json     one session's full payload, fetched when opened
      site/assets/<id>/       diagram.excalidraw + any images, for download/display
+     site/<id>/index.html    real, independently-crawlable per-session page — root
+                              index.html with the META/OG blocks swapped for that
+                              session's own title/description/canonical/JSON-LD;
+                              otherwise byte-identical (see writePerSessionShell)
+     site/sitemap.xml        generated here, not hand-written — lists every session
 
    The split matters: the grid must stay fast as sessions accumulate, so the
    heavy parts (rendered SVG, source, captured output) load only on demand.
@@ -365,6 +370,146 @@ function compile(id, journal, runner, opts) {
   return { payload, card };
 }
 
+/* ---- per-session real pages (search-indexable URLs) ------------------------ */
+// See the "Real per-post URLs" plan: index.html is one static file for every
+// hash-routed URL, so a crawler or a shared link only ever sees the generic
+// site-wide title/description — it never learns which session it's looking
+// at. This block gives each session its OWN file at site/<id>/index.html:
+// same page, same app, but with real per-session metadata baked into the raw
+// HTML a crawler reads without executing any JS.
+
+const SITE_ORIGIN = "https://theaicommit.com";
+
+function stripMd(s) {
+  // Mirrors index.html's client-side plain() exactly, so a description reads
+  // the same whether it was rendered by JS or baked in at build time.
+  return String(s == null ? "" : s)
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/(^|\W)\*([^*]+)\*(?=\W|$)/g, "$1$2")
+    .replace(/\[([^\]]+)\]\([^)\s]*\)/g, "$1");
+}
+
+function truncateWords(s, max) {
+  s = s.trim();
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trim() + "…";
+}
+
+function escAttr(s) {
+  return String(s)
+    .replace(/&/g, "&amp;").replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Safe to drop straight into a <script type="application/ld+json"> block: a
+// title/description containing a literal "</script>" would otherwise close
+// the tag early and dump the rest of the page as visible text.
+function jsonLdSafe(obj) {
+  return JSON.stringify(obj, null, 2).replace(/</g, "\\u003c");
+}
+
+// Reads root index.html once and returns a function that stamps in one
+// session's metadata — called once per session, not once per byte, so this
+// stays cheap even as the archive grows.
+function makeShellTemplate() {
+  const raw = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const cut = (text, startMarker, endMarker) => {
+    const s = text.indexOf(startMarker);
+    const e = text.indexOf(endMarker);
+    if (s === -1 || e === -1 || e < s) {
+      throw new Error(`index.html is missing ${startMarker} / ${endMarker} — per-session page generation depends on both markers being present and in order.`);
+    }
+    return { before: text.slice(0, s), after: text.slice(e + endMarker.length) };
+  };
+  const metaMark = cut(raw, "<!-- META:START -->", "<!-- META:END -->");
+  const ogMark = cut(metaMark.after, "<!-- OG:START -->", "<!-- OG:END -->");
+  // Three pieces once the two blocks are cut out: everything before META,
+  // everything between META and OG (icons/manifest — untouched per session),
+  // everything after OG (the rest of <head> plus the entire <body>).
+  const head = metaMark.before;
+  const middle = ogMark.before;
+  const tail = ogMark.after;
+
+  return function render(payload) {
+    const url = `${SITE_ORIGIN}/${payload.id}/`;
+    const title = stripMd(payload.title);
+    const pageTitle = `${title} — The AI Commit`;
+    const description = truncateWords(stripMd(payload.insight) || title, 155);
+
+    const meta =
+      `<!-- META:START -->\n` +
+      `<title>${escAttr(pageTitle)}</title>\n` +
+      `<meta name="description" content="${escAttr(description)}" />\n` +
+      `<link rel="canonical" href="${escAttr(url)}" />\n` +
+      `<!-- META:END -->`;
+
+    const jsonLd = jsonLdSafe({
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      headline: title,
+      description,
+      datePublished: payload.date,
+      url,
+      mainEntityOfPage: url,
+      image: `${SITE_ORIGIN}/og-image.png`,
+      publisher: {
+        "@type": "Organization",
+        name: "The AI Commit",
+        url: SITE_ORIGIN + "/",
+        logo: `${SITE_ORIGIN}/icon-512.png`,
+      },
+    });
+
+    const og =
+      `<!-- OG:START -->\n` +
+      `<meta property="og:type" content="article" />\n` +
+      `<meta property="og:site_name" content="The AI Commit" />\n` +
+      `<meta property="og:title" content="${escAttr(pageTitle)}" />\n` +
+      `<meta property="og:description" content="${escAttr(description)}" />\n` +
+      `<meta property="og:image" content="${SITE_ORIGIN}/og-image.png" />\n` +
+      `<meta property="og:image:width" content="1200" />\n` +
+      `<meta property="og:image:height" content="630" />\n` +
+      `<meta property="og:url" content="${escAttr(url)}" />\n` +
+      `<meta name="twitter:card" content="summary_large_image" />\n` +
+      `<meta name="twitter:title" content="${escAttr(pageTitle)}" />\n` +
+      `<meta name="twitter:description" content="${escAttr(description)}" />\n` +
+      `<meta name="twitter:image" content="${SITE_ORIGIN}/og-image.png" />\n\n` +
+      `<script type="application/ld+json">\n${jsonLd}\n</script>\n` +
+      `<!-- OG:END -->`;
+
+    return head + meta + middle + og + tail;
+  };
+}
+
+function writeSitemap(ids, cardsById) {
+  const urls = [
+    { loc: `${SITE_ORIGIN}/`, changefreq: "daily", priority: "1.0" },
+    { loc: `${SITE_ORIGIN}/privacy.html`, changefreq: "monthly", priority: "0.3" },
+    { loc: `${SITE_ORIGIN}/terms.html`, changefreq: "monthly", priority: "0.3" },
+    ...ids.map((id) => ({
+      loc: `${SITE_ORIGIN}/${id}/`,
+      lastmod: cardsById[id].date,
+      changefreq: "monthly",
+      priority: "0.7",
+    })),
+  ];
+  const body = urls.map((u) =>
+    `  <url>\n` +
+    `    <loc>${escAttr(u.loc)}</loc>\n` +
+    (u.lastmod ? `    <lastmod>${u.lastmod}</lastmod>\n` : "") +
+    `    <changefreq>${u.changefreq}</changefreq>\n` +
+    `    <priority>${u.priority}</priority>\n` +
+    `  </url>`
+  ).join("\n");
+  fs.writeFileSync(
+    path.join(SITE, "sitemap.xml"),
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`
+  );
+}
+
 /* ---- main ------------------------------------------------------------------ */
 
 function main() {
@@ -392,6 +537,10 @@ function main() {
 
   const runner = createRunner({ root: ROOT, run: !check && !noRun });
   const cards = [];
+  // Loaded once (not once per session) — see makeShellTemplate's own comment
+  // for why. Only needed when actually writing output, same as everything
+  // else gated on !check.
+  const renderShell = check ? null : makeShellTemplate();
 
   for (const id of ids) {
     const out = compile(id, journal, runner, { check });
@@ -399,6 +548,9 @@ function main() {
     cards.push(out.card);
     if (!check) {
       fs.writeFileSync(path.join(DATA_DIR, id + ".json"), JSON.stringify(out.payload));
+      const sessionDir = path.join(SITE, id);
+      fs.mkdirSync(sessionDir, { recursive: true });
+      fs.writeFileSync(path.join(sessionDir, "index.html"), renderShell(out.payload));
     }
   }
 
@@ -412,6 +564,9 @@ function main() {
       "window.CATEGORIES = " + JSON.stringify(CATEGORIES) + ";\n" +
       "window.SESSIONS = " + JSON.stringify(cards, null, 2) + ";\n"
     );
+    const cardsById = {};
+    cards.forEach((c) => { cardsById[c.id] = c; });
+    writeSitemap(cards.map((c) => c.id), cardsById);
   }
 
   warnings.forEach((w) => console.warn("  warn: " + w));

@@ -4,9 +4,15 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="theme-color" content="#111217" />
+<!-- build.js replaces the META:START..END block below per-session for
+     site/<id>/index.html — see the "Real per-post URLs" plan. The bare
+     markers below must stay exactly as-is: build.js finds them by exact
+     string search, not a parser. -->
+<!-- META:START -->
 <title>The AI Commit — Daily AI Engineering Lab for Software Engineers</title>
 <meta name="description" content="A daily AI engineering lab for software engineers, AI engineers, and CS students. Understand one real AI development in 30 minutes: explanation, diagram, and code that runs live in your browser — no API key needed." />
 <link rel="canonical" href="https://theaicommit.com/" />
+<!-- META:END -->
 
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
@@ -14,6 +20,8 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="manifest" href="/manifest.json" />
 
+<!-- Same deal as META:START above — bare markers, exact string search. -->
+<!-- OG:START -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="The AI Commit" />
 <meta property="og:title" content="The AI Commit — Daily AI Engineering Lab for Software Engineers" />
@@ -43,6 +51,7 @@
   }
 }
 </script>
+<!-- OG:END -->
 
 <script>
   // Applied before first paint (blocking, in <head>) so switching themes never
@@ -530,11 +539,26 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="data/index.js"></script>
+<script>
+  // Real per-session pages (site/<id>/index.html — same body as this one,
+  // built.js only swaps the <head> meta) live one directory deeper than root,
+  // so a plain relative "data/index.js" resolves against the WRONG directory
+  // there. GitHub Pages compounds this: it serves from /aI_daily_run/, not
+  // domain root, so even the root page needs a host-aware prefix. Computed
+  // once, reused by the main script below for the same reason (data/<id>.json
+  // fetches, assets/ image src).
+  window.SITE_ROOT = (location.hostname === "magna56.github.io" ? "/aI_daily_run" : "");
+  // A static <script src> is fetched by the parser the instant it's seen —
+  // there's no way for JS to compute its path first. document.write, run
+  // synchronously during parsing, is the correct (if old-school) tool for
+  // exactly this "resolve one tag's src before the parser reaches it" case.
+  document.write('<script src="' + window.SITE_ROOT + '/data/index.js"><' + '/script>');
+</script>
 <script>
 (function () {
   "use strict";
 
+  var SITE_ROOT = window.SITE_ROOT || "";  // set by the head script, above
   var DATA = (window.SESSIONS || []).slice();
   var ROTATION = window.CATEGORIES || [];
 
@@ -1073,7 +1097,7 @@
   /* ---- reader ---------------------------------------------------------- */
   function load(id) {
     if (CACHE[id]) return Promise.resolve(CACHE[id]);
-    return fetch("data/" + encodeURIComponent(id) + ".json")
+    return fetch(SITE_ROOT + "/data/" + encodeURIComponent(id) + ".json")
       .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
       .then(function (p) { CACHE[id] = p; return p; });
   }
@@ -1246,7 +1270,7 @@
     }
 
     var shots = (p.images || []).map(function (name) {
-      return '<img class="shot" src="assets/' + esc(p.id) + "/" + esc(name) + '" alt="Figure produced by ' + esc(p.id) + '" loading="lazy" />';
+      return '<img class="shot" src="' + SITE_ROOT + '/assets/' + esc(p.id) + "/" + esc(name) + '" alt="Figure produced by ' + esc(p.id) + '" loading="lazy" />';
     }).join("");
 
     var cachedCode = getCodeCache(p.id);
@@ -1560,6 +1584,22 @@
   } else {
     renderPills();
   }
+
+  // A direct load of a real per-session URL (build.js generates site/<id>/
+  // index.html for exactly this — search engines and shared links land here,
+  // not on a hash) — everything downstream (route(), cards, tabs, the GitHub
+  // OAuth flow) only ever reads location.hash, so translate the real path
+  // into the hash it already expects, once, before anything else runs. A
+  // *hash* already present means real internal navigation, not a fresh
+  // load — never override it.
+  (function () {
+    if (location.hash) return;
+    var m = location.pathname.match(/\/(\d{4}-\d{2}-\d{2}(?:-s\d+)?)\/?$/);
+    if (!m) return;
+    history.replaceState(null, "", location.pathname);
+    location.hash = "#" + m[1];
+  })();
+
   // On a plain load this resolves immediately (no ?code= present). Returning
   // from GitHub's authorize page, it must finish BEFORE route() — it restores
   // the original hash (GitHub's redirect strips it) that route() reads.
