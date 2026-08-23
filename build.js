@@ -960,8 +960,8 @@ function main() {
       "window.LEVELS = " + JSON.stringify(LEVELS) + ";\n" +
       "window.JOBS = " + JSON.stringify(JOBS) + ";\n" +
       "window.LEARN_TRACK = " + JSON.stringify({
-        title: "Learn",
-        blurb: "A two-day course for software engineers. Eleven lessons, in order. Separate from the daily lab.",
+        title: "Two-day tutorial",
+        blurb: "Eleven short lessons, in order. Start here if you are new. This is not the daily lab.",
         ids: LEARN_TRACK,
         sessions: LEARN_TRACK.map((id) => {
           const c = cards.find((x) => x.id === id);

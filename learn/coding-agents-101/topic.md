@@ -1,4 +1,4 @@
-# The Chat Box Isn't the Agent — The Repo Is
+# Coding agents 101
 
 **Category**: Coding Agents & Productivity
 **Tags**: coding-agents, context-engineering
@@ -62,7 +62,7 @@ Once you see the repo as the workspace, a lot of "the model is dumb" is "the mod
 
 This is the difference between a pure function and a process with I/O. The chat box is the pure function. The agent is the process. You already decide that split when you pick a library call vs a worker.
 
-Previous: [Specs and examples](#learn/prompting-that-holds-up). Next: [A skill is a reusable instruction pack](#learn/skills).
+Previous: [How to write prompts that hold up](#learn/prompting-that-holds-up). Next: [What a skill is](#learn/skills).
 
 ## Try It Yourself
 

@@ -1,4 +1,4 @@
-# The Model Only Ever Picks the Next Token
+# What an LLM does
 
 **Category**: New Models & APIs
 **Tags**: transformers, training
@@ -63,7 +63,7 @@ The assistant personality is trained on later. Same architecture, different chec
 
 A compiler emits the next valid construct according to an exact grammar. This model emits the next *likely* construct according to a statistical one. IDE autocomplete is the same job at 20 candidates; this is autocomplete with a 100,000-wide list and a longer prefix.
 
-Next in the course: [Temperature is a knob, not a personality](#learn/tokens-and-sampling) — how those scores become an actual pick.
+Next: [How tokens and sampling work](#learn/tokens-and-sampling).
 
 ## Try It Yourself
 

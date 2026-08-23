@@ -1,4 +1,4 @@
-# Thinking Longer Is a Product Choice, Not a Smarter Weight File
+# How reasoning models work
 
 **Category**: New Models & APIs
 **Tags**: training, cost

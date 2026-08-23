@@ -1,4 +1,4 @@
-# Observe / Think / Act; Tool Names Are the Contract
+# The agent loop
 
 **Category**: Building Agents & MCP
 **Tags**: agents, mcp

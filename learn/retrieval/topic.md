@@ -1,4 +1,4 @@
-# RAG Without Mystique — Chunk, Retrieve, Stuff the Prompt
+# How retrieval works
 
 **Category**: Hands-on Techniques
 **Tags**: rag, embeddings
@@ -60,7 +60,7 @@ Most RAG failures are retrieval failures labeled as model failures. Chunk size s
 
 This is search, then a template. Lucene + a mail merge. The vector index is another posting list.
 
-Previous: [Skills](#learn/skills). Next: [Context and the harness](#learn/context-and-harness).
+Previous: [What a skill is](#learn/skills). Next: [Context and the harness](#learn/context-and-harness).
 
 Lab: [Nobody re-tests their RAG chunk size](#2026-08-23).
 

@@ -43,7 +43,7 @@ The site fixes exactly that:
 | `code_example.py` is inert | Executed at build time, so its output sits beside the source |
 | No index or search | Searchable, filterable card grid with per-category coverage |
 | Five peer files | One page: Overview → Visualize → Diagram → Code → Articles |
-| A date-sorted pile | Latest first (daily lab); `#learn` is a separate two-day course; Start here / Building / Deeper on every card |
+| A date-sorted pile | Latest first (daily lab); `#learn` is a separate two-day tutorial with simple lesson titles |
 
 Deep links work per session and per tab: `#2026-08-19`, `#2026-08-19/visualize`,
 `#2026-08-19/code`. Learn and levels are shareable too: `#learn`,

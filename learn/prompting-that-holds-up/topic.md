@@ -1,4 +1,4 @@
-# Specs and Examples Beat Vague Prompts
+# How to write prompts that hold up
 
 **Category**: Coding Agents & Productivity
 **Tags**: prompt-engineering, coding-agents
@@ -65,7 +65,7 @@ Coding agents amplify a weak spec. A chat box invents text. An agent invents *ed
 
 You would not ship an API with a comment that says "be reasonable." You ship a schema. Prompts that survive contact with an agent are schemas plus examples.
 
-Previous: [Temperature is a knob](#learn/tokens-and-sampling). Next: [The chat box isn't the agent — the repo is](#learn/coding-agents-101).
+Previous: [How tokens and sampling work](#learn/tokens-and-sampling). Next: [Coding agents 101](#learn/coding-agents-101).
 
 ## Try It Yourself
 

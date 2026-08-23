@@ -1,4 +1,4 @@
-# A Skill Is a Reusable Instruction Pack, Not a Smaller Model
+# What a skill is
 
 **Category**: Building Agents & MCP
 **Tags**: coding-agents, agents
@@ -60,7 +60,7 @@ Once "skill" means "lazy-loaded markdown," you stop scheduling a fine-tune for a
 
 pytest plugins: the core publishes verbs, packages register nouns. A skill is the instruction-pack version of that. MCP (lesson 8) is the same idea across a process boundary.
 
-Previous: [The chat box isn't the agent](#learn/coding-agents-101). Next: [RAG without mystique](#learn/retrieval).
+Previous: [Coding agents 101](#learn/coding-agents-101). Next: [How retrieval works](#learn/retrieval).
 
 The daily lab on [2026-07-13](#2026-07-13) is the in-process plugin case study (`llm` + pluggy).
 
