@@ -21,7 +21,7 @@ This is vendor lock-in at the *behavior* layer, not the API layer. Matching `fil
 
 ## What This Means for You
 
-If this write-up assumed the loop: start at Learn → [The agent loop](#learn/the-agent-loop). Then come back. When you ship a tool, prefer the names the model already hits in Claude Code / Cursor, or write an adapter per provider.
+If this write-up assumed the loop: start at AI basics → [The agent loop](#learn/the-agent-loop). Then come back. When you ship a tool, prefer the names the model already hits in Claude Code / Cursor, or write an adapter per provider.
 
 ## What It Is
 
@@ -104,7 +104,7 @@ From llm-coding-agent's approach and the schema trap analysis:
 
 ## How It Connects to What You Know
 
-If the ReAct loop is still foggy, the Learn chapter [The agent loop](#learn/the-agent-loop) is the textbook; this post is the mid-2026 case study.
+If the ReAct loop is still foggy, AI basics → [The agent loop](#learn/the-agent-loop) is the textbook; this post is the mid-2026 case study.
 
 You already understand the ReAct loop (observe-think-act) and how Claude Code implements it.
 llm-coding-agent is essentially a minimal ReAct agent with a fixed tool set — no planning phase,

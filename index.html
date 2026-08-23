@@ -219,10 +219,7 @@
   .top-nav { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 18px 0 0; font-family: var(--mono); font-size: 12.5px; flex-wrap: wrap; }
   .top-nav a { color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; }
   .top-nav a:hover { color: var(--ink); border-color: rgba(255,255,255,.22); }
-  .top-nav a.on { color: var(--ink); border-color: rgba(167,139,250,.45); background: rgba(167,139,250,.12); }
-  .top-nav .nav-course { color: var(--publish-ink); background: var(--accent); border-color: transparent; font-weight: 650; }
-  .top-nav .nav-course:hover { color: var(--publish-ink); filter: brightness(1.08); }
-  .top-nav .nav-course.on { color: var(--publish-ink); background: var(--accent); }
+  .top-nav a.on { color: var(--publish-ink); background: var(--accent); border-color: transparent; font-weight: 650; }
   .tag.kind-learn { font-family: var(--mono); background: rgba(167,139,250,.14); color: var(--accent2); border-color: rgba(167,139,250,.32); }
   .course-invite {
     max-width: 720px; margin: 8px auto 28px; padding: 16px 18px;
@@ -613,7 +610,7 @@
       <p class="subtitle">Understand one real AI development in 30 minutes — a plain-English explanation, a diagram of the actual mechanism, and code that runs live in your browser. Written for software engineers.</p>
       <nav class="top-nav" aria-label="Site">
         <a href="#" class="nav-lab on" id="navLab">Daily lab</a>
-        <a href="#learn" class="nav-course" id="navCourse">Two-day tutorial</a>
+        <a href="#learn" class="nav-course" id="navCourse">AI basics</a>
       </nav>
       <p class="trust">Picked daily from papers, changelogs, and engineering blogs from the last 48 hours — not a content calendar. Every session links its real sources, and every code example runs live in your browser so you can check it yourself.</p>
     </header>
@@ -626,9 +623,9 @@
       <div class="course-invite" id="courseInvite">
         <div>
           <p class="k">New to this?</p>
-          <p>A two-day tutorial — 11 short lessons, in order. Separate from the daily lab below.</p>
+          <p>AI basics — 11 short lessons, in order. Separate from the daily lab below.</p>
         </div>
-        <a href="#learn">Open the tutorial →</a>
+        <a href="#learn">Open AI basics →</a>
       </div>
       <div class="stats" id="stats"></div>
       <hr class="sep" />
@@ -1313,7 +1310,7 @@
     if (!cat && !tag && !level && !learn) { el.innerHTML = ""; return; }
     var name, blurb;
     if (learn) {
-      name = LEARN.title || "Two-day tutorial";
+      name = LEARN.title || "AI basics";
       blurb = LEARN.blurb || "Eleven short lessons, in order. Start here if you are new. This is not the daily lab.";
     } else if (level) {
       name = level;
@@ -1583,7 +1580,7 @@
 
     var head =
       '<div class="rbar"><div class="rbar-top">' +
-        '<button class="back" id="back">' + (p.kind === "learn" ? "← Tutorial" : "← All sessions") + "</button>" +
+        '<button class="back" id="back">' + (p.kind === "learn" ? "← AI basics" : "← All sessions") + "</button>" +
         "<h1>" + esc(plain(p.title)) + "</h1>" +
         '<div class="nav">' +
           '<button id="goPrev" title="Older session ([)" aria-label="Older session"' + (prev ? "" : " disabled") + ">←</button>" +
@@ -2034,7 +2031,7 @@
       syncChrome();
       rdEl.classList.add("hidden");
       idxEl.classList.remove("hidden");
-      document.title = (target.learnIndex ? (LEARN.title || "Two-day tutorial") : (level || cat || ("#" + state.tag))) + " — The AI Commit";
+      document.title = (target.learnIndex ? (LEARN.title || "AI basics") : (level || cat || ("#" + state.tag))) + " — The AI Commit";
       renderTopicHead(cat, state.tag, level, target.learnIndex);
       renderStats();
       renderLevels();

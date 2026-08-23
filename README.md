@@ -43,10 +43,10 @@ The site fixes exactly that:
 | `code_example.py` is inert | Executed at build time, so its output sits beside the source |
 | No index or search | Searchable, filterable card grid with per-category coverage |
 | Five peer files | One page: Overview → Visualize → Diagram → Code → Articles |
-| A date-sorted pile | Latest first (daily lab); `#learn` is a separate two-day tutorial with simple lesson titles |
+| A date-sorted pile | Latest first (daily lab); `#learn` is AI basics — a separate lesson list |
 
 Deep links work per session and per tab: `#2026-08-19`, `#2026-08-19/visualize`,
-`#2026-08-19/code`. Learn and levels are shareable too: `#learn`,
+`#2026-08-19/code`. AI basics and levels are shareable too: `#learn`,
 `#learn/what-an-llm-does`, `#level/start-here`.
 
 Keyboard: `/` search · `j`/`k` or `↑`/`↓` move · `Enter` open · `Esc` back ·

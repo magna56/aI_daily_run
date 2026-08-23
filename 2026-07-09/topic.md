@@ -22,7 +22,7 @@ This is a CHECK constraint in front of the tool, not another LLM judge. `if pass
 
 ## What This Means for You
 
-If the agent loop is still new, read Learn → [The agent loop](#learn/the-agent-loop) first. On Monday: list the rules your tools will execute even when they should not, and put a function — not a paragraph — on that boundary.
+If the agent loop is still new, read AI basics → [The agent loop](#learn/the-agent-loop) first. On Monday: list the rules your tools will execute even when they should not, and put a function — not a paragraph — on that boundary.
 
 ## What It Is
 
@@ -55,7 +55,7 @@ This matters for production agent systems because:
 
 ## How It Connects to What You Know
 
-Learn → [The agent loop](#learn/the-agent-loop) is the chapter; this paper is the check you put in front of the call.
+AI basics → [The agent loop](#learn/the-agent-loop) is the chapter; this paper is the check you put in front of the call.
 
 If you've built agent systems with Claude or other models, you've likely seen this exact failure mode: the model chains 5 tool calls correctly, but one of them violates a business rule that was stated in the system prompt but forgotten during execution. The typical response is "add it to the prompt" or "use a better model." This paper says: **stop trying to reason your way to compliance and just check mechanically.**
 

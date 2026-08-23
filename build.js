@@ -835,7 +835,7 @@ function homePageSpec(cards, categories) {
         `<li><a href="/topics/${escAttr(slugify(c))}/">${escAttr(c)}</a></li>\n`).join("") +
       `</ul>\n` +
       `<h2>All sessions</h2>\n<ul>\n${cards.filter((c) => c.kind !== "learn").map(sessionLinkItem).join("")}</ul>\n` +
-      `<h2>Learn</h2>\n<ul>\n${cards.filter((c) => c.kind === "learn").map(sessionLinkItem).join("")}</ul>\n` +
+      `<h2>AI basics</h2>\n<ul>\n${cards.filter((c) => c.kind === "learn").map(sessionLinkItem).join("")}</ul>\n` +
       `</main>\n`,
   };
 }
@@ -960,7 +960,7 @@ function main() {
       "window.LEVELS = " + JSON.stringify(LEVELS) + ";\n" +
       "window.JOBS = " + JSON.stringify(JOBS) + ";\n" +
       "window.LEARN_TRACK = " + JSON.stringify({
-        title: "Two-day tutorial",
+        title: "AI basics",
         blurb: "Eleven short lessons, in order. Start here if you are new. This is not the daily lab.",
         ids: LEARN_TRACK,
         sessions: LEARN_TRACK.map((id) => {

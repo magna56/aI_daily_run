@@ -116,6 +116,6 @@ which is ordered by tier — A/B/C — and is the validation source of truth; `D
 `Shipping AI` / `How models work`; `Hook` is the one-line card blurb). Everything else is
 optional — a session missing a diagram or articles file simply shows fewer tabs in the reader.
 The unfiltered homepage is Latest first — daily sessions only, newest on top.
-The header splits **Daily lab** from **Two-day tutorial**. Tutorial pages do
-not appear in the lab grid; they live on `#learn` as a numbered lesson list
-(Day 1 foundations, Day 2 agents and the machine).
+The header splits **Daily lab** (the default homepage) from **AI basics**.
+Basics pages do not appear in the lab grid; they live on `#learn` as a
+numbered lesson list (Day 1 foundations, Day 2 agents and the machine).
