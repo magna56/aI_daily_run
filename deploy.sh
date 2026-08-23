@@ -7,7 +7,8 @@
 # SPA-fallback file — GitHub Pages ignores it, harmlessly), site/data/ (the
 # session manifest and payloads generated from the YYYY-MM-DD/ folders by
 # build.js) and site/assets/ (each session's .excalidraw source plus any
-# figures). Everything is client-side — no server.
+# figures). Pages Functions (OAuth + newsletter) live in functions/ and only
+# run on Cloudflare; the GitHub Pages mirror has no server.
 #
 # Both targets build from the SAME local site/ folder, built once up front —
 # never from a fresh build.js run on the host's own servers. That matters:
@@ -74,6 +75,40 @@ else
       npx --yes wrangler pages deploy site --project-name="$CF_PROJECT" --commit-dirty=true >/dev/null 2>&1; then
     echo "==> Cloudflare Pages done:"
     echo "    https://theaicommit.com  (https://$CF_PROJECT.pages.dev)"
+
+    # Mail the newest *daily* session once. D1's issues table is the lock —
+    # republishing the same session does not send again. Non-fatal: a send
+    # miss must not look like the deploy failed.
+    NL_SECRET="$(security find-generic-password -a "wrangler" -s "newsletter-secret-theaicommit" -w 2>/dev/null || true)"
+    if [ -z "$NL_SECRET" ]; then
+      echo "==> note: no newsletter secret in Keychain (account=wrangler, service=newsletter-secret-theaicommit) — skip send"
+    else
+      NL_PAYLOAD="$(node -e '
+        global.window = {};
+        require("./site/data/index.js");
+        const daily = (window.SESSIONS || [])
+          .filter((s) => s.kind !== "learn")
+          .sort((a, b) => String(b.id).localeCompare(String(a.id)))[0];
+        if (!daily) process.exit(0);
+        process.stdout.write(JSON.stringify({
+          session_id: daily.id,
+          title: daily.title,
+          hook: daily.hook || daily.insight || "",
+          url: "https://theaicommit.com/#" + daily.id,
+        }));
+      ' || true)"
+      if [ -n "${NL_PAYLOAD:-}" ]; then
+        echo "==> Sending newsletter for newest daily session"
+        if NL_RES="$(curl -sS -X POST "https://theaicommit.com/api/newsletter" \
+            -H "Authorization: Bearer ${NL_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d "${NL_PAYLOAD}")"; then
+          echo "    ${NL_RES}"
+        else
+          echo "==> WARN: newsletter send failed (list is unchanged; retry later)"
+        fi
+      fi
+    fi
   else
     echo "==> WARN: Cloudflare Pages deploy failed — gh-pages is still up to date; retry with 'make deploy' later"
   fi

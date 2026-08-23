@@ -23,6 +23,9 @@ index.html          # the reader (self-contained: CSS + JS inline, no CDN)
 build.js            # session folders -> site/data/
 lib/excalidraw-svg.js  # .excalidraw -> SVG, at build time
 lib/runner.js       # runs each code_example.py, captures its output
+functions/          # Cloudflare Pages Functions (OAuth + newsletter)
+db/schema.sql       # D1 source of truth (subscribers, issues)
+wrangler.jsonc      # Pages + D1 binding for theaicommit.com
 ```
 
 A `-s2` suffix (`2026-08-03-s2`) means a second session on the same day.
@@ -141,3 +144,22 @@ access; visualizers therefore keep all CSS, JavaScript, and data inline.
 
 Reading progress lives in `localStorage`, so it is per-browser and never leaves
 the machine.
+
+## Newsletter
+
+The homepage form collects an email into Cloudflare D1 (`subscribers`). Confirm and
+unsubscribe are token links. After each successful Cloudflare deploy, `deploy.sh`
+sends at most one email for the newest daily session (`issues` prevents repeats).
+
+Mail needs two Pages secrets (`npx wrangler pages secret put … --project-name=theaicommit`)
+and the send secret in Keychain so deploy can call the API:
+
+```
+RESEND_API_KEY          # from resend.com — verify theaicommit.com as the sending domain
+NEWSLETTER_SECRET       # random bearer token; same value in Keychain
+                        #   account=wrangler  service=newsletter-secret-theaicommit
+NEWSLETTER_FROM         # optional, default The AI Commit <newsletter@theaicommit.com>
+```
+
+Without `RESEND_API_KEY`, signups still land in D1 (marked active). GitHub Pages has
+no Functions — the form always posts to https://theaicommit.com/api/subscribe.

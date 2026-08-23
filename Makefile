@@ -34,9 +34,9 @@ site: build ## Assemble the publishable site/ folder
 	cp 404.html about.html privacy.html terms.html manifest.json robots.txt $(OUTPUT_DIR)/
 	cp favicon.svg favicon-16.png favicon-32.png apple-touch-icon.png icon-192.png icon-512.png og-image.png $(OUTPUT_DIR)/
 	cp -R functions $(OUTPUT_DIR)/
-	@echo "note: functions/ (the GitHub OAuth token exchange) only runs on Cloudflare Pages — GitHub Pages has no serverless functions, so that mirror will 404 on /api/*"
+	@echo "note: functions/ (OAuth + newsletter) only run on Cloudflare Pages — GitHub Pages has no serverless functions; the signup form posts to theaicommit.com"
 	touch $(OUTPUT_DIR)/.nojekyll
-	echo "/*  /index.html  200" > $(OUTPUT_DIR)/_redirects
+	printf '%s\n' '/api/*  /api/:splat  200' '/*  /index.html  200' > $(OUTPUT_DIR)/_redirects
 	@echo "==> Built $(OUTPUT_DIR)/"
 
 serve: site ## Preview locally at http://127.0.0.1:$(PORT) (Ctrl-C to stop)

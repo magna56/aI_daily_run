@@ -87,15 +87,26 @@ server:
   --project-name=theaicommit`, authenticated via a `CLOUDFLARE_API_TOKEN` read from macOS Keychain
   (`security find-generic-password -a wrangler -s cloudflare-api-token-theaicommit`). Non-fatal on
   failure — a Cloudflare hiccup must not undo the gh-pages publish that already succeeded above it.
+  After a successful publish, `deploy.sh` POSTs the newest *daily* session to
+  `/api/newsletter` (secret from Keychain `newsletter-secret-theaicommit`) so
+  subscribers get one email; D1's `issues` table is the idempotency lock.
 - **GitHub Pages** (mirror): initializes a *throwaway* git repo in a temp dir, commits, and
   force-pushes that single commit to the `gh-pages` branch of whatever `origin` remote is
-  configured — it does not touch this repo's own git history or branches.
+  configured — it does not touch this repo's own git history or branches. It has no
+  Functions; the homepage form posts signups to theaicommit.com.
 
-`site/_redirects` (`/* /index.html 200`, written by `make site`) is Cloudflare Pages' native
-SPA-fallback mechanism, needed because the reader is a single-page app using hash routing
-(`#2026-08-22/code`) — without it, a fresh load of a path Cloudflare doesn't recognize 404s.
-GitHub Pages ignores this file; it uses `404.html`'s own redirect-with-hash-preserved script
-instead, for the same purpose.
+`site/_redirects` (`/api/*` kept as-is, then `/* /index.html 200`, written by `make site`)
+is Cloudflare Pages' native SPA-fallback. GitHub Pages ignores this file; it uses
+`404.html`'s own redirect-with-hash-preserved script instead.
+
+**D1 + newsletter.** `wrangler.jsonc` binds D1 database `theaicommit`
+(`fa0d5d4b-8907-420f-956f-8fbbd8a854f2`) as `DB`. Schema is `db/schema.sql`
+(`subscribers`, `issues`). Pages Functions: `POST /api/subscribe`, `GET /api/confirm`,
+`GET /api/unsubscribe`, `POST /api/newsletter` (Bearer `NEWSLETTER_SECRET`). Mail goes
+through Resend (`RESEND_API_KEY`, optional `NEWSLETTER_FROM` / `PUBLIC_URL`). Without
+the Resend key, signups are still stored and marked active so an unset secret never
+drops an address. Same D1 is the place for later signup-adjacent features (comments,
+accounts) — add tables in `db/schema.sql`, don't stand up a second store.
 
 ## Session content conventions
 

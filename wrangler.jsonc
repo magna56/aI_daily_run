@@ -1,0 +1,13 @@
+{
+  "name": "theaicommit",
+  "pages_build_output_dir": "site",
+  "compatibility_date": "2026-08-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "theaicommit",
+      "database_id": "fa0d5d4b-8907-420f-956f-8fbbd8a854f2",
+      "preview_database_id": "DB"
+    }
+  ]
+}

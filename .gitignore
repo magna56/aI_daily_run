@@ -24,4 +24,5 @@ site/
 # Cached code_example.py run results (keyed by source hash)
 .build-cache.json
 .env
+.dev.vars
 .mcp.json
