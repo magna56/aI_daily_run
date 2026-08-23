@@ -134,6 +134,10 @@
 
   .rmeta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12.5px; color: var(--muted); margin: 20px 0 6px; }
   .rmeta .k { color: var(--dim); text-transform: uppercase; font-size: 10.5px; letter-spacing: .05em; margin-right: 6px; }
+  .share { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12.5px; margin: 4px 0 6px; }
+  .share .k { color: var(--dim); text-transform: uppercase; font-size: 10.5px; letter-spacing: .05em; }
+  .share a { border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; color: var(--muted); }
+  .share a:hover { color: var(--accent2); border-color: rgba(56,189,248,.45); text-decoration: none; }
   .insight { background: rgba(56,189,248,.07); border: 1px solid rgba(56,189,248,.22); border-left: 3px solid var(--accent); border-radius: 8px; padding: 14px 18px; margin: 18px 0 26px; color: #cfe6f2; font-size: 14px; line-height: 1.65; }
   .insight .k { display: block; color: var(--accent2); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
   .pane { padding: 22px 0 0; }
@@ -752,6 +756,17 @@
                label[name] + (n ? '<span class="n">' + n + "</span>" : "") + "</button>";
       }).join("") + "</div></div>";
 
+    var shareUrl = location.origin + location.pathname + "#" + p.id;
+    var shareTitle = plain(p.title) + " — AI Daily Learn";
+    var share =
+      '<div class="share">' +
+        '<span class="k">Share</span>' +
+        '<a href="https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareTitle) + '&url=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener">X</a>' +
+        '<a href="https://www.reddit.com/submit?url=' + encodeURIComponent(shareUrl) + '&title=' + encodeURIComponent(shareTitle) + '" target="_blank" rel="noopener">Reddit</a>' +
+        '<a href="https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener">LinkedIn</a>' +
+        '<a href="https://wa.me/?text=' + encodeURIComponent(shareTitle + " " + shareUrl) + '" target="_blank" rel="noopener">WhatsApp</a>' +
+      "</div>";
+
     var meta =
       '<div class="rmeta">' +
         (p.category ? '<span><span class="k">Category</span>' + esc(p.category) + "</span>" : "") +
@@ -761,6 +776,7 @@
           ? '<span><span class="k">Source</span><a href="' + esc(p.source.url) + '" target="_blank" rel="noopener">' + esc(p.source.label) + "</a></span>"
           : "") +
       "</div>" +
+      share +
       // Only on Overview: the other tabs are for doing, and a 10-line thesis
       // above the fold pushes the code and the diagram off the screen.
       (p.insight && pane === "overview"
