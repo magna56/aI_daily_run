@@ -109,20 +109,23 @@ const JOBS = ["Using tools", "Building agents", "Shipping AI", "How models work"
 const LEARNING_PATHS = [
   {
     id: "tools",
+    kicker: "You already use the tool",
     title: "If you use Claude or Cursor",
-    blurb: "Cost, context, and the tools you already open every day.",
+    blurb: "Why a long chat gets expensive, and what to stop stuffing into it.",
     ids: ["2026-08-22", "2026-07-04", "2026-07-13"],
   },
   {
     id: "agents",
+    kicker: "You are wiring tools together",
     title: "If you are building an agent",
-    blurb: "Schemas, checks, and review — before the loop gets clever.",
+    blurb: "The loop is easy. The names, the checks, and the review are not.",
     ids: ["2026-07-05", "2026-07-09", "2026-07-17"],
   },
   {
-    id: "machine",
-    title: "If you want the machine",
-    blurb: "How tokens, adapters, and batching actually behave.",
+    id: "how-it-works",
+    kicker: "You want the internals",
+    title: "If you want to see how it works",
+    blurb: "What happens to an image, an adapter, and a busy GPU — in plain terms.",
     ids: ["2026-07-26", "2026-08-21", "2026-08-18"],
   },
 ];
@@ -332,6 +335,7 @@ function learningPathsForReader(cards) {
   const byId = new Map(cards.map((c) => [c.id, c]));
   return LEARNING_PATHS.map((p) => ({
     id: p.id,
+    kicker: p.kicker,
     title: p.title,
     blurb: p.blurb,
     ids: p.ids,

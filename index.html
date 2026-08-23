@@ -262,7 +262,9 @@
   .count { text-align: center; color: var(--dim); font-family: var(--mono); font-size: 12.5px; margin-bottom: 18px; }
   .count .reset { margin-left: 10px; color: var(--accent); cursor: pointer; border: 0; background: none; font: inherit; font-size: 12.5px; }
 
-  .paths { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 0 0 28px; }
+  .paths { margin: 0 0 28px; }
+  .paths-label { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+  .paths-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
   .path {
     appearance: none; display: flex; flex-direction: column; gap: 8px; text-align: left;
     background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
@@ -271,10 +273,10 @@
   .path:hover { border-color: rgba(167,139,250,.45); background: var(--card-hi); text-decoration: none; }
   .path.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .path .path-k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent2); }
-  .path h3 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
+  .path h3 { margin: 0; font-size: 16.5px; font-weight: 650; letter-spacing: -.01em; line-height: 1.25; }
   .path p { margin: 0; color: var(--muted); font-size: 13.2px; line-height: 1.5; }
-  .path ol { margin: 6px 0 0; padding-left: 18px; color: var(--dim); font-size: 12.5px; line-height: 1.45; }
-  .path li { margin: 3px 0; }
+  .path ol { margin: 8px 0 0; padding-left: 18px; color: var(--dim); font-size: 12.5px; line-height: 1.45; }
+  .path li { margin: 4px 0; }
   .pills.levels { margin-bottom: 12px; }
   .tag.level { font-family: var(--mono); font-size: 10.5px; letter-spacing: .03em; }
   .tag.level-start { background: rgba(25,158,112,.13); color: var(--cat-craft-tx); border-color: rgba(25,158,112,.3); }
@@ -282,7 +284,7 @@
   .tag.level-deeper { background: rgba(201,133,0,.15); color: var(--cat-safety-tx); border-color: rgba(201,133,0,.32); }
   .tag.job { font-family: var(--mono); background: rgba(255,255,255,.05); color: var(--muted); border-color: var(--line); }
   @media (max-width: 860px) {
-    .paths { grid-template-columns: 1fr; }
+    .paths-grid { grid-template-columns: 1fr; }
   }
 
   /* Cards */
@@ -1298,17 +1300,21 @@
     var el = $("paths");
     if (!el) return;
     if (!PATHS.length) { el.innerHTML = ""; return; }
-    el.innerHTML = PATHS.map(function (p) {
-      var steps = (p.sessions || []).map(function (s) {
-        return "<li>" + esc(plain(s.title || s.id)) + "</li>";
-      }).join("");
-      return '<button type="button" class="path' + (state.path === p.id ? " active" : "") + '" data-path="' + esc(p.id) + '">' +
-        '<span class="path-k">Start here</span>' +
-        "<h3>" + esc(p.title) + "</h3>" +
-        "<p>" + esc(p.blurb) + "</p>" +
-        (steps ? "<ol>" + steps + "</ol>" : "") +
-      "</button>";
-    }).join("");
+    el.innerHTML =
+      '<p class="paths-label">Not sure where to start? Pick a path.</p>' +
+      '<div class="paths-grid">' +
+      PATHS.map(function (p) {
+        var steps = (p.sessions || []).map(function (s) {
+          return "<li>" + esc(plain(s.hook || s.title || s.id)) + "</li>";
+        }).join("");
+        return '<button type="button" class="path' + (state.path === p.id ? " active" : "") + '" data-path="' + esc(p.id) + '">' +
+          '<span class="path-k">' + esc(p.kicker || "3 sessions") + "</span>" +
+          "<h3>" + esc(p.title) + "</h3>" +
+          "<p>" + esc(p.blurb) + "</p>" +
+          (steps ? "<ol>" + steps + "</ol>" : "") +
+        "</button>";
+      }).join("") +
+      "</div>";
   }
 
   function renderLevels() {

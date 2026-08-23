@@ -45,7 +45,7 @@ The site fixes exactly that:
 | A date-sorted pile | Three start-here paths, plus Start here / Building / Deeper on every card |
 
 Deep links work per session and per tab: `#2026-08-19`, `#2026-08-19/visualize`,
-`#2026-08-19/code`. Paths and levels are shareable too: `#path/tools`,
+`#2026-08-19/code`. Paths and levels are shareable too: `#path/tools`, `#path/how-it-works`,
 `#level/start-here`.
 
 Keyboard: `/` search · `j`/`k` or `↑`/`↓` move · `Enter` open · `Esc` back ·
