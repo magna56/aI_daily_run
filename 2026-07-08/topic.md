@@ -2,6 +2,9 @@
 
 **Category**: Applied Research
 **Date**: 2026-07-08
+**Level**: Deeper
+**For**: How models work
+**Hook**: Image models can skip steps if the next frame is already readable — no retraining required.
 **Time to read**: ~10 minutes
 **Paper**: [arXiv:2607.06114](https://arxiv.org/abs/2607.06114) — Xin Peng, Ang Gao (July 2026)
 

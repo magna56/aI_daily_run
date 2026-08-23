@@ -262,6 +262,29 @@
   .count { text-align: center; color: var(--dim); font-family: var(--mono); font-size: 12.5px; margin-bottom: 18px; }
   .count .reset { margin-left: 10px; color: var(--accent); cursor: pointer; border: 0; background: none; font: inherit; font-size: 12.5px; }
 
+  .paths { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 0 0 28px; }
+  .path {
+    appearance: none; display: flex; flex-direction: column; gap: 8px; text-align: left;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
+    color: inherit; text-decoration: none; cursor: pointer; font: inherit;
+  }
+  .path:hover { border-color: rgba(167,139,250,.45); background: var(--card-hi); text-decoration: none; }
+  .path.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .path .path-k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent2); }
+  .path h3 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
+  .path p { margin: 0; color: var(--muted); font-size: 13.2px; line-height: 1.5; }
+  .path ol { margin: 6px 0 0; padding-left: 18px; color: var(--dim); font-size: 12.5px; line-height: 1.45; }
+  .path li { margin: 3px 0; }
+  .pills.levels { margin-bottom: 12px; }
+  .tag.level { font-family: var(--mono); font-size: 10.5px; letter-spacing: .03em; }
+  .tag.level-start { background: rgba(25,158,112,.13); color: var(--cat-craft-tx); border-color: rgba(25,158,112,.3); }
+  .tag.level-building { background: rgba(57,135,229,.13); color: var(--cat-models-tx); border-color: rgba(57,135,229,.3); }
+  .tag.level-deeper { background: rgba(201,133,0,.15); color: var(--cat-safety-tx); border-color: rgba(201,133,0,.32); }
+  .tag.job { font-family: var(--mono); background: rgba(255,255,255,.05); color: var(--muted); border-color: var(--line); }
+  @media (max-width: 860px) {
+    .paths { grid-template-columns: 1fr; }
+  }
+
   /* Cards */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 20px; }
   /* .card is an <a> (a real href to the canonical URL), so it needs the link
@@ -537,7 +560,7 @@
       <p class="title">THE AI COMMIT</p>
       <p class="kicker">read · see · run</p>
       <p class="tagline">A daily AI engineering lab for software engineers</p>
-      <p class="subtitle">Understand one real AI development in 30 minutes — a plain-English explanation, a diagram of the actual mechanism, and code that runs live in your browser. No API key, no setup — just practical, hands-on learning.</p>
+      <p class="subtitle">Understand one real AI development in 30 minutes — a plain-English explanation, a diagram of the actual mechanism, and code that runs live in your browser. Start with a path, or browse every daily session.</p>
       <p class="trust">Picked daily from papers, changelogs, and engineering blogs from the last 48 hours — not a content calendar. Every session links its real sources, and every code example runs live in your browser so you can check it yourself.</p>
     </header>
 
@@ -548,6 +571,8 @@
       <div id="topicHead"></div>
       <div class="stats" id="stats"></div>
       <hr class="sep" />
+
+      <section class="paths" id="paths" aria-label="Start here paths"></section>
 
       <div class="controls">
         <label class="search">
@@ -567,6 +592,7 @@
         </select>
       </div>
 
+      <div class="pills levels" id="levels" aria-label="Filter by level"></div>
       <div class="pills" id="pills"></div>
       <div class="count" id="count"></div>
       <div class="grid" id="grid"></div>
@@ -632,7 +658,9 @@
   };
   function famClass(cat) { return "cat-" + (CAT_FAMILY[cat] || "models"); }
   var CACHE = {};                                  // id -> fetched payload
-  var state = { q: "", cat: "", tag: "", read: "", sort: "date-desc" };
+  var state = { q: "", cat: "", tag: "", level: "", path: "", read: "", sort: "date-desc" };
+  var PATHS = window.LEARNING_PATHS || [];
+  var LEVELS = window.LEVELS || ["Start here", "Building", "Deeper"];
   var kbdIndex = -1;                               // keyboard-focused card
   var view = null;                                 // null = grid, else {id, pane}
   var PANES = ["overview", "visualize", "diagram", "code", "articles"];
@@ -1211,14 +1239,25 @@
   // topic name is that page's h1. Either way the document ends up with exactly
   // one h1 — checked at boot rather than guessed per render.
   var HEADER_HAS_H1 = !!document.querySelector("header.top h1");
-  function renderTopicHead(cat, tag) {
+  function renderTopicHead(cat, tag, path, level) {
     var el = $("topicHead");
     if (!el) return;
-    if (!cat && !tag) { el.innerHTML = ""; return; }
-    var name = cat || "#" + tag;
-    var blurb = cat
-      ? (BLURBS[cat] || "")
-      : "Every session tagged " + name + ".";
+    if (!cat && !tag && !path && !level) { el.innerHTML = ""; return; }
+    var name, blurb;
+    if (path) {
+      name = path.title;
+      blurb = path.blurb + " Read these in this order.";
+    } else if (level) {
+      name = level;
+      blurb = level === "Start here"
+        ? "Plain-language sessions that assume you have used a coding agent, not that you have trained a model."
+        : level === "Building"
+          ? "You have shipped a tool, a skill, or a small agent. These sessions add the next mechanism."
+          : "The machine under the tools — papers and serving details, still opened with an analogy.";
+    } else {
+      name = cat || "#" + tag;
+      blurb = cat ? (BLURBS[cat] || "") : "Every session tagged " + name + ".";
+    }
     var h = HEADER_HAS_H1 ? "h2" : "h1";
     el.innerHTML =
       '<div class="topic-head">' +
@@ -1228,8 +1267,64 @@
       "</div>";
   }
 
+  function slugifyLevel(s) {
+    return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+
+  function levelFromSlug(slug) {
+    for (var i = 0; i < LEVELS.length; i++) {
+      if (slugifyLevel(LEVELS[i]) === slug) return LEVELS[i];
+    }
+    return null;
+  }
+
+  function pathById(id) {
+    for (var i = 0; i < PATHS.length; i++) if (PATHS[i].id === id) return PATHS[i];
+    return null;
+  }
+
+  function levelClass(level) {
+    if (level === "Start here") return "level-start";
+    if (level === "Building") return "level-building";
+    if (level === "Deeper") return "level-deeper";
+    return "";
+  }
+
+  function cardBlurb(s) {
+    return s.hook || s.insight || "Open to read the write-up.";
+  }
+
+  function renderPaths() {
+    var el = $("paths");
+    if (!el) return;
+    if (!PATHS.length) { el.innerHTML = ""; return; }
+    el.innerHTML = PATHS.map(function (p) {
+      var steps = (p.sessions || []).map(function (s) {
+        return "<li>" + esc(plain(s.title || s.id)) + "</li>";
+      }).join("");
+      return '<button type="button" class="path' + (state.path === p.id ? " active" : "") + '" data-path="' + esc(p.id) + '">' +
+        '<span class="path-k">Start here</span>' +
+        "<h3>" + esc(p.title) + "</h3>" +
+        "<p>" + esc(p.blurb) + "</p>" +
+        (steps ? "<ol>" + steps + "</ol>" : "") +
+      "</button>";
+    }).join("");
+  }
+
+  function renderLevels() {
+    var el = $("levels");
+    if (!el) return;
+    var items = [{ v: "", l: "All levels", c: DATA.length }].concat(LEVELS.map(function (lv) {
+      return { v: lv, l: lv, c: DATA.filter(function (s) { return s.level === lv; }).length };
+    }));
+    el.innerHTML = items.map(function (it) {
+      return '<button class="pill-btn' + (state.level === it.v ? " active" : "") + '" data-level="' + esc(it.v) + '">' +
+             esc(it.l) + '<span class="c">' + it.c + "</span></button>";
+    }).join("");
+  }
+
   function renderPills() {
-    var items = [{ v: "", l: "All", c: DATA.length }].concat(categories.map(function (c) {
+    var items = [{ v: "", l: "All topics", c: DATA.length }].concat(categories.map(function (c) {
       return { v: c, l: c, c: DATA.filter(function (s) { return s.category === c; }).length };
     }));
     $("pills").innerHTML = items.map(function (it) {
@@ -1241,15 +1336,23 @@
   function filtered() {
     var q = state.q.toLowerCase();
     var read = readSet();
+    var path = state.path ? pathById(state.path) : null;
+    var pathIds = path ? path.ids : null;
     var rows = DATA.filter(function (s) {
+      if (pathIds && pathIds.indexOf(s.id) === -1) return false;
+      if (state.level && s.level !== state.level) return false;
       if (state.cat && s.category !== state.cat) return false;
       if (state.tag && (s.tags || []).indexOf(state.tag) === -1) return false;
       if (state.read === "read" && !read.has(s.id)) return false;
       if (state.read === "unread" && read.has(s.id)) return false;
       if (!q) return true;
-      return (s.title + " " + s.insight + " " + s.category + " " +
+      return (s.title + " " + cardBlurb(s) + " " + (s.insight || "") + " " + s.category + " " +
+              (s.level || "") + " " + (s.job || "") + " " +
               (s.tags || []).join(" ") + " " + s.date).toLowerCase().indexOf(q) > -1;
     });
+    if (pathIds) {
+      return rows.sort(function (a, b) { return pathIds.indexOf(a.id) - pathIds.indexOf(b.id); });
+    }
     var sorters = {
       "date-desc": function (a, b) { return (b.date || "").localeCompare(a.date || ""); },
       "date-asc": function (a, b) { return (a.date || "").localeCompare(b.date || ""); },
@@ -1266,7 +1369,7 @@
     var grid = $("grid");
 
     $("count").innerHTML = rows.length + " of " + DATA.length + " session" + (DATA.length === 1 ? "" : "s") +
-      (state.q || state.cat || state.tag || state.read
+      (state.q || state.cat || state.tag || state.read || state.level || state.path
         ? ' <button class="reset" id="reset">clear filters</button>' : "");
 
     if (!rows.length) {
@@ -1285,10 +1388,12 @@
           (read.has(s.id) ? '<span class="done" title="Read">✓</span>' : "") +
         "</div>" +
         '<div class="tags">' +
+          (s.level ? '<span class="tag level ' + levelClass(s.level) + '">' + esc(s.level) + "</span>" : "") +
+          (s.job ? '<span class="tag job">' + esc(s.job) + "</span>" : "") +
           (s.category ? '<span class="tag cat ' + famClass(s.category) + '">' + esc(s.category) + "</span>" : "") +
           '<span class="tag day">' + esc(s.date) + "</span>" +
         "</div>" +
-        '<p class="desc">' + esc(plain(s.insight) || "Open to read the write-up.") + "</p>" +
+        '<p class="desc">' + esc(plain(cardBlurb(s))) + "</p>" +
         ((s.tags && s.tags.length)
           ? '<div class="tags facets">' + s.tags.map(function (t) {
               return '<button class="tag facet" data-tag="' + esc(t) + '">' + esc(t) + "</button>";
@@ -1404,6 +1509,8 @@
     var meta =
       '<div class="rmeta">' +
         (p.category ? '<span><span class="k">Category</span><span class="catdot ' + famClass(p.category) + '"></span>' + esc(p.category) + "</span>" : "") +
+        (p.level ? '<span><span class="k">Level</span>' + esc(p.level) + "</span>" : "") +
+        (p.job ? '<span><span class="k">For</span>' + esc(p.job) + "</span>" : "") +
         '<span><span class="k">Date</span>' + esc(p.date) + "</span>" +
         (p.meta["Time to read"] ? '<span><span class="k">Read</span>' + esc(p.meta["Time to read"]) + "</span>" : "") +
         (p.source && p.source.url
@@ -1750,6 +1857,8 @@
     var parts = raw.split("/");
     if (parts[0] === "topic") return parts[1] ? { topic: parts[1] } : null;
     if (parts[0] === "tag") return parts[1] ? { tag: parts[1] } : null;
+    if (parts[0] === "path") return parts[1] ? { path: parts[1] } : null;
+    if (parts[0] === "level") return parts[1] ? { level: parts[1] } : null;
     return { id: parts[0], pane: parts[1] || "overview" };
   }
 
@@ -1772,21 +1881,37 @@
     // #topic/<slug> and #tag/<slug> are filtered GRID views — they preset the
     // same state the pills and chips already drive, so the filtering itself is
     // untouched; all that is new is that it now has a shareable address.
-    if (target && (target.topic || target.tag)) {
+    if (target && (target.topic || target.tag || target.path || target.level)) {
       var cat = target.topic ? categoryFromSlug(target.topic) : null;
+      var path = target.path ? pathById(target.path) : null;
+      var level = target.level ? levelFromSlug(target.level) : null;
       if (target.topic && !cat) {
         location.hash = "";
         toast("No topic " + target.topic);
         return;
       }
+      if (target.path && !path) {
+        location.hash = "";
+        toast("No path " + target.path);
+        return;
+      }
+      if (target.level && !level) {
+        location.hash = "";
+        toast("No level " + target.level);
+        return;
+      }
       view = null;
       state.cat = cat || "";
       state.tag = target.tag || "";
+      state.path = path ? path.id : "";
+      state.level = level || "";
       rdEl.classList.add("hidden");
       idxEl.classList.remove("hidden");
-      document.title = (cat || ("#" + state.tag)) + " — The AI Commit";
-      renderTopicHead(cat, state.tag);
+      document.title = ((path && path.title) || level || cat || ("#" + state.tag)) + " — The AI Commit";
+      renderTopicHead(cat, state.tag, path, level);
       renderStats();
+      renderPaths();
+      renderLevels();
       renderPills();
       renderGrid();
       window.scrollTo(0, 0);
@@ -1797,11 +1922,15 @@
       view = null;
       state.cat = "";
       state.tag = "";
+      state.path = "";
+      state.level = "";
       rdEl.classList.add("hidden");
       idxEl.classList.remove("hidden");
       document.title = "The AI Commit";
       renderTopicHead(null, "");
       renderStats();
+      renderPaths();
+      renderLevels();
       renderPills();
       renderGrid();
       if (target) toast("No session " + target.id);
@@ -1846,15 +1975,29 @@
     location.hash = cat ? "topic/" + slugifyCat(cat) : "";
     if (!location.hash) route();   // clearing to "" fires no hashchange from "#"
   });
+  $("levels").addEventListener("click", function (ev) {
+    var b = ev.target.closest(".pill-btn");
+    if (!b) return;
+    var lv = b.getAttribute("data-level");
+    location.hash = lv ? "level/" + slugifyLevel(lv) : "";
+    if (!location.hash) route();
+  });
+  $("paths").addEventListener("click", function (ev) {
+    var b = ev.target.closest("[data-path]");
+    if (!b) return;
+    var id = b.getAttribute("data-path");
+    location.hash = state.path === id ? "" : "path/" + id;
+    if (!location.hash) route();
+  });
   $("count").addEventListener("click", function (ev) {
     if (ev.target.id !== "reset") return;
     state.q = ""; state.read = "";
     $("q").value = ""; $("fRead").value = "";
-    // cat/tag live in the hash now, so clear them by routing rather than by
-    // assignment — otherwise the URL would keep claiming a filter that is gone.
+    // cat/tag/path/level live in the hash now, so clear them by routing rather
+    // than by assignment — otherwise the URL would keep claiming a filter that is gone.
     if (location.hash) { location.hash = ""; return; }
-    state.cat = ""; state.tag = "";
-    renderPills(); renderGrid();
+    state.cat = ""; state.tag = ""; state.path = ""; state.level = "";
+    renderPaths(); renderLevels(); renderPills(); renderGrid();
   });
 
   document.addEventListener("keydown", function (ev) {

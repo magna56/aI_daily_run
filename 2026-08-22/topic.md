@@ -3,6 +3,9 @@
 **Category**: Coding Agents & Productivity
 **Tags**: coding-agents, cost, caching, context-engineering
 **Date**: 2026-08-22
+**Level**: Start here
+**For**: Using tools
+**Hook**: Every old message is reread on every turn. A bad cache can cost more than no cache at all.
 **Time to read**: ~10 minutes
 
 ## Explain Like I'm 5

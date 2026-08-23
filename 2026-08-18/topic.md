@@ -3,6 +3,9 @@
 **Category**: AI in Production
 **Tags**: inference-serving, latency, production
 **Date**: 2026-08-18
+**Level**: Deeper
+**For**: Shipping AI
+**Hook**: There is no single right batch size. The winner flips when the GPU gets busy.
 **Time to read**: ~10 minutes
 
 ## What It Is

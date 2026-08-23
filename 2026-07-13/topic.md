@@ -2,6 +2,9 @@
 
 **Category**: Building Agents & MCP
 **Date**: 2026-07-13
+**Level**: Start here
+**For**: Building agents
+**Hook**: Core code publishes the verbs. Plugins add the nouns — no fork required.
 **Time to read**: ~10 minutes
 
 ## What It Is

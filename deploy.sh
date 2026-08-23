@@ -51,10 +51,15 @@ echo "==> gh-pages done. Pages will serve the update shortly:"
 echo "    https://magna56.github.io/aI_daily_run/"
 
 # --- Cloudflare Pages -----------------------------------------------------
+# Set SKIP_CLOUDFLARE=1 to publish the GitHub Pages mirror only (for previews).
 # Non-fatal by design: gh-pages above is already safely published by this
 # point, and a Cloudflare hiccup (expired token, network blip, npx cold-start
 # failure) must not read as "the whole deploy failed" — same philosophy as
 # the site-refresh step in publish.sh being non-fatal to the git push.
+if [ "${SKIP_CLOUDFLARE:-}" = "1" ]; then
+  echo "==> Skipping Cloudflare Pages (SKIP_CLOUDFLARE=1)"
+  exit 0
+fi
 CF_ACCOUNT_ID="573958e0e782dd175caf762d7e255da8"   # not a secret — an account identifier, visible in any dashboard URL
 CF_PROJECT="theaicommit"
 

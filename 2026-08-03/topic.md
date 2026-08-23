@@ -3,6 +3,9 @@
 **Category**: New Models & APIs
 **Tags**: cost, latency, production
 **Date**: 2026-08-03
+**Level**: Building
+**For**: Shipping AI
+**Hook**: After cheap models got twenty times cheaper, most questions should never hit the expensive one.
 **Time to read**: ~10 minutes
 
 ## What It Is

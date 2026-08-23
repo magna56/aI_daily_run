@@ -3,6 +3,9 @@
 **Category**: AI Hardware for Engineers
 **Tags**: quantization, from-scratch, transformers
 **Date**: 2026-08-03
+**Level**: Deeper
+**For**: How models work
+**Hook**: Weights that are only −1, 0, or +1 turn multiply into add — a language model that could fit a 1980s chip.
 **Time to read**: ~10 minutes
 
 ## What It Is

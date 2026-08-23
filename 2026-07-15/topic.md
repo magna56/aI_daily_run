@@ -2,6 +2,9 @@
 
 **Category**: AI Engineering Practices
 **Date**: 2026-07-15
+**Level**: Building
+**For**: Shipping AI
+**Hook**: A million lines of agent code shipped because tests, not humans, were the source of truth.
 **Time to read**: ~10 minutes
 
 ## What It Is

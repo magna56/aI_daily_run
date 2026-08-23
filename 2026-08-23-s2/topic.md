@@ -3,6 +3,9 @@
 **Category**: Evals & Reliability
 **Tags**: benchmarks, coding-agents, production
 **Date**: 2026-08-23
+**Level**: Building
+**For**: Shipping AI
+**Hook**: A coding-agent leaderboard gap can be smaller than the swing from giving the container more RAM.
 **Time to read**: ~10 minutes
 
 ## Explain Like I'm 5

@@ -2,6 +2,9 @@
 
 **Category**: Building Agents & MCP
 **Date**: 2026-07-05
+**Level**: Start here
+**For**: Building agents
+**Hook**: The agent loop is a few hundred lines. The hard part is the tool names the model already expects.
 **Time to read**: ~10 minutes
 
 ## What It Is

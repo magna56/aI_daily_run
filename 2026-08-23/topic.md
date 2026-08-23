@@ -3,6 +3,9 @@
 **Category**: Hands-on Techniques
 **Tags**: rag, benchmarks, cost
 **Date**: 2026-08-23
+**Level**: Start here
+**For**: Shipping AI
+**Hook**: Most teams never re-test chunk size. One search cut context by 88% with the same quality.
 **Time to read**: ~10 minutes
 
 ## Explain Like I'm 5

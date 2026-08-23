@@ -1,9 +1,11 @@
 ---
 name: ai-daily-learn
 description: >
-  Daily 30-minute AI learning session for senior engineers. Searches latest AI news/research,
-  picks a focused topic, and produces four companion artifacts: an interactive visualizer, an
-  Excalidraw diagram, a runnable pure-Python code example, and curated articles with summaries.
+  Daily 30-minute AI learning session for software engineers learning AI — from people who
+  have used Claude or Cursor, to people who have shipped a small agent, to readers further
+  ahead. Searches latest AI news/research, picks a focused topic, and produces four companion
+  artifacts: an interactive visualizer, an Excalidraw diagram, a runnable
+  pure-Python code example, and curated articles with summaries.
   Saves everything locally to
   ~/ai_learning/YYYY-MM-DD/ and nowhere else — nothing is pushed anywhere. Use the sibling skill
   ai-daily-learn-publish to also publish the session to GitHub. Tracks covered topics to avoid
@@ -16,10 +18,20 @@ verified: llm
 
 # AI Daily Learn — 30-Minute Session
 
-Senior AI researcher and educator running a focused 30-minute learning session for a
-software engineer who already deeply understands LLM fundamentals, prompt engineering, agent
-architectures (ReAct, Reflexion, ReWOO), Claude internals, and reasoning models. Skip basics.
-Go straight to what is NEW, interesting, and practically useful.
+Educator running a focused 30-minute session for software engineers who are learning AI.
+The same page has to work for three entry points — do not pick one and abandon the others:
+
+- **Tool users** have used Claude, Cursor, or ChatGPT on real work. They have not trained a
+  model and may not know what a KV cache or a tool schema is. They need the analogy and the
+  Monday-morning action first.
+- **Builders** have written a skill, an MCP server, or a small agent loop. They need the
+  mechanism and the failure mode.
+- **Further ahead** already live in evals, serving, or papers. They still want the last third
+  to be deep — numbers, ablations, the source. They do not need you to skip the first third.
+
+**Never "skip basics."** Open with the problem in product language. Define every term before
+you use it. Then go as deep as the topic deserves. Depth lives in the second half of the
+write-up, not in the title or the first paragraph.
 
 **CRITICAL: Keep everything practical and software-engineering relevant.** Every topic must
 connect to something a working engineer can build, deploy, optimize, or integrate. No pure
@@ -198,11 +210,14 @@ directory name — later steps refer to it.
 Write `~/ai_learning/YYYY-MM-DD/topic.md`:
 
 ```markdown
-# [Topic Title]
+# [Topic Title — a hook, not a method name]
 
 **Category**: [which of the 11 categories — exactly as written in the rotation list]
 **Tags**: [2-4 tags from the Tag Vocabulary below, comma-separated, lowercase]
 **Date**: YYYY-MM-DD
+**Level**: [Start here | Building | Deeper]
+**For**: [Using tools | Building agents | Shipping AI | How models work]
+**Hook**: [one plain sentence for the homepage card — no acronyms]
 **Time to read**: ~10 minutes
 
 ## Explain Like I'm 5
@@ -220,7 +235,7 @@ made someone go build it. See the rules below.]
 do about it — see the rules below. REQUIRED on every session, including Tier C.]
 
 ## What It Is
-[2-3 paragraph technical explanation for a senior engineer]
+[2-3 paragraph technical explanation. Assume a strong software engineer, not an ML researcher.]
 
 ## Why It Matters
 [Significance, what it enables, comparison to prior work]
@@ -229,7 +244,7 @@ do about it — see the rules below. REQUIRED on every session, including Tier C
 [Open with a short **Background first** paragraph, then the bullets — see the rules below.]
 
 ## How It Connects to What You Know
-[Connect to existing knowledge: transformers, agents, Claude internals, etc.]
+[Connect to something they already ship — caches, CI, code review, HTTP — then to earlier sessions.]
 
 ## Try It Yourself
 [Pointer to code_example.py and what it demonstrates]
@@ -238,28 +253,41 @@ do about it — see the rules below. REQUIRED on every session, including Tier C
 [Every acronym and domain term actually used above — see the rules below.]
 ```
 
-**The title.** This is the whole article for everyone who only sees a link — on the card grid,
-in a shared post, on Hacker News. Write it for a curious engineer scrolling past, not for a
-conference programme.
-- **Lead with the surprise, the cost, or the question** — the thing that makes someone go
-  "wait, really?" Curiosity and a concrete stake beat completeness every time.
+**The title is the hook.** This is the whole article for everyone who only sees a link — on the
+card grid, in Slack, on Hacker News. Write it for a curious software engineer scrolling past,
+including someone who has only used Cursor and has never read a paper. If the title needs a
+glossary, it failed.
+- **Lead with the surprise, the cost, or the question the reader has already felt** — the
+  thing that makes someone go "wait, really?" A concrete stake beats a method name every time.
 - **Ban academic formatting.** No `Method Name: Formal Description via Mechanism`. That pattern
-  is why real sessions travelled badly. Compare:
+  is why sessions feel all over the place. Compare:
   - ✗ `Truncated Jump Sampling: Training-Free Diffusion Acceleration via Endpoint Decodability`
     → ✓ `Skip 40% of Diffusion Steps Without Retraining Anything`
   - ✗ `LUMI: Tokenizer-Agnostic LLM-Based Lossless Image Compression`
     → ✓ `An LLM Compresses Images Better Than PNG — And It's Absurdly Slow`
   - ✗ `Prefill-Pressure Adaptive Scheduling: Why max_num_batched_tokens Has No Right Value`
     → ✓ `The vLLM Setting Everyone Copies From Blog Posts Is Wrong For You`
+  - ✗ `Deterministic Verification Gates for Tool-Using LLM Agents`
+    → ✓ `Don't Let the Agent Call a Tool Until a Check It Can't Talk Past Says Yes`
 - **Questions are welcome** when the question is one the reader has actually asked:
-  "Why Does My Agent Cost $30 Some Days and $3 Others?" A question the reader has never
-  wondered is just a worse statement.
+  "Why Does My Agent Cost $30 Some Days and $3 Others?" A question they have never wondered
+  is just a worse statement.
 - **Friendly, plain, curious.** Contractions are fine. Speak like a smart colleague who found
   something interesting, not like an abstract.
-- **Never oversell.** A hook that the article doesn't pay off is the fastest way to lose this
+- **Never oversell.** A hook the article doesn't pay off is the fastest way to lose this
   audience — they are professionally suspicious of hype. Surprising *and true*.
 - Keep it under ~70 characters where you can; a name the reader can repeat beats a name that
-  covers every nuance. The subtitle and the write-up carry the precision.
+  covers every nuance. `**Hook**` on the card and the write-up carry the precision.
+
+**`**Level**` and `**For**`** — required. Pick exactly one of each from the lists in the
+template. Level is runway, not prestige:
+- **Start here** — a tool user can finish the first third and act on it
+- **Building** — assumes they have shipped a skill, tool, or small agent
+- **Deeper** — the machine under the tools; still opens with an analogy
+**For** is the job: Using tools · Building agents · Shipping AI · How models work.
+
+**`**Hook**`** — one sentence, no acronyms, no paper names. This is the homepage card blurb.
+If someone who has used Cursor for a week cannot repeat it, rewrite it.
 
 **`**Tags**`** — the cross-cutting facet. A session has exactly one **category** (what it is
 *about*, and what decides the rotation) and 2-4 **tags** (what it *touches*). Tags are what let a
@@ -531,8 +559,9 @@ Append to `~/ai_learning/journal.md`:
 
 **`Key insight` is a hook, not a summary.** The reader renders it in a highlighted box at the top
 of the Overview pane — *above* `Explain Like I'm 5` — so it is the first thing anyone sees, and a
-dense one cancels out every on-ramp below it. It is also the card blurb in the index. It has been
-drifting into 200-word jargon walls; that is the single most daunting thing on the page.
+dense one cancels out every on-ramp below it. The homepage card uses `**Hook**` from `topic.md`,
+not this field — keep both plain. It has been drifting into 200-word jargon walls; that is the
+single most daunting thing on the page.
 
 - **Hard cap: 3 sentences, ~70 words.** Count them. Longer is a defect, not a thorough entry.
 - **Plain language throughout** — not just the first sentence. No acronyms, no config identifiers

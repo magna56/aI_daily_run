@@ -2,6 +2,9 @@
 
 **Category**: New Models & APIs
 **Date**: 2026-07-04
+**Level**: Start here
+**For**: Using tools
+**Hook**: Your coding agent rereads the whole repo. Rank and filter first and you can cut a third of the tokens.
 **Source**: arxiv 2607.01916 (published July 2, 2026 — 2 days ago)
 **Time to read**: ~10 minutes
 

@@ -2,6 +2,9 @@
 
 **Category**: Multimodal Engineering
 **Date**: 2026-07-11
+**Level**: Deeper
+**For**: How models work
+**Hook**: A model that predicts the next pixel well is already a compressor.
 **Time to read**: ~10 minutes
 **Paper**: [arXiv:2607.08221](https://arxiv.org/abs/2607.08221) — LUMI (July 2026)
 

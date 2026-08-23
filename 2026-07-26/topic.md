@@ -2,6 +2,9 @@
 
 **Category**: Hands-on Techniques
 **Date**: 2026-07-26
+**Level**: Deeper
+**For**: How models work
+**Hook**: A LoRA adapter stores only a couple of bits per parameter — and where you attach it matters more than how big it is.
 **Time to read**: ~10 minutes
 
 ## What It Is

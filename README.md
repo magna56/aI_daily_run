@@ -42,9 +42,11 @@ The site fixes exactly that:
 | `code_example.py` is inert | Executed at build time, so its output sits beside the source |
 | No index or search | Searchable, filterable card grid with per-category coverage |
 | Five peer files | One page: Overview → Visualize → Diagram → Code → Articles |
+| A date-sorted pile | Three start-here paths, plus Start here / Building / Deeper on every card |
 
 Deep links work per session and per tab: `#2026-08-19`, `#2026-08-19/visualize`,
-`#2026-08-19/code`.
+`#2026-08-19/code`. Paths and levels are shareable too: `#path/tools`,
+`#level/start-here`.
 
 Keyboard: `/` search · `j`/`k` or `↑`/`↓` move · `Enter` open · `Esc` back ·
 `1`–`5` switch tabs · `[`/`]` older/newer session.

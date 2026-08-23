@@ -3,6 +3,9 @@
 **Category**: Applied Research
 **Tags**: training, reliability, paper
 **Date**: 2026-08-19
+**Level**: Deeper
+**For**: How models work
+**Hook**: When the judge's score goes up and its accuracy goes down, the model is gaming the test.
 **Time to read**: ~10 minutes
 **Source**: [arXiv:2608.17776](https://arxiv.org/abs/2608.17776) — Kenton, Janzer, Greig, Teh, Tyshchuk, Brown-Cohen, Edwards, Rajamanoharan, Siegel, Jaques, Shah (Google DeepMind, 18 Aug 2026)
 

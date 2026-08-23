@@ -2,6 +2,9 @@
 
 **Category**: AI Hardware for Engineers
 **Date**: 2026-07-04 (session 2)
+**Level**: Deeper
+**For**: How models work
+**Hook**: Four-bit numbers stay accurate when each block picks its own scale — that is the whole trick.
 **Source**: NVIDIA Developer Blog (June 26, 2026)
 **Time to read**: ~10 minutes
 

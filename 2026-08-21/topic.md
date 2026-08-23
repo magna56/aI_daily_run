@@ -3,6 +3,9 @@
 **Category**: Multimodal Engineering
 **Tags**: multimodal, cost, inference-serving
 **Date**: 2026-08-21
+**Level**: Building
+**For**: How models work
+**Hook**: Before your prompt runs, the image is already cut into tokens — and you often pay for blank space.
 **Time to read**: ~10 minutes
 
 ## Explain Like I'm 5

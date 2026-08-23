@@ -2,6 +2,9 @@
 
 **Category**: Evals & Reliability
 **Date**: 2026-07-09
+**Level**: Building
+**For**: Building agents
+**Hook**: Wrap every tool call in a check the model cannot talk its way around.
 **Time to read**: ~10 minutes
 **Paper**: [arXiv:2607.07405](https://arxiv.org/abs/2607.07405) — Reddy, Challaram, Basu (July 8, 2026)
 

@@ -99,6 +99,34 @@ const CATEGORY_BLURBS = {
     "Alignment research, red-teaming findings and model behaviour studies, read by an engineer asking what it means for systems they ship.",
 };
 
+// Orientation, not a second taxonomy. Level is how much runway the reader
+// needs; For is which job they are doing. Both are required on new sessions.
+const LEVELS = ["Start here", "Building", "Deeper"];
+const JOBS = ["Using tools", "Building agents", "Shipping AI", "How models work"];
+
+// Three short paths on the homepage. Order inside each path is the reading
+// order, not the publish date. Keep each path to a handful of sessions.
+const LEARNING_PATHS = [
+  {
+    id: "tools",
+    title: "If you use Claude or Cursor",
+    blurb: "Cost, context, and the tools you already open every day.",
+    ids: ["2026-08-22", "2026-07-04", "2026-07-13"],
+  },
+  {
+    id: "agents",
+    title: "If you are building an agent",
+    blurb: "Schemas, checks, and review — before the loop gets clever.",
+    ids: ["2026-07-05", "2026-07-09", "2026-07-17"],
+  },
+  {
+    id: "machine",
+    title: "If you want the machine",
+    blurb: "How tokens, adapters, and batching actually behave.",
+    ids: ["2026-07-26", "2026-08-21", "2026-08-18"],
+  },
+];
+
 // Cross-cutting facets, deliberately NOT a restatement of CATEGORIES: a session
 // has exactly one category (what it is about) and several tags (what it touches).
 // A controlled list is the whole point — free-form tags drift into
@@ -300,6 +328,22 @@ function readMinutes(meta, body) {
 
 function rmrf(p) { fs.rmSync(p, { recursive: true, force: true }); }
 
+function learningPathsForReader(cards) {
+  const byId = new Map(cards.map((c) => [c.id, c]));
+  return LEARNING_PATHS.map((p) => ({
+    id: p.id,
+    title: p.title,
+    blurb: p.blurb,
+    ids: p.ids,
+    sessions: p.ids.map((id) => {
+      const c = byId.get(id);
+      return c
+        ? { id: c.id, title: c.title, hook: c.hook, slug: c.slug, minutes: c.minutes, level: c.level }
+        : { id };
+    }),
+  }));
+}
+
 /* ---- per-session compile --------------------------------------------------- */
 
 function compile(id, journal, runner, opts) {
@@ -331,6 +375,14 @@ function compile(id, journal, runner, opts) {
   }
 
   const date = topic.meta.Date || id.slice(0, 10);
+  const level = topic.meta.Level || "";
+  const job = topic.meta.For || "";
+  const hook = topic.meta.Hook || "";
+  if (!level) warn(`${id}: no Level in topic.md (Start here / Building / Deeper).`);
+  else if (!LEVELS.includes(level)) warn(`${id}: level "${level}" is not one of ${LEVELS.join(", ")}.`);
+  if (!job) warn(`${id}: no For in topic.md (${JOBS.join(" / ")}).`);
+  else if (!JOBS.includes(job)) warn(`${id}: For "${job}" is not one of ${JOBS.join(", ")}.`);
+  if (!hook) warn(`${id}: no Hook in topic.md — the card will fall back to the journal insight.`);
   const assetDir = path.join(ASSET_DIR, id);
   const writing = !opts.check;
 
@@ -451,6 +503,9 @@ function compile(id, journal, runner, opts) {
     meta: topic.meta,
     source,
     insight: j["Key insight"] || "",
+    hook,
+    level,
+    job,
     topic: topic.body,
     diagram,
     visualize,
@@ -471,6 +526,9 @@ function compile(id, journal, runner, opts) {
     tags,
     date,
     insight: payload.insight,
+    hook,
+    level,
+    job,
     minutes: readMinutes(topic.meta, topic.body),
     diagram: !!diagram,
     visualize: !!visualize,
@@ -902,6 +960,9 @@ function main() {
       banner +
       "window.CATEGORIES = " + JSON.stringify(CATEGORIES) + ";\n" +
       "window.CATEGORY_BLURBS = " + JSON.stringify(CATEGORY_BLURBS) + ";\n" +
+      "window.LEVELS = " + JSON.stringify(LEVELS) + ";\n" +
+      "window.JOBS = " + JSON.stringify(JOBS) + ";\n" +
+      "window.LEARNING_PATHS = " + JSON.stringify(learningPathsForReader(cards)) + ";\n" +
       "window.SESSIONS = " + JSON.stringify(cards, null, 2) + ";\n"
     );
     // Categories that actually have sessions, in CATEGORIES (tier) order so

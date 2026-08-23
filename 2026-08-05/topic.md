@@ -3,6 +3,9 @@
 **Category**: Building Agents & MCP
 **Tags**: mcp, agents, production
 **Date**: 2026-08-05
+**Level**: Building
+**For**: Building agents
+**Hook**: If every tool call is one self-contained HTTP request, you can scale the server like any other API.
 **Time to read**: ~10 minutes
 
 ## What It Is

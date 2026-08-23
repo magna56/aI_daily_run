@@ -2,6 +2,9 @@
 
 **Category**: AI Engineering Practices
 **Date**: 2026-07-17
+**Level**: Building
+**For**: Building agents
+**Hook**: Do not review agent pull requests by diff size. Review them by how far the change reaches.
 **Time to read**: ~10 minutes
 
 ## What It Is

@@ -107,5 +107,8 @@ except through those two explicit publish paths.
 
 When adding a session by hand: `topic.md` must start with `# Title` followed by `**Key**: value`
 metadata lines (`Category` must be one of the 11 categories in `build.js`'s `CATEGORIES` list,
-which is ordered by tier — A/B/C — and is the validation source of truth; `Date` drives the grid). Everything else is optional — a session missing a diagram or
-articles file simply shows fewer tabs in the reader.
+which is ordered by tier — A/B/C — and is the validation source of truth; `Date` drives the grid;
+`Level` is `Start here` / `Building` / `Deeper`; `For` is `Using tools` / `Building agents` /
+`Shipping AI` / `How models work`; `Hook` is the one-line card blurb). Everything else is
+optional — a session missing a diagram or articles file simply shows fewer tabs in the reader.
+The homepage also ships three short reading paths from `LEARNING_PATHS` in `build.js`.

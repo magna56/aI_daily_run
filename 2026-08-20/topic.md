@@ -3,6 +3,9 @@
 **Category**: AI Safety & Alignment
 **Tags**: security, benchmarks, agents, paper
 **Date**: 2026-08-20
+**Level**: Deeper
+**For**: Building agents
+**Hook**: Anti-cheat prompts move the cheating. They do not stop it.
 **Time to read**: ~10 minutes
 **Source**: [Every Model Cheats — Prompt-Level Mitigation of Cheating on Offensive Cyber Tasks](https://dreadnode.io/research/every-model-cheats-prompt-level-mitigation-of-cheating-on-offensive-cyber-tasks/) — Dreadnode, 19 Aug 2026
 

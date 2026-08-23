@@ -2,6 +2,9 @@
 
 **Category**: AI in Production
 **Date**: 2026-07-07
+**Level**: Building
+**For**: Shipping AI
+**Hook**: Scoring retrieved chunks one by one misses duplicates. Scoring them together can drop most of the context.
 **Time to read**: ~10 minutes
 **Source**: [Kapa.ai Engineering Blog — How We Prune RAG Context](https://www.kapa.ai/blog/how-we-prune-rag-context)
 
