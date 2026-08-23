@@ -834,7 +834,8 @@ function homePageSpec(cards, categories) {
       categories.map((c) =>
         `<li><a href="/topics/${escAttr(slugify(c))}/">${escAttr(c)}</a></li>\n`).join("") +
       `</ul>\n` +
-      `<h2>All sessions</h2>\n<ul>\n${cards.map(sessionLinkItem).join("")}</ul>\n` +
+      `<h2>All sessions</h2>\n<ul>\n${cards.filter((c) => c.kind !== "learn").map(sessionLinkItem).join("")}</ul>\n` +
+      `<h2>Learn</h2>\n<ul>\n${cards.filter((c) => c.kind === "learn").map(sessionLinkItem).join("")}</ul>\n` +
       `</main>\n`,
   };
 }
@@ -960,7 +961,7 @@ function main() {
       "window.JOBS = " + JSON.stringify(JOBS) + ";\n" +
       "window.LEARN_TRACK = " + JSON.stringify({
         title: "Learn",
-        blurb: "Eleven sessions. Same format as the daily lab. Start here if the grid assumed too much.",
+        blurb: "A two-day course for software engineers. Eleven lessons, in order. Separate from the daily lab.",
         ids: LEARN_TRACK,
         sessions: LEARN_TRACK.map((id) => {
           const c = cards.find((x) => x.id === id);
@@ -976,7 +977,7 @@ function main() {
     const covered = CATEGORIES.filter((cat) => cards.some((c) => c.category === cat));
 
     for (const cat of covered) {
-      const inCat = cards.filter((c) => c.category === cat);
+      const inCat = cards.filter((c) => c.category === cat && c.kind !== "learn");
       const dir = path.join(SITE, "topics", slugify(cat));
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, "index.html"), renderShell(topicPageSpec(cat, inCat)));

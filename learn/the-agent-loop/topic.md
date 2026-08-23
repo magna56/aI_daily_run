@@ -10,74 +10,72 @@
 **Time to read**: ~10 minutes
 
 ## Explain Like I'm 5
-Imagine a kitchen where every drawer has a label: "knife," "pot," "oven." You look at the counter (observe), decide what to do (think), and open the drawer whose label matches (act). You do not invent a new drawer in the moment. If someone peels the "knife" label off and writes "blade," a cook who only ever learned "knife" will stand there confused — or open the wrong drawer and jam the handle. The labels *are* the kitchen. The cook is not magic. They are a loop: look, decide, open.
+
+A helper who can only act by filling out forms: "read this file," "change these lines." The loop is simple — look, decide, fill a form, look again. If they were trained on *your company's* form and you hand them a different one, they keep writing the old field names. The work looks done. The form is invalid.
 
 ## The Problem
-"Agent" gets used to mean a new kind of intelligence. Under the API it is a while-loop: take the latest observations, ask the model what to do next, if the answer is a tool call then run that tool and append the result, repeat. The loop is a few dozen lines. What actually breaks in production is the *contract* — the tool names and JSON schemas the model was trained to emit versus the ones your harness accepts. People spend weeks on orchestration graphs and skip the part where renaming `edit_file` silently tanks the success rate.
+
+Anyone can write the observe-think-act loop in an afternoon. Teams then invent a nicer tool schema than the one the model was trained on, and newer models get *worse* at calling it. The failure is silent: extra fields, parse errors, retries that look like flakiness. People upgrade the model and the tools break.
 
 ## For a Software Engineer
-This is **a request loop over a typed API**. Observe is reading the last responses. Think is one model call. Act is dispatch on a function name plus JSON arguments. You have written this as a game loop, a REPL, or an HTTP worker: poll, decide, call, append.
 
-The tool list you send is not documentation. It is the **surface area of the API** the model can call. Names matter the way route paths matter. Models are trained — sometimes with reinforcement learning on a vendor's own coding agent — to emit `edit_file(path, old_string, new_string)` or `apply_patch` with a unified diff. If your schema uses `mutate_buffer` with a different shape, two things happen: the model is worse at filling it, and it may *invent* fields from the schema it was trained on. The daily case study on 2026-07-05 (*Building Coding Agents from Scratch — and the Tool Schema Trap*) is that failure in the wild: newer Claude models injected extra keys into a third-party edit array because Claude Code's schema had leaked into their reflexes.
+An agent is a `while` loop with a cap. Observe (prefix + last tool result). Think (the model emits a thought or a tool call). Act (your code runs the named function and appends the result). Stop when it says it is done or you hit `max_iters`.
 
-MCP (Model Context Protocol) is **HTTP for tools**. A server exposes `tools/list` and `tools/call` over JSON-RPC, the way a web service exposes `GET /routes` and `POST /routes/:name`. Any harness that speaks MCP can use any server. The protocol is not the loop. The loop still observe / think / act; MCP is how act is transported across a process boundary.
+The tool list is not documentation. It is the surface area of the API the model can call. Names matter the way route paths matter. Models that were reinforced on a vendor's coding agent emit `edit_file(path, old_string, new_string)` or `apply_patch` with a unified diff. If your schema uses `mutate_buffer` with a different shape, the model is worse at filling it — and may invent fields from the schema it was trained on.
 
-Monday-morning action: print every tool name your agent advertises. If you are not matching a well-known schema for edits and file reads, treat that as an API change — and expect a compatibility tax.
+The number worth feeling: the 2026-07-05 lab is that failure in the wild — newer Claude models injected extra keys into a third-party edit array because Claude Code's schema had leaked into their reflexes. The loop was fine. The labels on the kitchen drawers were not.
+
+Monday morning: keep the loop in one function you can print. Name tools after the verbs models already emit, or write a thin adapter. Use MCP to *expose* tools, not to replace the loop.
 
 ## What This Means for You
-**When this matters**: you are writing an agent loop, wrapping tools for a coding model, or adding an MCP server so Cursor or Claude Code can call your system.
 
-**How it affects you**: a clever planner with a sloppy schema will lose to a boring loop with names the model already knows. A hundred MCP tools stuffed into the prefix make every turn more expensive before the user has asked a question. A renamed tool is a broken contract, not a refactor.
+**When this matters**: you are wiring tools into an LLM, or a "better" model started failing your schema.
 
-**What to do about it**: keep the loop visible (one function, a max-iteration cap, tool results appended as observations). Name tools after the verbs models already emit (`read_file`, `edit_file`, or the provider's `apply_patch`). When you cannot match, write a thin adapter. Use MCP to *expose* tools, not to replace the loop. Then read 2026-07-05 for the schema-trap details.
+**How it affects you**: this is lock-in at the *behavior* layer, not the HTTP layer. Matching `path` / `old_string` / `new_string` is closer to matching a public contract the other side already implements than to taste.
+
+**What to do about it**: log every observe / think / act line. When someone asks "why did it call `execute_command` twice?", the answer should be a log line, not a framework callback maze. Prefer trained names; adapt if you cannot.
 
 ## What It Is
-An agent is this loop:
 
-1. **Observe.** The harness collects the user message and any tool results sitting on the transcript.
-2. **Think.** It sends the full prefix to the model. The model returns either text (stop) or one or more tool calls: a name plus arguments that should match a JSON Schema.
-3. **Act.** The harness looks up the name, validates arguments, runs the function (or denies it), and appends the result as the next observation.
-4. Repeat until the model stops calling tools, the user interrupts, or a turn cap fires.
+**Observe** — build the prefix: system, tools, messages, last result.
 
-That is the architecture. Planner/executor graphs, multi-agent swarms, and "cognitive architectures" are extra loops or extra prefixes. They still reduce to observe / think / act.
+**Think** — one model call. The output is either text (stop) or a structured tool call (name + arguments).
 
-A **tool schema** is the contract: `name`, `description`, and a JSON Schema for `parameters`. The model never imports your Python. It fills in JSON that claims to match that schema. Your dispatcher is a `switch` on `name`.
+**Act** — dispatch on the name. Validate arguments in *your* code. Return a string the model will see next turn.
 
-**MCP** standardizes discovery and invocation. A client (the harness) connects to a server, lists tools, and calls one by name. Resources and prompts are sibling surfaces. For this lesson, treat MCP as "tools over a socket" — the HTTP analogy holds: list is GET, call is POST, the schema is the OpenAPI operation.
+**MCP** (Model Context Protocol) is a standard way to list tools and call them over a process boundary — JSON-RPC, a server that says "I have `search_docs`." The host (Cursor, Claude Code) is the loop. MCP is the plugin bus. It does not think. It does not replace observe/think/act.
+
+A tool schema is a JSON Schema (or equivalent) the model sees in the prefix. That is why a hundred tools are expensive (lesson 7): they sit at the front and are re-read every turn.
 
 ## Why It Matters
-Simon Willison's `llm-coding-agent` (~500 lines) made the loop boring on purpose. The interesting software is the tool implementations (sandbox paths, approval gates, diffs) and the schemas those tools advertise. Once the loop is commodity, competition moves to the contract: whose names the frontier models have practiced, and whether your server speaks a protocol other harnesses already connect to.
 
-MCP matters because it turns "I wrote a Python callback" into "any client can call this." It does not make the model better at your names. If anything it makes the prefix problem worse: each connected server dumps its catalog at the front of every turn. The protocol and the loop are orthogonal — you can have a perfect MCP server and a loop that never validates arguments.
-
-Keep the loop in one function you can print. When someone asks "why did it call `execute_command` twice?", the answer should be a log line: observe, think (this JSON), act (this result), observe. If that trace lives inside a framework callback maze, you will debug the framework. The 2026-07-05 `llm-coding-agent` write-up is ~500 lines because the authors refused to hide the cycle.
+Frameworks hide the cycle and then you cannot debug it. The 2026-07-05 `llm-coding-agent` write-up is ~500 lines because the authors refused to hide it. Once the loop is visible, the remaining hard part is the contract — names, required fields, what happens on a bad call. Lesson 9 is when "think longer" is a different product. This lesson is the kitchen.
 
 ## Key Technical Details
-**Background first.** A *tool call* is structured output: the model emits a name and a JSON object instead of (or before) assistant prose. A *schema* is the JSON Schema that object should satisfy. The *dispatcher* is your code that maps name → function. *MCP* is a JSON-RPC protocol whose tool methods are `tools/list` and `tools/call`.
 
-- **The loop is the program.** Cap iterations. Log each think/act pair. If you cannot draw the cycle on a whiteboard, you do not have an agent you can debug — you have a framework.
-- **Names are the API.** Prefer `read_file`, `write_file`, `edit_file` (exact-string replace), `execute_command` — the set `llm-coding-agent` and Claude Code both speak. OpenAI-oriented stacks may want `apply_patch`. Adapters beat unique names.
-- **Descriptions steer, schemas constrain.** A vague description gets the tool called for the wrong job. A loose schema (`additionalProperties` implicit, missing `required`) lets the model invent keys. Validate *before* execution; treat extras as errors, not as "helpful."
-- **The schema trap is real.** Models reinforced on one vendor's tools leak that vendor's field names into yours. The 2026-07-05 write-up is the case study: extra keys in a nested `edits[]` array that the third-party schema never defined. Matching the trained shape is compatibility, not taste.
-- **MCP is transport plus discovery.** `tools/list` returns the catalog the harness will put in the prefix. `tools/call` is act. HTTP-shaped thinking helps: do not expose a hundred routes if the client pays for the whole OpenAPI document on every request. Progressive discovery (few tools first) is the protocol's answer; your server still has to offer a small surface.
-- **Act is where policy lives.** Read-only tools can auto-approve. Mutations need a gate. Path traversal (`..`, absolute paths) is a dispatcher bug, not a model bug. The loop should not trust the model to sandbox itself.
-- **Cap the cycle.** A missing stop condition is an infinite `think` → `act` → `observe` on a confused model. `llm-coding-agent` exposes a chain limit; you want the same integer, logged when it fires. "The agent ran away" is an uncapped loop, not a personality.
-- **Parallel tool calls are still this loop.** A think step may emit three names. Act runs them (or a subset), observe appends three results, think runs again. Do not invent a second architecture for "it called two tools." Validate each name independently — one miss should not silently drop the others.
+**Background first.** *Tool calling* means the model emits a structured call instead of (or before) user-facing text. *MCP* is a host/server protocol for exposing those tools. *Schema trap* means the model's likely arguments match a vendor's tools, not yours.
+
+- **Cap the loop.** `max_iters` is a fuse. Infinite observe/act is a bill.
+- **Validate in code.** Shape checks belong in the act step. Lesson-adjacent: 2026-07-09 puts policy gates in front of the call.
+- **One result, one observation.** Do not swallow errors. The model cannot fix what it cannot see.
+- **MCP is transport.** If you do not have a loop, a server does nothing.
 
 ## How It Connects to What You Know
-This is a REPL with side effects, or a message worker that calls other services by name. MCP is the part that looks like microservices: a standard request/response so the IDE is not hard-wired to your functions. The 2026-07-05 session is the next page — the loop is easy, the schema is where models have been silently trained onto one vendor's kitchen labels. This page is the kitchen. That page is what happens when the labels do not match the cook.
+
+A worker that reads a queue, calls a service by name, writes the result. The name *is* the API. MCP is microservices for tools; the loop is the worker.
+
+Previous: [Context and the harness](#learn/context-and-harness). Next: [Reasoning models](#learn/reasoning-models).
+
+Lab: [Building coding agents from scratch — and the tool schema trap](#2026-07-05).
 
 ## Try It Yourself
-`code_example.py` runs a fake model through observe / think / act. The trained policy knows `edit_file`. Point the same policy at a matching schema and the edit lands. Rename the tool to `mutate_buffer` and the call misses the dispatcher. A third run speaks MCP-shaped `list` / `call`. Pure Python, no API key, no network.
+
+`code_example.py` runs a tiny observe/think/act loop over a fake `read_file` / `edit_file` pair and shows a "wrong schema" call injecting an extra key — the trap without an API.
 
 ## Glossary
-- **Agent loop** — observe (inputs and tool results), think (one model call), act (run a named tool), repeat.
-- **Observe** — collect the latest user text and tool results onto the transcript.
-- **Think** — the model call that produces text or tool calls.
-- **Act** — the harness executing a named tool and appending the result.
-- **Tool schema** — name, description, and JSON Schema for arguments. The contract the model fills in.
-- **Dispatcher** — code that maps a tool name to a function and validates arguments.
-- **JSON-RPC** — the request/response format MCP uses (method name plus params, id for correlation).
-- **MCP** (Model Context Protocol) — an open protocol so a harness can list and call tools on another process. HTTP for tools.
-- **`tools/list` / `tools/call`** — MCP methods for discovery and invocation.
-- **Schema trap** — a model trained on one tool shape emitting that shape against a different schema.
+
+- **Agent loop** — observe → think → act → observe, with a stop condition.
+- **Tool** — a named function the model can request.
+- **Schema** — the argument contract for a tool.
+- **MCP** — a protocol for listing and calling tools out of process.
+- **Host** — the app that runs the loop (Cursor, Claude Code, your script).

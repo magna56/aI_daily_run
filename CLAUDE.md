@@ -115,5 +115,6 @@ which is ordered by tier — A/B/C — and is the validation source of truth; `D
 `Level` is `Start here` / `Building` / `Deeper`; `For` is `Using tools` / `Building agents` /
 `Shipping AI` / `How models work`; `Hook` is the one-line card blurb). Everything else is
 optional — a session missing a diagram or articles file simply shows fewer tabs in the reader.
-The unfiltered homepage pins every `Start here` session (daily and Learn) above the
-date-sorted rest of the grid. Latest is daily-only. The full track is `#learn`.
+The unfiltered homepage is Latest first — daily sessions only, newest on top.
+Learn pages do not appear on the homepage or in topic filters; they live on
+`#learn` as a two-day course (Day 1 foundations, Day 2 agents and the machine).

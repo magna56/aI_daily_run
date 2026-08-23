@@ -661,6 +661,14 @@
   var state = { q: "", cat: "", tag: "", level: "", learn: false, read: "", sort: "date-desc" };
   var LEVELS = window.LEVELS || ["Start here", "Building", "Deeper"];
   var LEARN = window.LEARN_TRACK || { ids: [], sessions: [] };
+
+  function isLearn(s) { return s && s.kind === "learn"; }
+  function labSessions() { return DATA.filter(function (s) { return !isLearn(s); }); }
+  function courseSessions() {
+    var order = LEARN.ids || [];
+    return DATA.filter(isLearn).sort(function (a, b) { return order.indexOf(a.id) - order.indexOf(b.id); });
+  }
+  function pool() { return state.learn ? courseSessions() : labSessions(); }
   var kbdIndex = -1;                               // keyboard-focused card
   var view = null;                                 // null = grid, else {id, pane}
   var PANES = ["overview", "visualize", "diagram", "code", "articles"];
@@ -1178,7 +1186,7 @@
   // Consecutive calendar days with at least one session, counting back from the
   // latest one — and only "current" if that day is today or yesterday.
   function streak() {
-    var days = Array.from(new Set(DATA.map(function (s) { return dayKey(s.date); }))).sort().reverse();
+    var days = Array.from(new Set(labSessions().map(function (s) { return dayKey(s.date); }))).sort().reverse();
     if (!days.length) return 0;
     var today = new Date(); today.setHours(0, 0, 0, 0);
     var latest = new Date(days[0] + "T00:00:00");
@@ -1198,22 +1206,23 @@
   function nextCategory() {
     if (!ROTATION.length) return "";
     var covered = {};
-    DATA.forEach(function (s) { covered[s.category] = true; });
+    labSessions().forEach(function (s) { covered[s.category] = true; });
     for (var k = 0; k < ROTATION.length; k++) {
       if (!covered[ROTATION[k]]) return ROTATION[k];
     }
-    var latest = DATA.slice().sort(function (a, b) { return (b.date || "").localeCompare(a.date || ""); })[0];
+    var latest = labSessions().slice().sort(function (a, b) { return (b.date || "").localeCompare(a.date || ""); })[0];
     var i = latest ? ROTATION.indexOf(latest.category) : -1;
     return i === -1 ? ROTATION[0] : ROTATION[(i + 1) % ROTATION.length];
   }
 
   function renderStats() {
-    var covered = new Set(DATA.map(function (s) { return s.category; }).filter(Boolean));
+    var lab = labSessions();
+    var covered = new Set(lab.map(function (s) { return s.category; }).filter(Boolean));
     var read = readSet();
-    var readCount = DATA.filter(function (s) { return read.has(s.id); }).length;
+    var readCount = lab.filter(function (s) { return read.has(s.id); }).length;
     var cards = [
-      { n: DATA.length, l: "Sessions" },
-      { n: readCount + "/" + DATA.length, l: "Read", a: true },
+      { n: lab.length, l: "Sessions" },
+      { n: readCount + "/" + lab.length, l: "Read", a: true },
       { n: covered.size + "/" + ROTATION.length, l: "Categories", sub: "next: " + esc(nextCategory()) },
       { n: streak(), l: "Day streak" }
     ];
@@ -1224,7 +1233,7 @@
   }
 
   /* ---- grid ------------------------------------------------------------ */
-  var categories = Array.from(new Set(DATA.map(function (s) { return s.category; }).filter(Boolean)))
+  var categories = Array.from(new Set(labSessions().map(function (s) { return s.category; }).filter(Boolean)))
     .sort(function (a, b) {
       var ia = ROTATION.indexOf(a), ib = ROTATION.indexOf(b);
       return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
@@ -1246,7 +1255,7 @@
     var name, blurb;
     if (learn) {
       name = LEARN.title || "Learn";
-      blurb = LEARN.blurb || "Eleven sessions. Same format as the daily lab.";
+      blurb = LEARN.blurb || "A two-day course. Eleven lessons, in order. Separate from the daily lab.";
     } else if (level) {
       name = level;
       blurb = level === "Start here"
@@ -1306,8 +1315,9 @@
   function renderLevels() {
     var el = $("levels");
     if (!el) return;
-    var items = [{ v: "", l: "All levels", c: DATA.length }].concat(LEVELS.map(function (lv) {
-      return { v: lv, l: lv, c: DATA.filter(function (s) { return s.level === lv; }).length };
+    var rows = pool();
+    var items = [{ v: "", l: "All levels", c: rows.length }].concat(LEVELS.map(function (lv) {
+      return { v: lv, l: lv, c: rows.filter(function (s) { return s.level === lv; }).length };
     }));
     el.innerHTML = items.map(function (it) {
       return '<button class="pill-btn' + (state.level === it.v ? " active" : "") + '" data-level="' + esc(it.v) + '">' +
@@ -1316,8 +1326,9 @@
   }
 
   function renderPills() {
-    var items = [{ v: "", l: "All topics", c: DATA.length }].concat(categories.map(function (c) {
-      return { v: c, l: c, c: DATA.filter(function (s) { return s.category === c; }).length };
+    var rows = pool();
+    var items = [{ v: "", l: "All topics", c: rows.length }].concat(categories.map(function (c) {
+      return { v: c, l: c, c: rows.filter(function (s) { return s.category === c; }).length };
     }));
     $("pills").innerHTML = items.map(function (it) {
       return '<button class="pill-btn' + (state.cat === it.v ? " active" : "") + '" data-cat="' + esc(it.v) + '">' +
@@ -1328,8 +1339,7 @@
   function filtered() {
     var q = state.q.toLowerCase();
     var read = readSet();
-    var rows = DATA.filter(function (s) {
-      if (state.learn && s.kind !== "learn") return false;
+    var rows = pool().filter(function (s) {
       if (state.level && s.level !== state.level) return false;
       if (state.cat && s.category !== state.cat) return false;
       if (state.tag && (s.tags || []).indexOf(state.tag) === -1) return false;
@@ -1359,7 +1369,8 @@
     var read = readSet();
     var grid = $("grid");
 
-    $("count").innerHTML = rows.length + " of " + DATA.length + " session" + (DATA.length === 1 ? "" : "s") +
+    var total = pool().length;
+    $("count").innerHTML = rows.length + " of " + total + " session" + (total === 1 ? "" : "s") +
       (state.q || state.cat || state.tag || state.read || state.level || state.learn
         ? ' <button class="reset" id="reset">clear filters</button>' : "");
 
@@ -1406,18 +1417,17 @@
       "</a>";
     }
 
-    var homeland = !(state.q || state.cat || state.tag || state.read || state.level || state.learn);
-    var start = homeland ? rows.filter(function (s) { return s.level === "Start here"; }) : [];
-    var rest = homeland ? rows.filter(function (s) { return s.kind !== "learn" && s.level !== "Start here"; }) : rows;
-    if (homeland && start.length) {
+    if (state.learn && !state.q && !state.cat && !state.tag && !state.read && !state.level) {
+      var day1 = rows.slice(0, 6);
+      var day2 = rows.slice(6);
       grid.className = "grid-stack";
       grid.innerHTML =
-        '<section class="band"><p class="band-k">Start here</p><div class="grid">' +
-          start.map(cardHtml).join("") +
+        '<section class="band"><p class="band-k">Day 1 — foundations</p><div class="grid">' +
+          day1.map(cardHtml).join("") +
         "</div></section>" +
-        (rest.length
-          ? '<section class="band"><p class="band-k">Latest</p><div class="grid">' +
-              rest.map(function (s, i) { return cardHtml(s, start.length + i); }).join("") +
+        (day2.length
+          ? '<section class="band"><p class="band-k">Day 2 — agents and the machine</p><div class="grid">' +
+              day2.map(function (s, i) { return cardHtml(s, 6 + i); }).join("") +
             "</div></section>"
           : "");
     } else {
