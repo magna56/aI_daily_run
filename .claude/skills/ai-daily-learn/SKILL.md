@@ -66,14 +66,36 @@ Note which categories and topics have been covered.
 
 If the user provided a topic argument, use that. Otherwise:
 
-1. Determine which **category** is due next:
-   - If any category in the list below has **never** appeared in `journal.md`, take that one.
-     A newly added category should not wait out a full cycle before its first session.
-   - Otherwise cycle in order from the last covered category.
-2. Use **WebFetch** to scan live sources for the most interesting recent development in that category:
-   - `https://news.ycombinator.com/` — scan front page for AI-related stories
-   - `https://arxiv.org/list/cs.AI/recent` — latest AI papers
-   - `https://arxiv.org/list/cs.LG/recent` — latest ML papers
+1. Determine which **category** is due next — **by tier weight, not flat rotation** (see
+   Category Tiers below). Read the last ~10 entries in `journal.md` and pick a category from
+   whichever tier is currently under its target share:
+   - **Tier A ≈ 50%** of sessions (about 3-4 of every 7)
+   - **Tier B ≈ 30%** (about 2 of every 7)
+   - **Tier C ≈ 20%** (about 1-2 of every 7)
+   - Inside the chosen tier, prefer the category least recently covered.
+   - If any category has **never** appeared in `journal.md`, it jumps the queue *within its
+     own tier* — a new category shouldn't wait out a full cycle, but it also shouldn't break
+     the tier weighting to get in.
+
+   Flat one-at-a-time rotation across all 11 categories is what this replaces, and why: equal
+   weighting guaranteed the single most relevant category (Coding Agents & Productivity) got
+   1/11 of the coverage. Over the first 20 sessions it appeared **once**, tied for last, while
+   GPU quantization and diffusion sampling each got double. The tiers exist to stop that
+   arithmetic, not to rank the topics by worth.
+2. Use **WebFetch** to scan live sources for the most interesting recent development in that
+   category. **Default to non-paper sources.** Changelogs, engineering blogs, docs, release
+   notes and real production write-ups should drive most sessions; arXiv is the exception, not
+   the default feed:
+
+   > **Paper budget: at most ONE arXiv-led session per 7.** Check `journal.md` before
+   > choosing — if a paper drove any session in the last 7, pick a non-paper source this time
+   > even if an interesting paper is sitting right there. A paper can still be *cited* as
+   > supporting evidence any day; this cap is about what the session is *built on*.
+
+   - `https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md` — canonical Claude Code
+     changelog; the single highest-yield source for Tier A
+   - `https://www.anthropic.com/engineering` — harness design, agent patterns, written by the
+     people who build it
    - `https://simonwillison.net/` — AI engineering blog (practical, tools-focused)
    - `https://www.latent.space/` — AI engineering podcast/blog
    - `https://huggingface.co/blog` — new models, tools, techniques
@@ -81,41 +103,70 @@ If the user provided a topic argument, use that. Otherwise:
      research-to-practice framing and catching developments the harness-focused sources miss
    - `https://openai.com/blog`, `https://www.anthropic.com/research`, or `https://x.ai/blog` —
      model provider updates
-   - For **Coding Agents & Productivity** specifically, these are the load-bearing ones:
-     - `https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md` — the canonical
-       Claude Code changelog (the docs.claude.com release-notes URL 301s here)
-     - `https://www.anthropic.com/engineering` — Claude Code internals, harness design,
-       agent patterns, written by the people who build it
-     - `https://simonwillison.net/` — the best running commentary on coding-agent tooling
-     - `https://cursor.com/changelog` and the Gemini CLI / Codex release notes — for
-       cross-tool comparison rather than single-vendor news
+   - `https://ai.meta.com/blog/` — Meta AI: Llama releases, PyTorch/infra work, and unusually
+     detailed production engineering write-ups
+   - `https://blog.google/technology/ai/` and `https://developers.googleblog.com/` — Google AI:
+     Gemini releases and API changes; the developers blog is the more practical of the two
+   - `https://cursor.com/changelog` and the Gemini CLI / Codex release notes — for cross-tool
+     comparison rather than single-vendor news
+   - `https://news.ycombinator.com/` — front page, for what practitioners are actually arguing
+     about; also the best signal for which framing of a topic will land
+   - **Papers, subject to the one-per-7 budget above**: `https://arxiv.org/list/cs.AI/recent`
+     and `https://arxiv.org/list/cs.LG/recent`
    - Try **WebSearch** first; if blocked (VPCSC error), fall back to WebFetch on the URLs above.
      `openai.com` returns 403 to WebFetch; use the arXiv or HN mirror of the announcement.
 3. Pick ONE focused topic that fits 30 minutes — specific, not broad
 4. Use **WebFetch** on the chosen article/paper URL to get full technical details
 
-**Category Rotation** (11 categories, cycle in order — always with practical SWE angle):
-1. New Models & APIs — new model releases, how to use them, API differences, migration guides
-2. AI Hardware for Engineers — GPU programming, inference optimization, hardware-aware coding
-3. Agent Frameworks & Tools — new dev tools, orchestration libraries, MCP servers, SDKs
-4. Coding Agents & Productivity — getting more out of the agent tools you already drive every
+**Category Tiers** (11 categories in 3 weighted tiers — always with practical SWE angle).
+The tier is about *how far the topic sits from the reader's Monday morning*, not how
+sophisticated it is. A Tier A topic can be every bit as deep — it just starts from a problem
+the reader already has.
+
+**Tier A — Ship it this week (~50% of sessions).** The reader changes how they work tomorrow.
+1. Coding Agents & Productivity — getting more out of the agent tools you already drive every
    day: Claude Code / Cursor / Codex / Gemini CLI configuration, hooks, skills, subagents, MCP
    setup, context and cost management, worktrees, loops, permission modes; what shipped this
    week in their changelogs and whether it changes your workflow. Cross-tool comparison is
    welcome — the reader uses more than one.
-5. AI in Production — deployment patterns, serving infra, cost optimization, monitoring, MLOps
-6. Applied Research — papers with working code, reproducible results, practical implications
-7. AI Safety & Testing — guardrails, eval frameworks, red-teaming tools, responsible AI patterns
-8. Multimodal Engineering — vision/audio/video pipelines, building multimodal apps
-9. Open Source Tools — new open models to run locally, tools, datasets, community libraries
-10. AI Engineering Practices — architecture patterns, scaling, team workflows, code review for AI
-11. Hands-on Techniques — fine-tuning, RAG pipelines, evaluation harnesses, prompt optimization
+2. Building Agents & MCP — *authoring* agent systems rather than operating them: tool schema
+   design, MCP servers, orchestration libraries, SDKs, agent architecture.
+3. AI Engineering Practices — reviewing, testing and trusting agent-written code; migrations
+   at scale; architecture patterns; team workflows for AI-heavy codebases.
+4. Evals & Reliability — "does my AI feature actually work?" App-level eval harnesses,
+   regression catching, guardrails you ship, output validation. This is the *practitioner*
+   half of testing — the research half lives in Tier C.
 
-**#3 vs #4** — #3 is about *building* agent systems (you are the author of the harness);
-#4 is about *operating* the ones you already use (you are the user of someone else's harness).
-"How MCP sampling works so I can implement it" is #3. "Three hooks worth adding to
-settings.json today" is #4. When a topic could be either, prefer the one whose reader is doing
+**Tier B — Understand the machine (~30%).** Not actionable this morning, but it changes a
+decision the reader makes this month.
+5. New Models & APIs — new model releases, how to use them, API differences, migration guides,
+   pricing and routing calls.
+6. AI in Production — deployment patterns, serving infra, cost optimization, monitoring, MLOps,
+   RAG at scale.
+7. Hands-on Techniques — fine-tuning, RAG pipelines, prompt and context engineering.
+
+**Tier C — Frontier (~20%).** The credibility layer: proof this site reads primary sources
+rather than press releases. Keep it — but capped, and it still owes the reader a
+"What This Means for You" section like everything else.
+8. Applied Research — papers with working code, reproducible results, practical implications.
+9. AI Hardware for Engineers — **how to actually use the hardware you have or rent**: picking
+   an instance type, quantization you can run today, inference-speed wins, memory limits,
+   what a given GPU can and can't hold, local-vs-hosted tradeoffs. *Not* novel silicon
+   research — a reader should finish able to make a better hardware or serving decision, not
+   just having admired someone's chip design.
+10. Multimodal Engineering — vision/audio/video pipeline internals, building multimodal apps.
+11. AI Safety & Alignment — alignment research, red-teaming findings, model behaviour studies.
+    (Shipping guardrails and eval harnesses belong in #4, Tier A.)
+
+**#1 vs #2** — #2 is about *building* agent systems (you are the author of the harness);
+#1 is about *operating* the ones you already use (you are the user of someone else's harness).
+"How MCP sampling works so I can implement it" is #2. "Three hooks worth adding to
+settings.json today" is #1. When a topic could be either, prefer the one whose reader is doing
 something different tomorrow morning.
+
+Open Source Tools is gone as a category — it was never a topic, it was a property of one. File
+an open-source tool under whatever it actually teaches (the `llm` CLI plugin architecture was a
+Tier A tooling piece, not a "look, a tool" piece).
 
 **Accuracy rule for #4** — this category is the one most likely to invent a flag, a config key
 or a model ID that does not exist, and a wrong `settings.json` snippet is worse than no session.
@@ -157,6 +208,10 @@ Write `~/ai_learning/YYYY-MM-DD/topic.md`:
 ## For a Software Engineer
 [3-5 short paragraphs or bullets. The bridge section — see the rules below.]
 
+## What This Means for You
+[The anchor section. When this is useful, how it affects your work, and what to actually
+do about it — see the rules below. REQUIRED on every session, including Tier C.]
+
 ## What It Is
 [2-3 paragraph technical explanation for a senior engineer]
 
@@ -175,6 +230,29 @@ Write `~/ai_learning/YYYY-MM-DD/topic.md`:
 ## Glossary
 [Every acronym and domain term actually used above — see the rules below.]
 ```
+
+**The title.** This is the whole article for everyone who only sees a link — on the card grid,
+in a shared post, on Hacker News. Write it for a curious engineer scrolling past, not for a
+conference programme.
+- **Lead with the surprise, the cost, or the question** — the thing that makes someone go
+  "wait, really?" Curiosity and a concrete stake beat completeness every time.
+- **Ban academic formatting.** No `Method Name: Formal Description via Mechanism`. That pattern
+  is why real sessions travelled badly. Compare:
+  - ✗ `Truncated Jump Sampling: Training-Free Diffusion Acceleration via Endpoint Decodability`
+    → ✓ `Skip 40% of Diffusion Steps Without Retraining Anything`
+  - ✗ `LUMI: Tokenizer-Agnostic LLM-Based Lossless Image Compression`
+    → ✓ `An LLM Compresses Images Better Than PNG — And It's Absurdly Slow`
+  - ✗ `Prefill-Pressure Adaptive Scheduling: Why max_num_batched_tokens Has No Right Value`
+    → ✓ `The vLLM Setting Everyone Copies From Blog Posts Is Wrong For You`
+- **Questions are welcome** when the question is one the reader has actually asked:
+  "Why Does My Agent Cost $30 Some Days and $3 Others?" A question the reader has never
+  wondered is just a worse statement.
+- **Friendly, plain, curious.** Contractions are fine. Speak like a smart colleague who found
+  something interesting, not like an abstract.
+- **Never oversell.** A hook that the article doesn't pay off is the fastest way to lose this
+  audience — they are professionally suspicious of hype. Surprising *and true*.
+- Keep it under ~70 characters where you can; a name the reader can repeat beats a name that
+  covers every nuance. The subtitle and the write-up carry the precision.
 
 **The reader.** A working software engineer who is *learning* AI and intends to apply it
 practically. Assume fluency in general software engineering — caching, padding, schedulers,
@@ -199,6 +277,30 @@ engineering principles the reader already owns**, not AI ones.
 - Give at least one number from the session that a non-specialist can feel (a cost multiple, a
   percentage wasted, a hard ceiling) and say why it is surprising.
 - Never require a later section to be understood first. This must stand alone.
+
+**`## What This Means for You`** — the anchor section, and the one that decides whether a deep
+topic lands or bounces. The reader's real question is never "is this clever?", it is *"does this
+touch my work, and what do I do about it?"* Answer that explicitly rather than leaving them to
+infer it. Three short labelled parts, in this order:
+
+- **When this matters** — the concrete situation where this shows up. Name the trigger, not the
+  topic: "you're paying more than you expect for a long Claude Code session", "your RAG answers
+  got worse after you raised top-k", "you're choosing between an A10G and an L4". If the reader
+  can't recognise themselves in this line, the framing is wrong — rewrite it before continuing.
+- **How it affects you** — the consequence in their terms. Money, latency, a bug class they'll
+  hit, a decision they're about to get wrong, a belief they hold that's outdated.
+- **What to do about it** — at least one thing they can actually do: a setting to change, a
+  command to run, a number to go measure in their own logs, a check to add to CI, or an
+  explicit "nothing yet, but here's the signal to watch for". Be specific enough to act on
+  without re-reading the article.
+
+Rules:
+- **Required on every session, including Tier C.** A frontier paper still owes the reader this.
+  If the honest answer is "this won't affect your work for a year", *say that* — a truthful
+  "not yet, and here's what would change that" is far better than an invented use case.
+- **Never invent applicability.** Overstating relevance is worse than admitting there is little;
+  this section is the site's credibility, not its marketing.
+- Write it in second person, plainly. This is the least academic section in the document.
 
 **`## Key Technical Details`** — keep the depth, but stop dropping the reader into it cold. This
 section is where the write-up historically loses people: it opens on config constants and
@@ -315,9 +417,19 @@ Write `~/ai_learning/YYYY-MM-DD/articles.md` with 3-5 curated articles from WebS
 ```
 
 Prioritize: primary source, best technical explanation, practical tutorial, industry analysis.
-`deeplearning.ai/the-batch` is a good candidate for the industry-analysis slot when it has
-covered the topic — it tends to connect a development to the broader research trend rather
-than just reporting the release.
+
+Good candidates when they've covered the topic:
+- `deeplearning.ai/the-batch` — the industry-analysis slot; connects a development to the
+  broader research trend rather than just reporting the release.
+- `ai.meta.com/blog` — Meta AI; strong for the practical-tutorial and primary-source slots on
+  Llama, PyTorch and serving-infrastructure topics, and their production write-ups tend to
+  carry real numbers rather than announcements.
+- `blog.google/technology/ai` and `developers.googleblog.com` — Google AI; the primary source
+  for anything Gemini, and the developers blog is usually the one with runnable detail.
+
+Same spirit as the source rule in Step 2: **favour engineering write-ups, docs and changelogs
+over papers** here too. The `## Papers` block is optional — use it when a paper genuinely is the
+primary source, not to make the list look rigorous.
 
 ### Step 9: Update the Journal
 

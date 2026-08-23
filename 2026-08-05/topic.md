@@ -1,6 +1,6 @@
 # Stateless MCP (MCP 2.0): One Request, No Sessions, Trivial Horizontal Scaling
 
-**Category**: Agent Frameworks & Tools
+**Category**: Building Agents & MCP
 **Date**: 2026-08-05
 **Time to read**: ~10 minutes
 

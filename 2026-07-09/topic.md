@@ -1,6 +1,6 @@
 # Deterministic Verification Gates for Tool-Using LLM Agents
 
-**Category**: AI Safety & Testing
+**Category**: Evals & Reliability
 **Date**: 2026-07-09
 **Time to read**: ~10 minutes
 **Paper**: [arXiv:2607.07405](https://arxiv.org/abs/2607.07405) — Reddy, Challaram, Basu (July 8, 2026)

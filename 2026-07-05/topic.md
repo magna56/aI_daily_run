@@ -1,6 +1,6 @@
 # Building Coding Agents from Scratch — and the Tool Schema Trap
 
-**Category**: Agent Frameworks & Tools
+**Category**: Building Agents & MCP
 **Date**: 2026-07-05
 **Time to read**: ~10 minutes
 

@@ -1,6 +1,6 @@
 # The `llm` CLI & Its Plugin Architecture: pluggy Hooks as an Extensibility Pattern
 
-**Category**: Open Source Tools
+**Category**: Building Agents & MCP
 **Date**: 2026-07-13
 **Time to read**: ~10 minutes
 

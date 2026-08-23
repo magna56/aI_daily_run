@@ -40,20 +40,28 @@ const JOURNAL = path.join(ROOT, "journal.md");
 const REPO_BLOB = process.env.ADL_REPO_BLOB
   || "https://github.com/magna56/aI_daily_run/blob/main";
 
-// The rotation /ai-daily-learn cycles through. Kept here so the reader can show
-// coverage and which category is due next; order is the rotation order.
+// The categories /ai-daily-learn draws from, in tier order: Tier A (ship it this
+// week) first, then B (understand the machine), then C (frontier). Kept here so
+// the reader can validate a session's Category and show coverage.
+//
+// NOTE: selection is *tier-weighted* (A~50% / B~30% / C~20%), not a flat cycle —
+// so the reader's "next category" hint is only that, a hint. See the skill's
+// Category Tiers section for the real rule and why flat rotation was dropped.
 const CATEGORIES = [
-  "New Models & APIs",
-  "AI Hardware for Engineers",
-  "Agent Frameworks & Tools",
+  // Tier A — ship it this week
   "Coding Agents & Productivity",
-  "AI in Production",
-  "Applied Research",
-  "AI Safety & Testing",
-  "Multimodal Engineering",
-  "Open Source Tools",
+  "Building Agents & MCP",
   "AI Engineering Practices",
+  "Evals & Reliability",
+  // Tier B — understand the machine
+  "New Models & APIs",
+  "AI in Production",
   "Hands-on Techniques",
+  // Tier C — frontier
+  "Applied Research",
+  "AI Hardware for Engineers",
+  "Multimodal Engineering",
+  "AI Safety & Alignment",
 ];
 
 // A session folder: a date, optionally suffixed for a second session that day.

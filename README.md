@@ -65,22 +65,40 @@ to reproduce it locally.
 
 ## Categories
 
-Sessions rotate through eleven categories, always with a practical
-software-engineering angle. The reader shows which one is due next.
+Eleven categories in three **weighted tiers**, always with a practical
+software-engineering angle. The tier is about how far a topic sits from the
+reader's Monday morning — not how sophisticated it is. A Tier A topic can be
+every bit as deep; it just starts from a problem the reader already has.
 
-1. New Models & APIs
-2. AI Hardware for Engineers
-3. Agent Frameworks & Tools — *building* agent systems
-4. Coding Agents & Productivity — *operating* the ones you already use: Claude
+Selection is weighted, not a flat cycle: an equal 1-of-11 rotation meant the
+single most relevant category (Coding Agents & Productivity) appeared **once**
+in the first 20 sessions, tied for last, while GPU quantization and diffusion
+sampling each got double.
+
+**Tier A — ship it this week (~50%)**
+1. Coding Agents & Productivity — *operating* the tools you already use: Claude
    Code / Cursor / Codex / Gemini CLI config, hooks, skills, subagents, MCP
    setup, context and cost management, and what their changelogs shipped
-5. AI in Production
-6. Applied Research
-7. AI Safety & Testing
-8. Multimodal Engineering
-9. Open Source Tools
-10. AI Engineering Practices
-11. Hands-on Techniques
+2. Building Agents & MCP — *authoring* agent systems: tool schemas, MCP servers,
+   orchestration, SDKs
+3. AI Engineering Practices — reviewing, testing and trusting agent-written code
+4. Evals & Reliability — "does my AI feature actually work?" App-level harnesses,
+   guardrails you ship, regression catching
+
+**Tier B — understand the machine (~30%)**
+5. New Models & APIs
+6. AI in Production
+7. Hands-on Techniques — fine-tuning, RAG, prompt & context engineering
+
+**Tier C — frontier (~20%)**
+8. Applied Research
+9. AI Hardware for Engineers — how to *use* the hardware you have or rent
+   (instance choice, quantization you can run, memory ceilings), not novel silicon
+10. Multimodal Engineering
+11. AI Safety & Alignment
+
+Every session — including Tier C — carries a **What This Means for You** section:
+when it matters, how it affects you, and what to actually do about it.
 
 ## Running a session manually
 

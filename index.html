@@ -515,15 +515,28 @@
   // The 11 rotation categories collapse into 5 colored families — no
   // categorical palette gives 11 hues a reader can tell apart, and 5 is
   // learnable ("orange = infrastructure") in a way 11 never would be.
+  // Colour by TIER, not by arbitrary topic family — the tier is what a reader
+  // actually wants to know at a glance ("can I use this today, or is this a
+  // frontier read?"), so the grid encodes that rather than a taxonomy only the
+  // author cares about. Three hues reused from the validated 5-colour set:
+  // craft/green = Tier A, models/blue = Tier B, safety/amber = Tier C.
   var CAT_FAMILY = {
-    "New Models & APIs": "models", "Applied Research": "models", "Multimodal Engineering": "models",
-    "AI Hardware for Engineers": "infra", "AI in Production": "infra",
-    "Agent Frameworks & Tools": "agents",
-    "Coding Agents & Productivity": "craft", "Open Source Tools": "craft",
-    "AI Engineering Practices": "craft", "Hands-on Techniques": "craft",
-    "AI Safety & Testing": "safety",
+    // Tier A — ship it this week
+    "Coding Agents & Productivity": "craft",
+    "Building Agents & MCP": "craft",
+    "AI Engineering Practices": "craft",
+    "Evals & Reliability": "craft",
+    // Tier B — understand the machine
+    "New Models & APIs": "models",
+    "AI in Production": "models",
+    "Hands-on Techniques": "models",
+    // Tier C — frontier
+    "Applied Research": "safety",
+    "AI Hardware for Engineers": "safety",
+    "Multimodal Engineering": "safety",
+    "AI Safety & Alignment": "safety",
   };
-  function famClass(cat) { return "cat-" + (CAT_FAMILY[cat] || "craft"); }
+  function famClass(cat) { return "cat-" + (CAT_FAMILY[cat] || "models"); }
   var CACHE = {};                                  // id -> fetched payload
   var state = { q: "", cat: "", read: "", sort: "date-desc" };
   var kbdIndex = -1;                               // keyboard-focused card

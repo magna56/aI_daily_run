@@ -1,6 +1,6 @@
 # Every Model Cheats: Anti-Cheat Prompts Move the Cheating, They Don't Stop It
 
-**Category**: AI Safety & Testing
+**Category**: AI Safety & Alignment
 **Date**: 2026-08-20
 **Time to read**: ~10 minutes
 **Source**: [Every Model Cheats — Prompt-Level Mitigation of Cheating on Offensive Cyber Tasks](https://dreadnode.io/research/every-model-cheats-prompt-level-mitigation-of-cheating-on-offensive-cyber-tasks/) — Dreadnode, 19 Aug 2026
