@@ -1,13 +1,15 @@
 ---
 name: ai-daily-learn-publish
 description: >
-  Runs a full AI Daily Learn session AND publishes it to GitHub. Identical to ai-daily-learn —
-  same topic selection, same four artifacts in ~/ai_learning/YYYY-MM-DD/ — but afterwards commits
-  the session and pushes it straight to main on magna56/aI_daily_run (no branch, no PR). This
-  is what the automated 11:00 daily job runs. Use when: "daily learn and publish", "publish today's
-  session", "ai-daily-learn-publish", "learn and push", "daily AI session to github", or when the
-  user wants the session to land in the repo. Use plain /ai-daily-learn instead when they want it
-  saved locally only. Accepts optional topic argument: /ai-daily-learn-publish "vision transformers".
+  Runs a full AI Daily Learn session AND publishes it live. Identical to ai-daily-learn — same
+  topic selection, same four artifacts in ~/ai_learning/YYYY-MM-DD/ — but afterwards commits the
+  session and pushes it straight to main on magna56/aI_daily_run (no branch, no PR), then rebuilds
+  and republishes the reader to theaicommit.com (Cloudflare Pages, primary) and
+  magna56.github.io/aI_daily_run (GitHub Pages, mirror). This is what the automated 11:00 daily
+  job runs. Use when: "daily learn and publish", "publish today's session", "ai-daily-learn-publish",
+  "learn and push", "daily AI session to github", "find and publish a new article", or when the
+  user wants the session live. Use plain /ai-daily-learn instead when they want it saved locally
+  only. Accepts optional topic argument: /ai-daily-learn-publish "vision transformers".
 argument-hint: "[optional-topic]"
 verified: llm
 ---
@@ -32,7 +34,7 @@ If the Skill tool is unavailable, read
 Note the exact session directory name it produced — `YYYY-MM-DD`, or `YYYY-MM-DD-s2` for a second
 session on the same day. Step B needs it.
 
-## Step B: Publish to GitHub
+## Step B: Publish (push to GitHub, deploy to both hosts)
 
 Push the session straight to `main` on
 `git@github.com:magna56/aI_daily_run.git`.
@@ -55,13 +57,17 @@ bash "$PUB" YYYY-MM-DD    # the exact session dir name from Step A
 
 The script is self-healing and idempotent: it initialises the repo and remote if missing, commits
 the session directory plus `journal.md`, rebases if the remote moved, pushes to `main`, and then
-rebuilds and republishes the reader site to the `gh-pages` branch. Re-running it with nothing new
-is a safe no-op that still refreshes the site — which is how you recover from a deploy that failed
-the first time. `.venv/`, `.claude/`, `.logs/`, `site/`, and `.DS_Store` are gitignored and never
-pushed to `main`.
+calls `./deploy.sh` — which builds the reader once locally and publishes that same build to
+**both** hosts: Cloudflare Pages (`theaicommit.com`, primary) and the `gh-pages` branch (GitHub
+Pages, mirror). Re-running it with nothing new is a safe no-op that still refreshes both hosts —
+which is how you recover from a deploy that failed the first time. `.venv/`, `.claude/`, `.logs/`,
+`site/`, `.wrangler/`, and `.DS_Store` are gitignored and never pushed to `main`.
 
 The site step is deliberately non-fatal: if it warns `site deploy failed`, the session is already
 safely on `main` and only the reader is stale — run `cd ~/ai_learning && make deploy` to retry.
+Within `deploy.sh` itself, a Cloudflare-specific hiccup (expired token, network blip) is separately
+non-fatal and never blocks the `gh-pages` push that runs before it — but a `publish.sh` caller
+only ever sees one coarse "site deploy failed" either way, not which host specifically failed.
 
 ### Manual fallback
 
@@ -81,9 +87,15 @@ closing line with the published deep link — that URL opens the rendered sessio
 the thing worth sharing:
 
 ```
-Read it: https://magna56.github.io/aI_daily_run/#YYYY-MM-DD
+Read it: https://theaicommit.com/#YYYY-MM-DD
+Mirror:  https://magna56.github.io/aI_daily_run/#YYYY-MM-DD
 Source:  https://github.com/magna56/aI_daily_run
 ```
+
+theaicommit.com is the primary link to share — it's the one with the real domain, the GitHub
+sign-in/Publish-to-Gist feature (GitHub Pages has no serverless functions, so that button 404s on
+the mirror), and the light/dark toggle. The GitHub Pages mirror exists as a free fallback if
+Cloudflare is ever down.
 
 Pages can take a minute to serve a fresh push. If `publish.sh` warned that the site deploy failed,
 say so and give the retry command rather than the link.

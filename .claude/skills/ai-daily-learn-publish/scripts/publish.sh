@@ -21,7 +21,7 @@ SESSION="${1:-$(date +%F)}"
 say()  { printf '[publish] %s\n' "$*"; }
 die()  { printf '[publish] ERROR: %s\n' "$*" >&2; exit 1; }
 
-PAGES_URL="https://magna56.github.io/aI_daily_run"
+PAGES_URL="https://theaicommit.com"
 
 # Rebuild and republish the reader site (gh-pages) after the source lands on
 # main. Deliberately non-fatal: the session itself is already safely pushed, and
