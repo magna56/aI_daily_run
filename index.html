@@ -423,7 +423,7 @@
      comfortable measure over strict edge-alignment with the header/tabs
      above, which stay full-width. */
   .insight, .prose, .rmeta, .share { max-width: var(--measure); margin-left: auto; margin-right: auto; }
-  .insight { background: rgba(167,139,250,.07); border: 1px solid rgba(167,139,250,.22); border-left: 3px solid var(--accent); border-radius: 8px; padding: 16px 20px; margin-top: 18px; margin-bottom: 30px; color: #cfe6f2; font-size: 15.5px; line-height: 1.7; }
+  .insight { background: rgba(167,139,250,.07); border: 1px solid rgba(167,139,250,.22); border-left: 3px solid var(--accent); border-radius: 8px; padding: 16px 20px; margin-top: 18px; margin-bottom: 14px; color: #cfe6f2; font-size: 15.5px; line-height: 1.7; }
   .insight .k { display: block; color: var(--accent2); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
   .pane { padding: 22px 0 0; }
   .visualize-shell { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #0a0d18; }
@@ -598,11 +598,26 @@
   .nl .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 0 0 4px; }
   .nl .lede { margin: 0 0 10px; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
   .nl .fine { margin: 8px 0 0; font-size: 12px; color: var(--dim); }
-  .reader .nl {
-    max-width: var(--measure); margin: 8px auto 22px; padding: 0;
-    border: none; background: none;
+  .reader .nl-article {
+    max-width: var(--measure); margin: 0 auto 28px; padding: 16px 18px;
+    border: 1px solid rgba(167,139,250,.28); border-radius: 10px;
+    background: rgba(167,139,250,.07);
   }
-  .reader .nl-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .reader .nl-article .k { color: var(--accent2); margin: 0 0 5px; }
+  .reader .nl-article .lede { margin: 0 0 12px; color: var(--ink); font-size: 14.5px; line-height: 1.45; }
+  .reader .nl-article .nl-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .reader .nl-article input[type=email] {
+    background: rgba(17,18,23,.35);
+  }
+  .reader .nl-article button {
+    color: var(--publish-ink); background: var(--accent); border-color: transparent; font-weight: 650;
+  }
+  .reader .nl-article button:hover { color: var(--publish-ink); filter: brightness(1.08); }
+  :root[data-theme="light"] .nl-article {
+    background: rgba(124,92,217,.08); border-color: rgba(124,92,217,.28);
+  }
+  :root[data-theme="light"] .nl-article .lede { color: #1f2937; }
+  :root[data-theme="light"] .nl-article input[type=email] { background: #fff; }
 
   .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); background: var(--surface); border: 1px solid var(--line); color: var(--ink); font-size: 13px; padding: 10px 16px; border-radius: 9px; box-shadow: 0 10px 30px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; z-index: 50; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -2228,9 +2243,10 @@
   /* ---- newsletter ------------------------------------------------------ */
   function newsletterMarkup() {
     return (
-      '<form class="nl nl-home" action="https://theaicommit.com/api/subscribe" method="post">' +
+      '<form class="nl nl-article" action="https://theaicommit.com/api/subscribe" method="post">' +
+        '<p class="k">Daily email</p>' +
+        '<p class="lede">One email when the next session ships — the title, the insight, a link.</p>' +
         '<div class="nl-row">' +
-          '<span class="nl-label">Daily email</span>' +
           '<label class="nl-hp" aria-hidden="true">Leave blank <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>' +
           '<input type="email" name="email" required placeholder="you@email.com" autocomplete="email" />' +
           '<button type="submit">Subscribe</button>' +
