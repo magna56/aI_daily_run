@@ -155,7 +155,8 @@
   :root[data-theme="light"] .prose em { color: #26221c; }
   :root[data-theme="light"] .insight { color: #1f2937; }
   :root[data-theme="light"] .pill-btn { color: #4a453b; }
-  :root[data-theme="light"] .course-invite { background: rgba(124,92,217,.08); border-color: rgba(124,92,217,.28); }
+  :root[data-theme="light"] .course-invite,
+  :root[data-theme="light"] .gh-invite { background: rgba(124,92,217,.08); border-color: rgba(124,92,217,.28); }
   :root[data-theme="light"] .top-nav a:hover { border-color: rgba(0,0,0,.18); }
 
   /* The code/output panels and the captured-output fallback box keep their
@@ -240,18 +241,16 @@
     max-width: 720px; margin: -12px auto 28px; padding: 16px 18px;
     border: 1px solid var(--line); border-radius: 12px;
     background: var(--card);
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
   }
   .mlc-invite .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 0 0 4px; }
-  .mlc-invite .row { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
   .mlc-invite p { margin: 0; color: var(--ink); font-size: 14.5px; line-height: 1.45; max-width: 460px; }
-  .mlc-invite .topics { margin-top: 12px; }
-  .mlc-invite .topics .lesson { padding: 12px 14px; }
-  .mlc-invite .topics .lesson h3 { font-size: 15px; }
-  .mlc-invite .go {
+  .mlc-invite a {
     font-family: var(--mono); font-size: 12.5px; font-weight: 650;
-    color: var(--accent2); text-decoration: none; white-space: nowrap;
+    color: var(--publish-ink); background: var(--accent); text-decoration: none;
+    border-radius: 999px; padding: 8px 14px; white-space: nowrap;
   }
-  .mlc-invite .go:hover { color: var(--ink); }
+  .mlc-invite a:hover { filter: brightness(1.08); }
   :root[data-theme="light"] .mlc-invite { background: rgba(0,0,0,.03); }
   body.on-learn .tagline,
   body.on-learn .subtitle,
@@ -261,7 +260,8 @@
   body.on-learn .pills,
   body.on-learn .count,
   body.on-learn .course-invite,
-  body.on-learn .mlc-invite { display: none; }
+  body.on-learn .mlc-invite,
+  body.on-learn .gh-invite { display: none; }
   .lessons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
   .lesson {
     display: flex; align-items: baseline; gap: 14px;
@@ -280,6 +280,20 @@
   .subtitle { color: var(--muted); font-size: 15px; max-width: 640px; margin: 16px auto 0; line-height: 1.6; }
   .trust { color: var(--dim); font-size: 12.5px; max-width: 560px; margin: 18px auto 0; line-height: 1.6; padding-top: 16px; border-top: 1px solid var(--line); }
   .trust a { color: var(--accent2); white-space: nowrap; }
+  .gh-invite {
+    max-width: 720px; margin: 8px auto 16px; padding: 16px 18px;
+    border: 1px solid rgba(167,139,250,.32); border-radius: 12px;
+    background: rgba(167,139,250,.08);
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .gh-invite .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent2); margin: 0 0 4px; }
+  .gh-invite p { margin: 0; color: var(--ink); font-size: 14.5px; line-height: 1.45; max-width: 480px; }
+  .gh-invite a {
+    font-family: var(--mono); font-size: 12.5px; font-weight: 650;
+    color: var(--publish-ink); background: var(--accent); text-decoration: none;
+    border-radius: 999px; padding: 8px 14px; white-space: nowrap;
+  }
+  .gh-invite a:hover { filter: brightness(1.08); }
 
   /* Stats */
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin: 34px 0 8px; }
@@ -419,6 +433,8 @@
   .tab:hover { color: var(--ink); }
   .tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
   .tab .n { font-family: var(--mono); font-size: 11px; opacity: .55; margin-left: 5px; }
+  .tab .tab-gh { width: 12px; height: 12px; margin-left: 6px; opacity: .7; vertical-align: -1px; fill: currentColor; }
+  .tab.active .tab-gh { opacity: 1; }
 
   .rmeta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12.5px; color: var(--muted); margin: 20px 0 6px; }
   .rmeta .k { color: var(--dim); text-transform: uppercase; font-size: 10.5px; letter-spacing: .05em; margin-right: 6px; }
@@ -441,7 +457,21 @@
   /* Centered reading column (Medium/reader-app pattern) — prioritizes the
      comfortable measure over strict edge-alignment with the header/tabs
      above, which stay full-width. */
-  .insight, .prose, .rmeta, .share { max-width: var(--measure); margin-left: auto; margin-right: auto; }
+  .insight, .prose, .rmeta, .share, .keep { max-width: var(--measure); margin-left: auto; margin-right: auto; }
+  .keep {
+    display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;
+    background: rgba(167,139,250,.07); border: 1px solid rgba(167,139,250,.22);
+    border-radius: 8px; padding: 12px 16px; margin-top: 10px; margin-bottom: 8px;
+    color: var(--muted); font-size: 14.5px; line-height: 1.55;
+  }
+  .keep .k { display: block; color: var(--accent2); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
+  .keep a {
+    font-family: var(--mono); font-size: 12.5px; font-weight: 650;
+    color: var(--publish-ink); background: var(--accent); text-decoration: none;
+    border-radius: 999px; padding: 7px 13px; white-space: nowrap;
+  }
+  .keep a:hover { filter: brightness(1.08); text-decoration: none; }
+  :root[data-theme="light"] .keep { color: #3a362e; }
   .insight { background: rgba(167,139,250,.07); border: 1px solid rgba(167,139,250,.22); border-left: 3px solid var(--accent); border-radius: 8px; padding: 16px 20px; margin-top: 18px; margin-bottom: 14px; color: #cfe6f2; font-size: 15.5px; line-height: 1.7; }
   .insight .k { display: block; color: var(--accent2); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
   .pane { padding: 22px 0 0; }
@@ -672,9 +702,9 @@
            margin/font-size, so the tag swap is visually identical. -->
       <img class="brand-mark" src="/favicon.svg" width="56" height="56" alt="" />
       <p class="title">THE AI COMMIT</p>
-      <p class="kicker">read · see · run</p>
+      <p class="kicker">read · see · run · keep</p>
       <p class="tagline">A daily AI engineering lab for software engineers</p>
-      <p class="subtitle">Understand one real AI development in 30 minutes — a plain-English explanation, a diagram of the actual mechanism, and code that runs live in your browser. Written for software engineers.</p>
+      <p class="subtitle">Understand one real AI development in 30 minutes — a plain-English explanation, a diagram of the actual mechanism, and code you can run, then publish to your own GitHub. Written for software engineers.</p>
       <nav class="top-nav" aria-label="Site">
         <a href="#" class="nav-lab on" id="navLab">Daily lab</a>
         <a href="#learn" class="nav-course" id="navCourse">AI basics</a>
@@ -687,6 +717,13 @@
            This carries the h1 for a topic page in the JS-rendered view; the
            non-JS view gets its own h1 from the generated <noscript>. -->
       <div id="topicHead"></div>
+      <div class="gh-invite" id="ghLine">
+        <div>
+          <p class="k">Publish to GitHub</p>
+          <p>Today's example becomes a public repo under your account — the script plus a README with the output. One click from the Code tab.</p>
+        </div>
+        <a id="ghInvite" href="#/code">Publish today's code →</a>
+      </div>
       <form class="nl nl-home" id="nlHome" action="https://theaicommit.com/api/subscribe" method="post">
         <div class="nl-row">
           <span class="nl-label">Daily email</span>
@@ -704,14 +741,11 @@
         <a href="#learn">Start the basics →</a>
       </div>
       <div class="mlc-invite" id="mlcInvite">
-        <div class="row">
-          <div>
-            <p class="k">Intermediate basics</p>
-            <p>Six primers on this site — freeze a matrix, watch attention, poke a calibration curve. Separate from the daily lab.</p>
-          </div>
-          <a class="go" href="#learn">Open the primers →</a>
+        <div>
+          <p class="k">Intermediate basics</p>
+          <p>Six primers on this site — freeze a matrix, watch attention, poke a calibration curve. Separate from the daily lab.</p>
         </div>
-        <ol class="lessons topics" id="mlcTopics"></ol>
+        <a href="#learn/intermediate">Open the primers →</a>
       </div>
       <div class="stats" id="stats"></div>
       <hr class="sep" />
@@ -1462,20 +1496,19 @@
     return s.hook || s.insight || "Open to read the write-up.";
   }
 
-  function renderMlcInvite() {
-    var el = $("mlcTopics");
-    if (!el) return;
-    var rows = INTERMEDIATE.sessions || [];
-    el.innerHTML = rows.map(function (s, i) {
-      return '<a class="lesson" href="#learn/' + esc(s.id) + '">' +
-        '<span class="n">' + (i + 1) + "</span>" +
-        "<div>" +
-          "<h3>" + esc(plain(s.title || s.id)) + "</h3>" +
-          '<p class="desc">' + esc(plain(s.hook || "")) + "</p>" +
-        "</div>" +
-        '<span class="mins">~' + (s.minutes || 10) + " min</span>" +
-      "</a>";
-    }).join("");
+  function latestLab() {
+    return labSessions().slice().sort(function (a, b) {
+      return (b.date || "").localeCompare(a.date || "");
+    })[0] || null;
+  }
+
+  function renderGhInvite() {
+    var a = $("ghInvite");
+    var line = $("ghLine");
+    if (!a || !line) return;
+    var s = latestLab();
+    if (s && s.code) a.setAttribute("href", "#" + sessionHash(s.id, "code"));
+    else line.hidden = true;
   }
 
   function renderLevels() {
@@ -1715,7 +1748,9 @@
         var n = name === "articles" ? p.articles.reduce(function (a, g) { return a + g.items.length; }, 0)
               : name === "code" ? p.code.lines : 0;
         return '<button class="tab' + (name === pane ? " active" : "") + '" data-pane="' + name + '">' +
-               label[name] + (n ? '<span class="n">' + n + "</span>" : "") + "</button>";
+               label[name] + (n ? '<span class="n">' + n + "</span>" : "") +
+               (name === "code" ? '<svg class="tab-gh" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>' : "") +
+               "</button>";
       }).join("") + "</div></div>";
 
     var shareUrl = location.origin + location.pathname + "#" + sessionHash(p.id);
@@ -1743,6 +1778,9 @@
           : "") +
       "</div>" +
       share +
+      (p.code && pane === "overview"
+        ? '<div class="keep"><div><span class="k">Publish to GitHub</span>Run the example, then keep it as a public repo under your account — code plus a README with the output.</div><a href="#' + sessionHash(p.id, "code") + '">Open Code tab →</a></div>'
+        : "") +
       // Only on Overview: the other tabs are for doing, and a 10-line thesis
       // above the fold pushes the code and the diagram off the screen.
       (p.insight && pane === "overview"
@@ -1915,7 +1953,7 @@
         '<div class="code-cta-copy">' +
           "<strong>Run it. Tweak it. Keep it.</strong>" +
           "<span>Runs in your browser — no API key, nothing to install. " +
-          "Save your version as a new GitHub repo (code + README with output) in one click.</span>" +
+          "One click creates a public repo under your GitHub account (code + README with the output). We never see the files.</span>" +
         "</div>" +
         '<button class="btn-publish" id="publishGh" title="' +
           (ghUser() ? "Publish as " + esc(ghUser().login) : "Sign in with GitHub, then publish") + '">' +
@@ -2103,7 +2141,7 @@
     if (parts[0] === "start") return { level: "start-here" };
     if (parts[0] === "level") return parts[1] ? { level: parts[1] } : null;
     if (parts[0] === "learn") {
-      if (!parts[1]) return { learnIndex: true };
+      if (!parts[1] || parts[1] === "intermediate") return { learnIndex: true, learnBand: parts[1] || "" };
       return { id: parts[1], pane: parts[2] || "overview" };
     }
     return { id: parts[0], pane: parts[1] || "overview" };
@@ -2162,7 +2200,13 @@
       renderLevels();
       renderPills();
       renderGrid();
-      window.scrollTo(0, 0);
+      if (target.learnBand === "intermediate") {
+        var band = $("intermediate");
+        if (band) band.scrollIntoView({ block: "start" });
+        else window.scrollTo(0, 0);
+      } else {
+        window.scrollTo(0, 0);
+      }
       return;
     }
 
@@ -2369,7 +2413,7 @@
   })();
 
   /* ---- boot ------------------------------------------------------------ */
-  renderMlcInvite();
+  renderGhInvite();
   if (!DATA.length) {
     $("grid").innerHTML = '<div class="empty">No sessions found. Run <code>make build</code> first.</div>';
   } else {
