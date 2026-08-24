@@ -1,4 +1,4 @@
-# Freeze the Big Matrix. Train Two Skinny Ones.
+# LoRA
 
 **Category**: Hands-on Techniques
 **Tags**: fine-tuning, training, cost
@@ -59,7 +59,7 @@ It is also why a LoRA is not a new brain. It can steer tone, format, and a narro
 
 A Git patch is a small delta on a frozen tree. LoRA is a patch on a matrix. A plugin that does not fork the host app is the product version of the same idea. You already accept that a 200-line adapter can change a 2-million-line product. This is that, for weights.
 
-Next: [Each token asks who matters](#learn/self-attention) — the layer LoRA most often sits on.
+Next: [Self-Attention](#learn/self-attention) — the layer LoRA most often sits on.
 
 ## Try It Yourself
 

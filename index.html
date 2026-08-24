@@ -244,12 +244,9 @@
   .mlc-invite .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 0 0 4px; }
   .mlc-invite .row { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
   .mlc-invite p { margin: 0; color: var(--ink); font-size: 14.5px; line-height: 1.45; max-width: 460px; }
-  .mlc-invite .topics { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .mlc-invite .topics a {
-    font-family: var(--mono); font-size: 11.5px; color: var(--muted);
-    border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; text-decoration: none;
-  }
-  .mlc-invite .topics a:hover { color: var(--ink); border-color: rgba(167,139,250,.45); }
+  .mlc-invite .topics { margin-top: 12px; }
+  .mlc-invite .topics .lesson { padding: 12px 14px; }
+  .mlc-invite .topics .lesson h3 { font-size: 15px; }
   .mlc-invite .go {
     font-family: var(--mono); font-size: 12.5px; font-weight: 650;
     color: var(--accent2); text-decoration: none; white-space: nowrap;
@@ -714,14 +711,7 @@
           </div>
           <a class="go" href="#learn">Open the primers →</a>
         </div>
-        <div class="topics">
-          <a href="#learn/lora">LoRA</a>
-          <a href="#learn/self-attention">Self-Attention</a>
-          <a href="#learn/calibration">Calibration</a>
-          <a href="#learn/embeddings">Embeddings</a>
-          <a href="#learn/build-an-llm">Build an LLM</a>
-          <a href="#learn/agents-in-prod">Agents in Prod</a>
-        </div>
+        <ol class="lessons topics" id="mlcTopics"></ol>
       </div>
       <div class="stats" id="stats"></div>
       <hr class="sep" />
@@ -1470,6 +1460,22 @@
 
   function cardBlurb(s) {
     return s.hook || s.insight || "Open to read the write-up.";
+  }
+
+  function renderMlcInvite() {
+    var el = $("mlcTopics");
+    if (!el) return;
+    var rows = INTERMEDIATE.sessions || [];
+    el.innerHTML = rows.map(function (s, i) {
+      return '<a class="lesson" href="#learn/' + esc(s.id) + '">' +
+        '<span class="n">' + (i + 1) + "</span>" +
+        "<div>" +
+          "<h3>" + esc(plain(s.title || s.id)) + "</h3>" +
+          '<p class="desc">' + esc(plain(s.hook || "")) + "</p>" +
+        "</div>" +
+        '<span class="mins">~' + (s.minutes || 10) + " min</span>" +
+      "</a>";
+    }).join("");
   }
 
   function renderLevels() {
@@ -2363,6 +2369,7 @@
   })();
 
   /* ---- boot ------------------------------------------------------------ */
+  renderMlcInvite();
   if (!DATA.length) {
     $("grid").innerHTML = '<div class="empty">No sessions found. Run <code>make build</code> first.</div>';
   } else {

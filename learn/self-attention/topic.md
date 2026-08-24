@@ -1,4 +1,4 @@
-# Each Token Asks: Who Matters Right Now?
+# Self-Attention
 
 **Category**: New Models & APIs
 **Tags**: transformers, from-scratch
@@ -59,7 +59,7 @@ You do not need to derive the paper to use the product. You do need the shape: s
 
 A database index is "who matches this query." Attention is "how much does each already-loaded row matter," with soft weights instead of a boolean. A code review that highlights three lines and ignores the rest is the same habit. The transformer just does it with matrix multiplies.
 
-Next: [When 80% should mean 80%](#learn/calibration) — after the mix, the scores still have to be honest.
+Next: [Calibration](#learn/calibration) — after the mix, the scores still have to be honest.
 
 ## Try It Yourself
 

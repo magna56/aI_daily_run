@@ -1,4 +1,4 @@
-# When 80% Should Mean 80%
+# Calibration
 
 **Category**: Evals & Reliability
 **Tags**: reliability, benchmarks
@@ -57,7 +57,7 @@ It also tells you when to stop. Temperature scaling is a one-parameter bandage. 
 
 A unit-test pass rate of 80% is not the same as a flaky test that *says* 80% and fails half the time. A load balancer that routes on a health score you never validated is this bug in ops clothing. You would not page on an uncalibrated metric. Do not auto-send on one either.
 
-Next: [Meaning lives in distance](#learn/embeddings) — another number people treat as truth without measuring it.
+Next: [Embeddings](#learn/embeddings) — another number people treat as truth without measuring it.
 
 ## Try It Yourself
 

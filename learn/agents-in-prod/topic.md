@@ -1,4 +1,4 @@
-# The Loop Is Cheap. Serving and Checks Are the Job.
+# Agents in Prod
 
 **Category**: AI in Production
 **Tags**: agents, production, cost
