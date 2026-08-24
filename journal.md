@@ -112,3 +112,9 @@
 - **Key insight**: Most teams pick chunk size, overlap, and top-k by feel and never revisit them. AutoRAG grid-searches each pipeline stage against a scorer that needs no model call, then freezes only the winner before sweeping the next stage. A real test on a small model found a config with identical retrieval quality that sent the model 88% fewer words of context.
 - **Code**: `2026-08-23/code_example.py` — pure-Python retrieval sim, 72-config grid search over chunk_size/overlap/top_k scored by `context_recall + 0.05*MRR - 0.00002*avg_ctx_words`, then a second node (prompt-template overhead) swept only against the winner; reproduces a 29% context reduction at equal recall/MRR and shows greedy search testing 75 configs vs. 216 for a full cross product (65.3% fewer runs)
 - **Articles**: 6 sources (Red Hat AutoRAG demo + AutoRAG docs/optimization page + AutoRAG GitHub + original AutoRAG paper arXiv:2410.20878 + AutoRAGTuner follow-up + multi-hop prompt-template evaluation paper)
+
+## 2026-08-24 — MCP Deleted Its Handshake. Your Server Got Simpler; Your Client Didn't.
+- **Category**: Building Agents & MCP
+- **Key insight**: The protocol that connects AI agents to tools just removed the idea of a connection. Servers get much easier to run — no sticky routing, no shared session store, a restart costs one retry — but the work moved into the client, which now has to cache the tool list itself. Get that one cache wrong and a session costs eleven times more.
+- **Code**: `2026-08-24/code_example.py` — measures the literal request bodies from the spec, then prices a 40-call agent session four ways and sweeps the cache lifetime to show where the cost actually lives
+- **Articles**: 6 sources collected
