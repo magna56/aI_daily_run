@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Nearby points are the retrieve decision</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090c12;--card:#121821;--line:#2a3544;--ink:#edf4ff;--muted:#95a4b8;--cyan:#55e6d2;--violet:#b197fc;--amber:#ffd166}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif}
+    main{max-width:980px;margin:auto;padding:clamp(16px,3vw,32px)}
+    header{display:flex;justify-content:space-between;gap:16px;margin-bottom:16px}
+    h1{font-size:clamp(22px,4vw,34px);line-height:1.1;margin:0 0 6px}
+    p{margin:0;color:var(--muted);max-width:540px}
+    button{font:inherit;color:var(--ink);background:#192231;border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer}
+    .grid{display:grid;grid-template-columns:1fr 240px;gap:14px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+    canvas{width:100%;height:320px;display:block;background:#0b1018;border-radius:10px;cursor:crosshair}
+    ol{margin:8px 0 0;padding-left:18px;color:var(--muted)}
+    li strong{color:var(--ink)}
+    @media(max-width:720px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<main data-visualizer="embeddings">
+  <header>
+    <div>
+      <h1>Click the map. Top-k is whoever lives nearby.</h1>
+      <p>Docs are fixed points. The query is the cyan dot — click to move it. Cosine in 2-D is the retrieve score.</p>
+    </div>
+    <button type="button" id="reset">Reset</button>
+  </header>
+  <section class="grid">
+    <div class="card"><canvas id="map" aria-label="2-D embedding space"></canvas></div>
+    <div class="card">
+      <p>Nearest chunks</p>
+      <ol id="rank"></ol>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const DOCS = [
+    { name: "refund.md", x: 0.22, y: 0.28 },
+    { name: "charge.md", x: 0.30, y: 0.38 },
+    { name: "invoice.md", x: 0.34, y: 0.22 },
+    { name: "password.md", x: 0.78, y: 0.72 },
+    { name: "weather.md", x: 0.82, y: 0.24 }
+  ];
+  let q = { x: 0.18, y: 0.42 };
+  const $ = (id) => document.getElementById(id);
+  const canvas = $("map"), ctx = canvas.getContext("2d");
+  function cosine(a, b) {
+    const dot = a.x * b.x + a.y * b.y;
+    const na = Math.hypot(a.x, a.y), nb = Math.hypot(b.x, b.y);
+    return (!na || !nb) ? 0 : dot / (na * nb);
+  }
+  function draw() {
+    const w = canvas.width = canvas.clientWidth * 2;
+    const h = canvas.height = 640;
+    ctx.clearRect(0, 0, w, h);
+    DOCS.forEach((d) => {
+      ctx.fillStyle = "#b197fc";
+      ctx.beginPath();
+      ctx.arc(d.x * w, d.y * h, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#edf4ff";
+      ctx.font = "20px ui-sans-serif";
+      ctx.fillText(d.name, d.x * w + 16, d.y * h + 6);
+    });
+    ctx.fillStyle = "#55e6d2";
+    ctx.beginPath();
+    ctx.arc(q.x * w, q.y * h, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#55e6d2";
+    ctx.fillText("query", q.x * w + 16, q.y * h + 6);
+  }
+  function render() {
+    draw();
+    const ranked = DOCS.map((d) => ({ n: d.name, s: cosine(q, d) })).sort((a, b) => b.s - a.s);
+    $("rank").innerHTML = ranked.map((r) => "<li><strong>" + r.n + "</strong> cos " + r.s.toFixed(3) + "</li>").join("");
+    reportHeight();
+  }
+  function reportHeight() {
+    parent.postMessage({ type: "adl-visualize-height", height: document.documentElement.scrollHeight }, "*");
+  }
+  canvas.addEventListener("click", (ev) => {
+    const rec = canvas.getBoundingClientRect();
+    q = { x: (ev.clientX - rec.left) / rec.width, y: (ev.clientY - rec.top) / rec.height };
+    render();
+  });
+  $("reset").onclick = () => { q = { x: 0.18, y: 0.42 }; render(); };
+  addEventListener("load", () => { render(); reportHeight(); });
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

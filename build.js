@@ -120,6 +120,17 @@ const LEARN_TRACK = [
   "the-coding-agent-harness",
 ];
 
+// Mechanism primers after the two-day basics. Same learn/ folders and
+// reader, separate list so Day 1 / Day 2 stay an 11-lesson path.
+const INTERMEDIATE_TRACK = [
+  "lora",
+  "self-attention",
+  "calibration",
+  "embeddings",
+  "build-an-llm",
+  "agents-in-prod",
+];
+
 // Cross-cutting facets, deliberately NOT a restatement of CATEGORIES: a session
 // has exactly one category (what it is about) and several tags (what it touches).
 // A controlled list is the whole point — free-form tags drift into
@@ -835,7 +846,8 @@ function homePageSpec(cards, categories) {
         `<li><a href="/topics/${escAttr(slugify(c))}/">${escAttr(c)}</a></li>\n`).join("") +
       `</ul>\n` +
       `<h2>All sessions</h2>\n<ul>\n${cards.filter((c) => c.kind !== "learn").map(sessionLinkItem).join("")}</ul>\n` +
-      `<h2>AI basics</h2>\n<ul>\n${cards.filter((c) => c.kind === "learn").map(sessionLinkItem).join("")}</ul>\n` +
+      `<h2>AI basics</h2>\n<ul>\n${LEARN_TRACK.map((id) => cards.find((c) => c.id === id)).filter(Boolean).map(sessionLinkItem).join("")}</ul>\n` +
+      `<h2>Intermediate basics</h2>\n<ul>\n${INTERMEDIATE_TRACK.map((id) => cards.find((c) => c.id === id)).filter(Boolean).map(sessionLinkItem).join("")}</ul>\n` +
       `</main>\n`,
   };
 }
@@ -899,7 +911,7 @@ function main() {
   }
 
   const learnRoot = path.join(ROOT, "learn");
-  for (const slug of LEARN_TRACK) {
+  for (const slug of LEARN_TRACK.concat(INTERMEDIATE_TRACK)) {
     const topicPath = path.join(learnRoot, slug, "topic.md");
     if (!fs.existsSync(topicPath)) warn(`learn/${slug}: missing topic.md — slot will be absent from the track.`);
   }
@@ -941,7 +953,7 @@ function main() {
     if (out) writeSession(out);
   }
 
-  for (const slug of LEARN_TRACK) {
+  for (const slug of LEARN_TRACK.concat(INTERMEDIATE_TRACK)) {
     const dir = path.join(learnRoot, slug);
     if (!fs.existsSync(path.join(dir, "topic.md"))) continue;
     const out = compile(slug, journal, runner, { check, dir, kind: "learn" });
@@ -961,9 +973,20 @@ function main() {
       "window.JOBS = " + JSON.stringify(JOBS) + ";\n" +
       "window.LEARN_TRACK = " + JSON.stringify({
         title: "AI basics",
-        blurb: "Eleven short lessons, in order. Start here if you are new. This is not the daily lab.",
+        blurb: "Eleven short lessons, then six mechanism primers. Start here if you are new. This is not the daily lab.",
         ids: LEARN_TRACK,
         sessions: LEARN_TRACK.map((id) => {
+          const c = cards.find((x) => x.id === id);
+          return c
+            ? { id: c.id, title: c.title, hook: c.hook, slug: c.slug, minutes: c.minutes, level: c.level, job: c.job }
+            : { id };
+        }),
+      }) + ";\n" +
+      "window.INTERMEDIATE_TRACK = " + JSON.stringify({
+        title: "Intermediate basics",
+        blurb: "Six primers you can poke at — rank, attention, calibration, embeddings, a tiny LLM, agents in production.",
+        ids: INTERMEDIATE_TRACK,
+        sessions: INTERMEDIATE_TRACK.map((id) => {
           const c = cards.find((x) => x.id === id);
           return c
             ? { id: c.id, title: c.title, hook: c.hook, slug: c.slug, minutes: c.minutes, level: c.level, job: c.job }

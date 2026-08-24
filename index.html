@@ -710,17 +710,17 @@
         <div class="row">
           <div>
             <p class="k">Intermediate basics</p>
-            <p>Interactive primers you can poke at — math, live training, honest outputs. Separate from the daily lab.</p>
+            <p>Six primers on this site — freeze a matrix, watch attention, poke a calibration curve. Separate from the daily lab.</p>
           </div>
-          <a class="go" href="https://mlconcepts.viveksingh-heritage.workers.dev/" target="_blank" rel="noopener">ML Concepts →</a>
+          <a class="go" href="#learn">Open the primers →</a>
         </div>
         <div class="topics">
-          <a href="https://mlconcepts.viveksingh-heritage.workers.dev/" target="_blank" rel="noopener">LoRA</a>
-          <a href="https://mlconcepts.viveksingh-heritage.workers.dev/" target="_blank" rel="noopener">Self-Attention</a>
-          <a href="https://mlconcepts.viveksingh-heritage.workers.dev/" target="_blank" rel="noopener">Calibration</a>
-          <a href="https://mlconcepts.viveksingh-heritage.workers.dev/" target="_blank" rel="noopener">Embeddings</a>
-          <a href="https://mlconcepts.viveksingh-heritage.workers.dev/" target="_blank" rel="noopener">Build an LLM</a>
-          <a href="https://mlconcepts.viveksingh-heritage.workers.dev/" target="_blank" rel="noopener">Agents in Prod</a>
+          <a href="#learn/lora">LoRA</a>
+          <a href="#learn/self-attention">Self-Attention</a>
+          <a href="#learn/calibration">Calibration</a>
+          <a href="#learn/embeddings">Embeddings</a>
+          <a href="#learn/build-an-llm">Build an LLM</a>
+          <a href="#learn/agents-in-prod">Agents in Prod</a>
         </div>
       </div>
       <div class="stats" id="stats"></div>
@@ -813,14 +813,18 @@
   var state = { q: "", cat: "", tag: "", level: "", learn: false, read: "", sort: "date-desc" };
   var LEVELS = window.LEVELS || ["Start here", "Building", "Deeper"];
   var LEARN = window.LEARN_TRACK || { ids: [], sessions: [] };
+  var INTERMEDIATE = window.INTERMEDIATE_TRACK || { ids: [], sessions: [] };
 
   function isLearn(s) { return s && s.kind === "learn"; }
   function labSessions() { return DATA.filter(function (s) { return !isLearn(s); }); }
-  function courseSessions() {
-    var order = LEARN.ids || [];
-    return DATA.filter(isLearn).sort(function (a, b) { return order.indexOf(a.id) - order.indexOf(b.id); });
+  function orderedLearn(track) {
+    var order = (track && track.ids) || [];
+    return DATA.filter(function (s) { return isLearn(s) && order.indexOf(s.id) !== -1; })
+      .sort(function (a, b) { return order.indexOf(a.id) - order.indexOf(b.id); });
   }
-  function pool() { return state.learn ? courseSessions() : labSessions(); }
+  function courseSessions() { return orderedLearn(LEARN); }
+  function intermediateSessions() { return orderedLearn(INTERMEDIATE); }
+  function pool() { return state.learn ? courseSessions().concat(intermediateSessions()) : labSessions(); }
   var kbdIndex = -1;                               // keyboard-focused card
   var view = null;                                 // null = grid, else {id, pane}
   var PANES = ["overview", "visualize", "diagram", "code", "articles"];
@@ -1407,7 +1411,7 @@
     var name, blurb;
     if (learn) {
       name = LEARN.title || "AI basics";
-      blurb = LEARN.blurb || "Eleven short lessons, in order. Start here if you are new. This is not the daily lab.";
+      blurb = LEARN.blurb || "Eleven short lessons, then six mechanism primers. Start here if you are new. This is not the daily lab.";
     } else if (level) {
       name = level;
       blurb = level === "Start here"
@@ -1440,7 +1444,11 @@
   }
 
   function learnIndex(id) {
-    return (LEARN.ids || []).indexOf(id);
+    var i = (LEARN.ids || []).indexOf(id);
+    if (i !== -1) return { i: i, ids: LEARN.ids, sessions: LEARN.sessions || [], label: "Lesson" };
+    i = (INTERMEDIATE.ids || []).indexOf(id);
+    if (i !== -1) return { i: i, ids: INTERMEDIATE.ids, sessions: INTERMEDIATE.sessions || [], label: "Primer" };
+    return null;
   }
 
   function learnHref(id, pane) {
@@ -1503,7 +1511,7 @@
               (s.tags || []).join(" ") + " " + s.date).toLowerCase().indexOf(q) > -1;
     });
     if (state.learn) {
-      var order = LEARN.ids || [];
+      var order = (LEARN.ids || []).concat(INTERMEDIATE.ids || []);
       return rows.sort(function (a, b) { return order.indexOf(a.id) - order.indexOf(b.id); });
     }
     var sorters = {
@@ -1579,16 +1587,28 @@
     }
 
     if (state.learn) {
-      var day1 = rows.slice(0, 6);
-      var day2 = rows.slice(6);
+      var byLearnId = {};
+      rows.forEach(function (s) { byLearnId[s.id] = s; });
+      function pick(ids) { return ids.map(function (id) { return byLearnId[id]; }).filter(Boolean); }
+      var day1Ids = (LEARN.ids || []).slice(0, 6);
+      var day2Ids = (LEARN.ids || []).slice(6);
+      var midIds = INTERMEDIATE.ids || [];
+      var day1 = pick(day1Ids);
+      var day2 = pick(day2Ids);
+      var mid = pick(midIds);
       grid.className = "grid-stack";
       grid.innerHTML =
         '<section class="band"><p class="band-k">Day 1 — foundations</p><ol class="lessons">' +
-          day1.map(lessonHtml).join("") +
+          day1.map(function (s, i) { return lessonHtml(s, i); }).join("") +
         "</ol></section>" +
         (day2.length
           ? '<section class="band"><p class="band-k">Day 2 — agents and the machine</p><ol class="lessons">' +
-              day2.map(function (s, i) { return lessonHtml(s, 6 + i); }).join("") +
+              day2.map(function (s, i) { return lessonHtml(s, day1Ids.length + i); }).join("") +
+            "</ol></section>"
+          : "") +
+        (mid.length
+          ? '<section class="band" id="intermediate"><p class="band-k">Intermediate — poke at the mechanism</p><ol class="lessons">' +
+              mid.map(function (s, i) { return lessonHtml(s, i); }).join("") +
             "</ol></section>"
           : "");
     } else {
@@ -1726,16 +1746,18 @@
 
     var li = learnIndex(p.id);
     var trailBar = "";
-    if (li !== -1 && pane === "overview") {
-      var nxt = (LEARN.sessions || [])[li + 1];
+    if (li && pane === "overview") {
+      var nxt = li.sessions[li.i + 1];
       trailBar =
         '<div class="trail-next">' +
-          "<div><div class=\"k\">Lesson " + (li + 1) + " of " + (LEARN.ids || []).length + "</div>" +
+          "<div><div class=\"k\">" + li.label + " " + (li.i + 1) + " of " + li.ids.length + "</div>" +
           (nxt
             ? "Next: " + esc(plain(nxt.hook || nxt.title))
-            : "That's the last lesson. The daily lab is a different pile.") +
+            : (li.label === "Primer"
+              ? "That's the last primer. Day 1 and Day 2 are the ordered basics above."
+              : "That's the last lesson. The primers below go one mechanism deeper.")) +
           "</div>" +
-          (nxt ? '<a href="' + learnHref(nxt.id) + '">Open next →</a>' : '<a href="#">All sessions</a>') +
+          (nxt ? '<a href="' + learnHref(nxt.id) + '">Open next →</a>' : '<a href="#learn">AI basics</a>') +
         "</div>";
     }
 
