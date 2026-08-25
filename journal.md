@@ -118,3 +118,9 @@
 - **Key insight**: The protocol that connects AI agents to tools just removed the idea of a connection. Servers get much easier to run — no sticky routing, no shared session store, a restart costs one retry — but the work moved into the client, which now has to cache the tool list itself. Get that one cache wrong and a session costs eleven times more.
 - **Code**: `2026-08-24/code_example.py` — measures the literal request bodies from the spec, then prices a 40-call agent session four ways and sweeps the cache lifetime to show where the cost actually lives
 - **Articles**: 6 sources collected
+
+## 2026-08-25 — `Bash(rm *)` Even Catches `echo $(rm -rf /)`. It's Still Not a Gate.
+- **Category**: Coding Agents & Productivity
+- **Key insight**: The rules you write to stop a coding agent running dangerous commands do more work than most people expect — they strip environment assignments, split command chains, and look inside command substitutions. They also fail open the moment they cannot parse the shell, and nothing records that a rule was skipped. Anything you would be upset to have bypassed belongs in the permission system, not a hook.
+- **Code**: `2026-08-25/code_example.py` — implements both matching layers as documented: the character-set mode switch that silently turns a matcher into an unanchored regex, and the Bash walk (assignment stripping, chain splitting, recursive descent into `$()` and backticks). Runs a corpus of matchers and commands and flags every result that contradicts the naive reading — 4 of 8 on the shipped set, all documented behaviour. `find . -delete` deletes files and matches nothing.
+- **Articles**: 5 sources (Claude Code hooks reference + settings/permissions docs + CHANGELOG 2.1.243 + Anthropic Engineering + Cursor 19 Aug release as the cross-tool check)
