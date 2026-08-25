@@ -99,8 +99,12 @@ Pages, mirror). Re-running it with nothing new is a safe no-op that still refres
 which is how you recover from a deploy that failed the first time. `.venv/`, `.claude/`, `.logs/`,
 `site/`, `.wrangler/`, and `.DS_Store` are gitignored and never pushed to `main`.
 
-The site step is deliberately non-fatal: if it warns `site deploy failed`, the session is already
-safely on `main` and only the reader is stale — run `cd ~/ai_learning && make deploy` to retry.
+The site step is deliberately non-fatal: if it warns `site deploy failed`, the session is safely
+on `main` but it is **not published**. `feed.xml`, `sitemap.xml` and the session's Open Graph card
+are all build outputs of the same `make site` run, so a failed deploy leaves the article invisible
+to RSS readers, search crawlers and social previews as well as absent from the reader. Treat it as
+a failed publish rather than cosmetic staleness: run `cd ~/ai_learning && make deploy` to retry,
+and do not report the session as live until it succeeds.
 Within `deploy.sh` itself, a Cloudflare-specific hiccup (expired token, network blip) is separately
 non-fatal and never blocks the `gh-pages` push that runs before it — but a `publish.sh` caller
 only ever sees one coarse "site deploy failed" either way, not which host specifically failed.
@@ -116,9 +120,28 @@ git commit -m "YYYY-MM-DD: <topic title>"
 git push origin HEAD:main
 ```
 
-## Step C: Report
+## Step C: Confirm it is discoverable, then report
 
-Use the same summary block as `ai-daily-learn` Step 12, but replace its "Read it" block and
+Nothing about discovery is hand-maintained. `build.js` regenerates `feed.xml`, `sitemap.xml` and
+`site/og/<id>.png` from the session folders on **every** build, and `deploy.sh` builds before it
+publishes, so a successful deploy always carries all three — there is no separate step to remember
+and no file to hand-edit. That is exactly why this check is worth thirty seconds: the failure mode
+is not a forgotten step, it is a deploy that reported success while serving stale output, which
+looks identical from here.
+
+```bash
+S=YYYY-MM-DD    # the session id from Step A
+curl -s https://theaicommit.com/feed.xml    | grep -c "$S"                  # expect >= 1
+curl -s https://theaicommit.com/sitemap.xml | grep -c "$S"                  # expect >= 1
+curl -s -o /dev/null -w '%{http_code}\n' "https://theaicommit.com/og/$S.png"  # expect 200
+```
+
+A zero or a 404 means the new session did not reach the live site. Pages can take a minute to serve
+a fresh push, so wait and retry once; if it is still missing, re-run `make deploy` and check again
+**before** reporting the session as live. Reporting a URL that crawlers and feed readers cannot see
+is the one failure this skill should never produce silently.
+
+Then report. Use the same summary block as `ai-daily-learn` Step 12, but replace its "Read it" block and
 closing line with the published deep link — that URL opens the rendered session directly and is
 the thing worth sharing:
 

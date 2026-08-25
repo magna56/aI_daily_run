@@ -71,3 +71,23 @@ reached it for free — the real gap was that nothing *gated* the live push.
   rule lands where it will actually be read rather than only in the section that defines it.
 - **Not changed**: the Cursor twins. Both are thin runners that link to the canonical files and
   copy no section list, so they inherit all of this.
+
+## 2026-08-24 — publish path, discoverability
+
+- **Note**: "we had pages for rss feed, would they be updated on new publish, will our skill do
+  that? if not update the skill — we want our articles discoverable"
+- **Verdict**: mostly a false alarm, one real doc defect, one missing verification
+- **Not changed**: the mechanism. `feed.xml`, `sitemap.xml` and `site/og/<id>.png` are build
+  outputs — `build.js` regenerates all three from the session folders on every build, and
+  `deploy.sh` runs `make site` before publishing, so every publish already carries them to both
+  hosts. No skill step was missing and nothing is hand-maintained. Verified live: the newest
+  session appears in `feed.xml` and `sitemap.xml`, its OG card serves 200, and every generated
+  session page carries `<link rel="alternate" type="application/rss+xml">`.
+- **Changed**: `ai-daily-learn-publish/SKILL.md` — the "site deploy failed" note said only the
+  reader goes stale. That was true before the RSS/OG commit and is now wrong: a failed deploy also
+  leaves the article out of the feed, out of the sitemap, and without an OG card, so it is
+  invisible to aggregators, crawlers and social previews. Reworded as a failed *publish*.
+- **Changed**: `ai-daily-learn-publish/SKILL.md` Step C — renamed to "Confirm it is discoverable,
+  then report" and given three curl checks (feed, sitemap, OG card) to run before reporting the
+  session as live. The failure mode being guarded is a deploy that reports success while serving
+  stale output, which is indistinguishable from a good one without asking the live site.
