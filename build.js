@@ -375,6 +375,24 @@ function parseTopic(raw, rel) {
   return { title, meta, body: lines.slice(i).join("\n").trim() };
 }
 
+// topic.md body -> Map of "## Heading" -> its text. Used by the content checks;
+// deliberately ignores headings inside fenced blocks, since a code sample may well
+// contain a markdown "## " line of its own.
+function splitSections(body) {
+  const out = new Map();
+  let name = null, buf = [], fenced = false;
+  for (const line of String(body).split("\n")) {
+    if (/^```/.test(line)) fenced = !fenced;
+    const h = !fenced && line.match(/^##\s+(.+?)\s*$/);
+    if (h) {
+      if (name !== null) out.set(name, buf.join("\n"));
+      name = h[1]; buf = [];
+    } else if (name !== null) buf.push(line);
+  }
+  if (name !== null) out.set(name, buf.join("\n"));
+  return out;
+}
+
 /**
  * journal.md: `## <id> — <Title>` blocks of `- **Key**: value` bullets.
  * The hand-written "Key insight" is the best one-line blurb we have, so the
@@ -546,11 +564,38 @@ function compile(id, journal, runner, opts) {
   if (!hook) warn(`${id}: no Hook in topic.md — the card will fall back to the journal insight.`);
 
   if (kind === "daily" && date >= IMPLEMENT_SECTION_SINCE) {
-    if (!/^##\s+Implementing It\s*$/m.test(topic.body)) {
+    const sections = splitSections(topic.body);
+    const impl = sections.get("Implementing It");
+    if (impl === undefined) {
       warn(`${id}: topic.md has no "## Implementing It" section — see contract.md.`);
-    } else if (!/^```/m.test(topic.body)) {
-      warn(`${id}: topic.md has no fenced code block — "Implementing It" must show real code, `
-        + `not point at code_example.py.`);
+    } else {
+      if (!/^```/m.test(topic.body)) {
+        warn(`${id}: topic.md has no fenced code block — "Implementing It" must show real code, `
+          + `not point at code_example.py.`);
+      }
+      // The two parts that separate an engineering doc from a tutorial, and the two
+      // most often skipped: can the reader tell the change took, and when is it wrong?
+      if (!/how you know it worked/i.test(impl)) {
+        warn(`${id}: "Implementing It" has no "How you know it worked" part — an engineer who `
+          + `cannot tell whether the change took has been given a suggestion, not an implementation.`);
+      }
+      if (!/when not to/i.test(impl)) {
+        warn(`${id}: "Implementing It" has no "When not to" part — a technique with no stated `
+          + `downside reads as marketing.`);
+      }
+      // Structural: a single required section cannot outweigh nine explanatory ones
+      // unless it is actually the biggest thing in the document. Measured across the
+      // first 22 sessions the split was 97% prose / 3% implementation.
+      const words = (t) => (t.trim().match(/\S+/g) || []).length;
+      let longest = "", longestN = 0;
+      for (const [name, body] of sections) {
+        const n = words(body);
+        if (n > longestN) { longestN = n; longest = name; }
+      }
+      if (longest && longest !== "Implementing It") {
+        warn(`${id}: "${longest}" (${longestN} words) is longer than "Implementing It" `
+          + `(${words(impl)}) — tighten the explanatory sections, do not pad the implementation.`);
+      }
     }
   }
   const assetDir = path.join(ASSET_DIR, id);

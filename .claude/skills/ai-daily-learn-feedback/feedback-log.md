@@ -188,3 +188,36 @@ reached it for free — the real gap was that nothing *gated* the live push.
 - **Design principle for future gates**: a gate may warn freely, and may block only where the fix
   is an in-place edit the same run can perform. It may never be designed such that the correct
   response to failing it is to skip the day.
+
+## 2026-08-24 — implementation as the shape, not a section
+
+- **Note**: "the articles need to be implementation focus, engineering implementation — an
+  engineer reading this should be able to take something and implement it in their work. Not
+  shallow or space filler, but generates real value. Assume you are teaching / upskilling your
+  engineers for practical implementation."
+- **Verdict**: standing rule. Second pass on the same concern as the first entry in this log,
+  which added `## Implementing It`. That fix was necessary and insufficient.
+- **Measured before editing**: the 2026-08-24 article is **97% explanatory prose, 3%
+  implementation, zero fenced code blocks**, with the Glossary at 21% — as long as every
+  technical section combined. One required section cannot outweigh nine explanatory ones; the
+  document's *shape* was the defect, not a missing rule.
+- **Changed**: `SKILL.md` — an **acceptance test** governing the whole document: could a
+  competent engineer ship the change from the article alone, without opening the source? Plus the
+  register: you are the senior engineer writing the internal doc that upskills your team, not a
+  reporter filing on a development.
+- **Changed**: `SKILL.md` — structural rule: **`Implementing It` must be the longest section in
+  the document**, with the 97/3 measurement as its justification. Tighten the explainers; never
+  pad the implementation.
+- **Changed**: `SKILL.md` — `Implementing It` now has three labelled parts. **How you know it
+  worked** (the number that moves, the log line, the assertion — "make sure caching works" is not
+  a verification) and **When not to** (the counter-case and the cost) are new and are the two
+  that turn a tutorial into an engineering document.
+- **Changed**: `SKILL.md` — an explicit anti-filler list naming the patterns that produce padding
+  (the same point restated across three sections, a `Why It Matters` that says it matters,
+  history the reader does not need to make the change), and a Glossary cap of one sentence per
+  term.
+- **Changed**: `contract.md` — the four conditions restated as a checklist, with the acceptance
+  test behind them.
+- **Changed**: `build.js` — added `splitSections()` (fence-aware) and three new checks: the two
+  labelled parts, and whether `Implementing It` is the longest section. Verified both ways: an
+  explainer-shaped article trips all three; a correctly-shaped one is clean.

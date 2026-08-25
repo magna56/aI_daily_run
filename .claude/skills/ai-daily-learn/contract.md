@@ -40,11 +40,24 @@ Explain Like I'm 5 → The Problem → For a Software Engineer → What This Mea
 `What This Means for You` is three labelled parts: **When this matters**, **How it affects you**,
 **What to do about it**. Required on Tier C too.
 
-`Implementing It` is a hard requirement, and it is the one most easily faked. It must contain at
-least one **fenced code block or literal payload in `topic.md` itself** — a link to
-`code_example.py` does not satisfy it — and it must say what each role the change touches has to
-write, not only the role the source announcement addresses. A session whose deepest content is a
-description of what a release says has not met this contract, however long it is.
+`Implementing It` is a hard requirement, and it is the one most easily faked. Four conditions,
+all checked by `--check`:
+
+1. At least one **fenced code block or literal payload in `topic.md` itself** — a link to
+   `code_example.py` does not satisfy it.
+2. Three labelled parts: **The change**, **How you know it worked**, **When not to**. The last
+   two are what separate an engineering document from a tutorial and are the two most often
+   skipped. A reader who cannot tell whether the change took has been given a suggestion; a
+   technique with no stated downside reads as marketing.
+3. Code for **each role the change touches**, not only the role the source announcement
+   addresses.
+4. **It is the longest section in the document.** Measured across the first 22 sessions the shape
+   was 97% explanatory prose and 3% implementation, with no code in the write-up at all. If some
+   other section is longer, tighten that one — never pad this one.
+
+The acceptance test behind all four: *could a competent engineer ship this change from the
+article alone, without opening the source it was built from?* A session whose deepest content is
+a description of what a release says has not met this contract, however long it is.
 
 ## journal.md
 

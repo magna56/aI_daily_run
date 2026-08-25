@@ -298,8 +298,10 @@ do about it — see the rules below. REQUIRED on every session, including Tier C
 [Open with a short **Background first** paragraph, then the bullets — see the rules below.]
 
 ## Implementing It
-[The code the reader has to write, in fenced blocks, for every role the change touches —
-see the rules below. REQUIRED on every session.]
+[REQUIRED, and the longest section in the document. Three labelled parts: **The change** (the
+code, in fenced blocks, for every role the change touches), **How you know it worked** (the
+verification signal — a number, a log line, an assertion), **When not to** (the counter-case and
+what it costs). See the rules below.]
 
 ## How It Connects to What You Know
 [Connect to something they already ship — caches, CI, code review, HTTP — then to earlier
@@ -312,6 +314,39 @@ link the matching `learn/<slug>` page instead of re-teaching it.]
 ## Glossary
 [Every acronym and domain term actually used above — see the rules below.]
 ```
+
+**The acceptance test — apply it to the whole document, not just one section.**
+
+> Could a competent engineer who has never met this topic ship the change from your article
+> alone — open the editor, write it, and know whether it worked — without opening the source
+> you built it from?
+
+If the honest answer is no, you have written a summary with a code block in it, however long and
+however well sourced. This is the bar the whole write-up is measured against; every section below
+either serves it or is cut.
+
+You are not filing a report on a development. **You are the senior engineer writing the internal
+doc that upskills your team on something they are about to have to use.** That register is the
+whole difference: an internal doc names the file, gives the real config key, says what broke last
+time, and admits where the approach is wrong. It never pads, because the audience is people whose
+time you will have to face on Monday.
+
+**`## Implementing It` must be the longest section in the document.** This is a structural rule
+with a number behind it: measured across the first 22 sessions the shape was **97% explanatory
+prose, 3% implementation, and zero fenced code blocks in the write-up** — an explainer with an
+appendix bolted on. A single required section cannot outweigh nine explanatory ones. Everything
+else gets tightened until the implementation is the spine, not the epilogue.
+
+**No space filler.** Every section must carry something no other section has. These are the
+patterns that produce padding, and each one is a cut, not a rewrite:
+- The same point restated in `The Problem`, `Why It Matters` and `What This Means for You`. Pick
+  the one that owns it.
+- `Why It Matters` explaining *that* it matters rather than what it costs or enables.
+- A `Glossary` that grows to a fifth of the article. Cover every term, one sentence each; spend a
+  second sentence only on a term the article actually turns on.
+- Background the reader does not need to make the change — history, org politics, who shipped it
+  first, how many stars the repo has.
+- Any sentence you could delete without changing what the reader does. Delete it.
 
 **The title is the hook.** This is the whole article for everyone who only sees a link — on the
 card grid, in Slack, on Hacker News. Write it for a curious software engineer scrolling past,
@@ -501,11 +536,37 @@ lives with it. Required on every session.
   followed; one without gets skipped.
 - Use the real API, field and config names throughout. Never write pseudocode for something that
   has an actual name in the source.
-- 3-6 short blocks and at least one fenced code block. If the honest answer is that nothing is
-  implementable yet (a paper with no released code), implement the *mechanism* from the paper in
-  a dozen lines instead — that is what "implementing Y from scratch" means here.
+- If the honest answer is that nothing is implementable yet (a paper with no released code),
+  implement the *mechanism* from the paper in a dozen lines instead — that is what "implementing
+  Y from scratch" means here.
 
-**`## Glossary`** — closes the document as reference, in the order terms first appear.
+**Three labelled parts, in this order.** The first is the work; the other two are what separate an
+engineering document from a tutorial, and they are the two most often skipped:
+
+- **The change** — the code itself, in fenced blocks, for every role the change touches. This is
+  the bulk of the section. Real API, field and config names throughout; name the file and the
+  function, not the intention.
+- **How you know it worked** — the verification signal, concretely. The number that should move
+  and in which direction, the log line that should appear or stop appearing, the assertion to add,
+  the command to run and what its output looks like when correct. *"Log how often your client
+  calls `tools/list` in one session; it should be close to 1, not close to your tool-call count"*
+  is a verification. "Make sure caching is working" is not. **An engineer who cannot tell whether
+  the change took has not been given an implementation** — they have been given a suggestion.
+- **When not to** — the honest counter-case, and what the change costs. When is the old way still
+  right; what does this add in complexity, latency, money or operational surface; which
+  constraint makes it a bad idea. A technique with no stated downside reads as marketing, and the
+  audience is professionally suspicious of it. If it genuinely has no downside, say what you
+  checked to be sure.
+
+Length follows from the structural rule above: this section is the longest in the document. If it
+is not, tighten the explanatory sections rather than padding this one — padding here fails the
+same anti-filler test as padding anywhere else.
+
+**`## Glossary`** — closes the document as reference, in the order terms first appear. It is
+reference, not teaching, and it competes with the code for the reader's attention: **one sentence
+per term, and a second only for a term the article turns on.** Measured on a real session it had
+grown to a fifth of the whole article — as long as every technical section combined — which is
+padding whatever the individual entries say.
 - Cover **every** acronym and domain term used anywhere above — no exceptions, including ones
   that feel obvious to you (VLM, token, prefill, KV cache, RLAIF, patch, DPI).
 - Format: `- **Term** (expansion) — one or two plain sentences.`
