@@ -361,3 +361,36 @@ reached it for free — the real gap was that nothing *gated* the live push.
 - **Not changed**: `Implementing It` stays required, with its three labelled parts. The note was
   about the *balance* between the two artifacts, not about dropping the section — checked against
   the first entry in this log before editing, per the rule at the top of this file.
+
+## 2026-08-25 — spec-wide (house title form, and what to learn from ByteByteGo)
+
+- **Note**: "these titles are better, they are inspired by ByteByteGo and ByteByteAI — update the
+  skill to have titles like these in future, and see ByteByteGo articles on AI for style, content
+  and depth, we need to take some inspiration from them." Clarified immediately after: "we keep
+  our own persona, just learn from them what we can do better, not copy them."
+- **Verdict**: standing rule, and it **demotes an existing rule** — flagged here rather than done
+  quietly. "Lead with the surprise, the cost, or the question" is no longer the primary
+  instruction for titles.
+- **Changed**: `SKILL.md` title rules — the explanatory form is now the default, with a table of
+  the four shapes drawn from real ByteByteGo titles (`How X Works` / `How X Does Y`; `A vs B`;
+  `Name: plain-English gloss`; `A Guide to X`). The surprise is explicitly optional and belongs in
+  `Hook`, the first paragraph and `Key insight`, where it has room to be true. Every ✓ example in
+  the anti-academic list was rewritten into the house form so the examples stop teaching the old
+  rule.
+- **Changed**: `SKILL.md` — the colon form needed disambiguating, because the spec already bans
+  `Method: Formal Description via Mechanism`. The colon is allowed when the tail is plain English
+  about what the thing does for the reader (`GraphRAG: How AI Answers Questions Hidden Across Many
+  Documents`) and banned when it is a formal restatement (`LUMI: Tokenizer-Agnostic LLM-Based
+  Lossless Image Compression`).
+- **Changed**: `SKILL.md` — new "What to borrow from ByteByteGo — and what stays ours" block under
+  the register rule: open on the specific failure rather than a definition; scaffold through
+  concrete scenarios before the solution; vary paragraph rhythm and land ideas in one-sentence
+  paragraphs; let the diagram carry a step of the argument. Written from two of their AI pieces
+  (*How Agentic RAG Works*, *A Guide to LLM Evals*), not from memory.
+- **Not changed, deliberately**: their AI articles carry no code and end at understanding. The
+  block says so explicitly and keeps `Implementing It`, `code_example.py`, **How you know it
+  worked** and **When not to** as ours — "borrow their clarity, keep our payload." The user's
+  clarification about persona is quoted into the spec in that form so a future session cannot
+  read this as a licence to imitate.
+- **Not changed**: the no-product-glyph rule and the "readable to someone who has only used
+  Cursor" test. The house form reinforces both — its ✓ example was updated to the shipped title.

@@ -390,6 +390,37 @@ whole difference: an internal doc names the file, gives the real config key, say
 time, and admits where the approach is wrong. It never pads, because the audience is people whose
 time you will have to face on Monday.
 
+### What to borrow from ByteByteGo — and what stays ours
+
+ByteByteGo's AI writing is the reference for *how to explain*, not a template to copy. Take these
+four things:
+
+1. **Open on the specific failure, not on a definition.** *"The main problem with standard RAG
+   isn't the retrieval or the generation. It's that nothing sits in the middle deciding whether
+   the retrieval was actually good enough."* That sentence names the gap before naming the
+   technique, and everything after it has somewhere to land. `## The Problem` should read like
+   this, and never like a paragraph that begins "Agentic RAG is an approach in which…".
+2. **Scaffold through concrete scenarios before the solution.** Walk the reader through the
+   ambiguous query, the evidence scattered across three documents, the confident wrong answer —
+   then show what changes. A mechanism explained against a failure the reader recognises is
+   remembered; the same mechanism explained abstractly is not.
+3. **Vary the paragraph rhythm.** Four or five sentences to develop an idea, then a one-sentence
+   paragraph to land it. *"This works fine for simple questions with obvious answers."* Our
+   sessions drift toward uniform dense blocks, which is what makes them tiring rather than long.
+4. **Let the diagram carry a step of the argument.** Theirs are load-bearing: the pipeline, then
+   the same pipeline as a control loop. Ours (`diagram.excalidraw`, `visualize.html`) should be
+   the thing that makes a step click, never a picture of the sentence above it.
+
+**What we do not borrow, because it is the reason this site exists:** ByteByteGo's AI pieces
+carry no code and end at understanding. We end at implementation. `## Implementing It` stays the
+spine, `code_example.py` stays runnable, every session still keeps its **How you know it worked**
+and **When not to**, and the reader is still expected to leave able to build something. Their
+closing move — three questions to ask before adopting this — is worth stealing *into* `When not
+to`, not instead of it.
+
+The rule in one line: **borrow their clarity, keep our payload.** If a session comes out readable
+and elegant and the reader cannot ship anything from it, we have copied the wrong half.
+
 **`## Implementing It` must be the longest section in the document** — measured on **prose,
 with fenced code excluded from every section's count**. This is a structural rule with a number
 behind it: measured across the first 22 sessions the shape was **97% explanatory prose, 3%
@@ -424,32 +455,57 @@ patterns that produce padding, and each one is a cut, not a rewrite:
   first, how many stars the repo has.
 - Any sentence you could delete without changing what the reader does. Delete it.
 
-**The title is the hook.** This is the whole article for everyone who only sees a link — on the
-card grid, in Slack, on Hacker News. Write it for a curious software engineer scrolling past,
-including someone who has only used Cursor and has never read a paper. If the title needs a
-glossary, it failed.
-- **Lead with the surprise, the cost, or the question the reader has already felt** — the
-  thing that makes someone go "wait, really?" A concrete stake beats a method name every time.
+**The title says what the reader will understand.** This is the whole article for everyone who
+only sees a link — on the card grid, in Slack, on Hacker News. Write it for a curious software
+engineer scrolling past, including someone who has only used Cursor and has never read a paper.
+If the title needs a glossary, it failed.
+
+**Default to the explanatory form.** The house style is ByteByteGo's: name the thing and say
+plainly what the reader is about to understand about it. It reads as a reference someone would
+come back to rather than a post that was timely once, it survives being read six months later,
+and it is the same promise the article actually keeps. Four shapes cover nearly everything:
+
+| shape | use it when | examples |
+| --- | --- | --- |
+| `How X Works` / `How X Does Y` | a mechanism is the subject — the most common case | `How Large Language Models Learn` · `How Agentic RAG Works` · `How a Coding-Agent Hook Decides to Fire` |
+| `A vs B` (`: what it decides`) | the session is a real comparison | `Ollama vs vLLM vs SGLang` · `Waymo vs Tesla: Two Ways to Build Self-Driving Cars` |
+| `Name: plain-English gloss` | the thing has a name worth teaching | `GraphRAG: How AI Answers Questions Hidden Across Many Documents` |
+| `A Guide to X` / `Why X Matters` | a survey or a stance, used sparingly | `A Guide to LLM Evals` |
+
+Note the third shape against the banned one below: the colon is allowed when the tail is **plain
+English about what it does for the reader**, and banned when the tail is a formal restatement of
+the method. `GraphRAG: How AI Answers Questions Hidden Across Many Documents` teaches; `LUMI:
+Tokenizer-Agnostic LLM-Based Lossless Image Compression` announces.
+
+- **A surprise in the title is optional, not the goal.** *This demotes an earlier rule that said
+  to lead with the surprise or the cost.* It produced titles that were sharp on the day and
+  unreadable as an index — `Nobody Re-Tests Their RAG Chunk Size — One Grid Search Cut It 88%`
+  works once, in a feed. Keep the number and the surprise; put them in `**Hook**`, in the first
+  paragraph, and in `Key insight`, where they have room to be true. If a surprise fits the
+  explanatory form without straining, keep it there too: `How a Coding-Agent Hook Decides to Fire
+  (And Why It Still Isn't a Gate)` is both.
 - **Ban academic formatting.** No `Method Name: Formal Description via Mechanism`. That pattern
-  is why sessions feel all over the place. Compare:
+  is why sessions feel all over the place. Compare — and note the ✓ column now prefers the
+  explanatory form:
   - ✗ `Truncated Jump Sampling: Training-Free Diffusion Acceleration via Endpoint Decodability`
-    → ✓ `Skip 40% of Diffusion Steps Without Retraining Anything`
+    → ✓ `How Diffusion Models Skip Steps Without Retraining`
   - ✗ `LUMI: Tokenizer-Agnostic LLM-Based Lossless Image Compression`
-    → ✓ `An LLM Compresses Images Better Than PNG — And It's Absurdly Slow`
+    → ✓ `How an LLM Compresses Images Better Than PNG`
   - ✗ `Prefill-Pressure Adaptive Scheduling: Why max_num_batched_tokens Has No Right Value`
-    → ✓ `The vLLM Setting Everyone Copies From Blog Posts Is Wrong For You`
+    → ✓ `How vLLM Decides How Many Requests to Batch`
   - ✗ `Deterministic Verification Gates for Tool-Using LLM Agents`
-    → ✓ `Don't Let the Agent Call a Tool Until a Check It Can't Talk Past Says Yes`
+    → ✓ `How to Gate an Agent's Tool Calls Behind a Check It Can't Talk Past`
 - **Questions are welcome** when the question is one the reader has actually asked:
   "Why Does My Agent Cost $30 Some Days and $3 Others?" A question they have never wondered
-  is just a worse statement.
+  is just a worse statement. Prefer the `How` form when both work — the question form dates
+  faster.
 - **No glyph only one product's users can read.** A title may quote code, but only code whose
   meaning survives a reader who has never opened that product. `Bash(rm *)`, `min_pixels`,
   `--max-num-seqs` and `PreToolUse` are in-house vocabulary: to the Cursor-only engineer scrolling
   past, they are noise where the surprise should be. Say what the thing *does* and let the glyph
   appear in paragraph one.
   - ✗ `Bash(rm *) Even Catches echo $(rm -rf /). It's Still Not a Gate.`
-    → ✓ `The Rule You Wrote to Stop Your Agent Deleting Things Isn't a Lock`
+    → ✓ `How a Coding-Agent Hook Decides to Fire (And Why It Still Isn't a Gate)`
   A good test: if the `Hook` line would work better as the title for someone who has only used
   Cursor, the title lost and the hook won — use the hook.
 - **Friendly, plain, curious.** Contractions are fine. Speak like a smart colleague who found
