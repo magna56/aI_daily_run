@@ -165,3 +165,26 @@ reached it for free — the real gap was that nothing *gated* the live push.
 - **Trade-off recorded**: a blocked publish means no article that day. Accepted on the grounds
   that a fourth consecutive frontier session costs more than a blank day and the block is
   recoverable by regenerating. Flagged to the user as reversible to warn-only.
+
+## 2026-08-24 — no gate may cost a day
+
+- **Note**: "we can't have a blank day"
+- **Verdict**: standing rule, and it reverses a trade-off accepted an hour earlier in this same
+  log. Recorded loudly for that reason: the audience gate was deliberately designed to block a
+  publish, and that design is now wrong.
+- **Changed**: `publish.sh` — the audience gate warns and continues instead of exiting 1. The
+  violation is still printed in full, with a pointer to run `--mix` for tomorrow's pick.
+- **Changed**: `ai-daily-learn-publish/SKILL.md` — Step A½ moves the action earlier rather than
+  softening it: on exit 3, regenerate for the due category *while the article is still cheap to
+  change*, because a wrong-mix session costs a slot in a ten-session window that takes ten days
+  to work off. But if regeneration is not on the table, publish anyway and record the miss.
+- **Changed**: Error Handling now states the constraint as a rule with no third branch — fix it,
+  or publish it as-is and say so. "Never end a run with the session unpublished and the day
+  empty." The 11:00 job is unattended, so any gate that can deadlock it silently stops the site,
+  which is worse than any single article's shortcomings.
+- **Content gate**: still blocks, but its recovery is an in-place edit the same run can make and
+  retry, and the skill now says so explicitly and offers `ADL_SKIP_GATE=1` as the last resort
+  rather than leaving "abort" as an implied option.
+- **Design principle for future gates**: a gate may warn freely, and may block only where the fix
+  is an in-place edit the same run can perform. It may never be designed such that the correct
+  response to failing it is to skip the day.

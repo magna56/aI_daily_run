@@ -68,14 +68,24 @@ Then the **audience gate** — did this session take a slot that was already at 
 cd ~/ai_learning && node build.js --mix YYYY-MM-DD    # exit 3 = it ignored what was due
 ```
 
-This asks about the one session, not about the trailing average: was its tier, or its `**For**`
-layer, already at its cap in the ten sessions before it? Three consecutive Tier C sessions once
-shipped because nobody could answer that on the day. `publish.sh` runs this itself and refuses
-the publish on exit 3.
+This asks about the one session, not the trailing average: was its tier, or its `**For**` layer,
+already at cap in the ten sessions before it? Three consecutive Tier C sessions once shipped
+because nobody could answer that on the day.
 
-Trailing-window **drift** warnings (`audience mix: Tier C is 4 of the last 10 …`) are advisory and
-must never block, because the only way out of drift is to publish the sessions that correct it.
-Read them as instructions for tomorrow's pick, not as a reason to hold today's.
+**If it exits 3, act now — while the article is still cheap to change.** Regenerating for the
+category `node build.js --mix` says is due costs one more pass; publishing the wrong-mix article
+costs a slot in a ten-session window that takes ten days to work off. So: go back to Step A and
+regenerate for the due category.
+
+**But do not turn that into a missed day.** If regeneration is not on the table — the user asked
+for this topic by name, the due category has no source worth building on today, a second pass
+already failed — **publish this session anyway** and record the miss in the Step C summary so
+tomorrow's pick corrects it. `publish.sh` treats this gate as a loud warning, never as a refusal,
+for exactly that reason.
+
+Trailing-window **drift** warnings (`audience mix: Tier C is 4 of the last 10 …`) are advisory
+too, and for a different reason: the only way out of drift is to publish the sessions that
+correct it. Read them as instructions for tomorrow, never as a reason to hold today.
 
 Other warnings are advisory and do not block: a `code_example.py` that exits non-zero is a
 *rendered traceback* by design, not a broken build.
@@ -197,17 +207,23 @@ republishing the back catalog never trips it.
   re-run `bash "$PUB" YYYY-MM-DD` later. **Never** force-push, and never open a PR instead.
 - Rebase conflict in `~/ai_learning` → the script aborts the rebase and stops; resolve by hand.
 - Session generation failed in Step A → do not publish a partial session. Report the failure.
-- `publish.sh` aborted with `content gate` → the session does not meet `contract.md`. Fix the
-  session (usually: write the `## Implementing It` section, with real code in `topic.md`) and
-  re-run.
-- `publish.sh` aborted with `audience gate` → the session's tier or `**For**` layer was already
-  at cap before it. The right fix is to regenerate for the category `node build.js --mix` says is
-  due, not to publish anyway: this is the specific failure that let the frontier tier reach double
-  its cap. Override only for a session that is deliberately out of band, and say so.
-- **A blocked publish means no article that day.** That is the intended trade: a fourth
-  consecutive frontier session costs more than a blank day, and the block is recoverable in the
-  time it takes to regenerate. If a blank day is ever worse — a streak that matters, a session
-  the user asked for by name — `ADL_SKIP_GATE=1` is the deliberate override, not a workaround. `ADL_SKIP_GATE=1` exists for a deliberate override and should stay unused by the
+- `publish.sh` aborted with `content gate` → the session does not meet `contract.md`. Fix it in
+  place — usually: write the `## Implementing It` section with real code in `topic.md` — and
+  re-run. This is a five-minute edit, not a reason to stop.
+- `audience gate` warning in the log → the session's tier or `**For**` layer was already at cap.
+  It published. Name the miss in the summary and correct it in tomorrow's pick.
+
+**No gate may ever cost a day.** The daily cadence is the product; one session's mix is repaired
+by what gets picked tomorrow, and one missing section is repaired by writing it. So there is
+always a path that ends in publishing:
+
+1. **Fix it** — write the missing section, regenerate for the due category. Almost always this.
+2. **Publish it as-is and say so** — when the fix would cost more than the miss. The audience gate
+   is already non-fatal; for a content-gate failure that genuinely cannot be repaired, publish
+   with `ADL_SKIP_GATE=1` and state plainly in the summary what shipped below contract and why.
+3. There is no third option. **Never end a run with the session unpublished and the day empty.**
+   The 11:00 job runs unattended, so a gate that deadlocks it is a gate that silently stops the
+   site — which is a far worse failure than any single article's shortcomings. `ADL_SKIP_GATE=1` exists for a deliberate override and should stay unused by the
   scheduled job — publishing past this gate is how the site drifts back into announcement recaps.
 - Everything else → see `ai-daily-learn`'s own Error Handling section.
 

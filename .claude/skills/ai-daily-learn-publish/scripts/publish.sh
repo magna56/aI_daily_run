@@ -82,19 +82,19 @@ content_gate() {
     exit 1
   fi
 
-  # Did this session take a slot the audience mix said was already at cap? This is
-  # a question about the one session, not about trailing drift — drift must never
-  # block, since the only way out of it is to publish the sessions that correct it.
-  # Captured rather than piped: a pipeline's exit status needs PIPESTATUS, which
-  # is bash-only, and this gate is too important to depend on which shell ran it.
+  # Did this session take a slot the audience mix said was already at cap? Reported,
+  # never fatal. A missed day is worse than a badly-mixed one: the daily cadence is
+  # the product, and one session's mix is repaired by what gets picked tomorrow.
+  # The place to act on this is BEFORE publishing (see Step A½ — regenerate for the
+  # due category); by the time the article exists, shipping it beats binning the day.
+  # Captured rather than piped: a pipeline's exit status needs PIPESTATUS, which is
+  # bash-only, and this should not depend on which shell ran the script.
   local mix_out mix_rc
   mix_out=$(node build.js --mix "$SESSION" 2>&1); mix_rc=$?
   printf '%s\n' "$mix_out" | sed 's/^/[publish] /'
   if [ "$mix_rc" = "3" ]; then
-    printf '[publish] ERROR: audience gate — %s ignores what was due.\n' "$SESSION" >&2
-    printf '[publish] Regenerate for the due category, or publish with ADL_SKIP_GATE=1 if this\n' >&2
-    printf '[publish] session is deliberately out of band. See selection.md (the reader pyramid).\n' >&2
-    exit 1
+    say "WARN: audience gate — $SESSION ignores what was due; publishing anyway."
+    say "WARN: correct it in tomorrow's pick — run 'node build.js --mix' to see what is owed."
   fi
 
   say "content gate passed for $SESSION"
