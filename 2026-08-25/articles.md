@@ -1,4 +1,4 @@
-# Further Reading: How a Coding-Agent Hook Decides to Fire
+# Further Reading: How a Coding-Agent Hook Decides to Fire (And Why It Still Isn't a Gate)
 
 ## Articles
 
@@ -12,12 +12,4 @@
 
 ### 3. [Claude Code CHANGELOG](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md)
 **Source**: anthropics/claude-code | **Date**: 2.1.243, August 2026 | **Read time**: ~5 min
-> The entry this session hangs on: *"Fixed hook `if` conditions like `Bash(cat *)` firing on unrelated Bash commands when containing `$()`."* Worth reading the surrounding release too — `modelPicker`, `modelPricing` and the `Skipped sources` line in `/status` are all governance surface landing in the same version, which is why more teams are writing rules right now than were six months ago. Read first if you maintain a shared `settings.json`.
-
-### 4. [Anthropic Engineering blog](https://www.anthropic.com/engineering)
-**Source**: Anthropic | **Date**: ongoing | **Read time**: varies
-> Background on why agent harnesses are built this way — the posts on agent design and context engineering explain the reasoning behind fail-open defaults, which is the part of this session most likely to feel wrong until you have tried to operate a hook that fail-closed on every command it could not parse.
-
-### 5. [Cursor changelog — Cloud Agents and harness improvements](https://cursor.com/changelog)
-**Source**: Cursor | **Date**: 19 August 2026 | **Read time**: ~5 min
-> The cross-tool check. Subscriptions that respond to events, custom modes pinned with a keystroke, and subagents on isolated machines — a different vendor building the same governance surface in the same month. Useful for seeing which of the ideas in this session are Claude Code specifics and which are becoming conventions across coding agents.
+> The entry this session hangs on: *"Fixed hook `if` conditions like `Bash(cat *)` firing on unrelated Bash commands when containing `$()`."* Read it to find out whether the version you are on descends into `$()` the old way or the fixed way, because that decides which commands your existing `if` conditions match today. If you maintain a shared `settings.json`, diff your rules against this before and after upgrading.

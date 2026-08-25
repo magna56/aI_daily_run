@@ -735,7 +735,9 @@ function compile(id, journal, runner, opts) {
       warn(`${id}: code_example.py exited ${run.exitCode}${run.timedOut ? " (timeout)" : ""}.`);
     }
     if (run && run.durationMs != null) delete run.durationMs; // keep payloads stable
-    const codeLines = source.split("\n").length;
+    // A newline-terminated file splits into one extra empty element; counting it
+    // made every card read one line long and put the 150-line cap at 149.
+    const codeLines = source.replace(/\n$/, "").split("\n").length;
     if (kind === "daily" && date >= ARTIFACT_CONTRACT_SINCE && codeLines > 150) {
       warn(`${id}: code_example.py is ${codeLines} lines (cap 150) — cut the demo that is `
         + `furthest from the one mechanism, do not raise the limit.`);

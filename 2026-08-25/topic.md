@@ -56,7 +56,7 @@ Only the third of those is a program you control. The first two are pattern matc
 
 The gap between "this looks like a firewall rule" and "this is best-effort text matching" is where a whole class of false confidence lives. It is not a flaw in the design — the documentation is unusually direct about it, and fail-open is the *correct* default for a workflow hook, because a hook that fail-closed on an unparseable command would wedge your agent constantly. The mistake is the reader's, and it is an easy one: the syntax borrows from the permission system, the file is the same file, and the mental model comes along for free.
 
-What makes this worth thirty minutes rather than a footnote is that hooks are becoming the standard way teams put policy around agents. Cursor shipped subscriptions and custom modes in August; Claude Code's 2.1.243 alone added `modelPicker`, `modelPricing` and managed-settings visibility. The governance surface is growing fast, which means more teams are writing rules, and more of those rules are being written by people who reasonably assume that a rule in a settings file is enforced. Knowing which of the three filters is a lock and which is a note is the difference between a policy and a decoration.
+What it costs when you get this wrong is asymmetric, and that is what makes it worth thirty minutes rather than a footnote. A rule that fires too often costs you a prompt you did not need. A rule that silently does not fire costs you the thing the rule existed to prevent — and nothing is logged as skipped, so the cost is paid before you find out the rule was decorative. Each layer here has a defined answer to "what happens when I cannot decide": the `if` condition runs the hook anyway, a timed-out hook lets the action proceed, and `permissions.deny` refuses. Knowing which of those three you are standing on is the whole of it.
 
 ## Key Technical Details
 
@@ -147,6 +147,8 @@ exit 0    # no decision — normal permission flow applies
 }
 ```
 
+Note what that `if [[ ... =~ ... ]]` is: another lexer. It re-checks because the `if` fails open, but it is a regex over text rather than a parse of the command, so it misses the same shapes for the same reason — `find . -delete` sails through it too. It is a better note, not a lock. That is what the next block is for.
+
 The `deny` list is the lock. The hook is the note — keep it for the logging, the reason string, and the nudge, but stop treating it as the thing standing between your agent and your filesystem.
 
 *Anchor anything that became a regex.* One character decides this, so make the decision visible:
@@ -177,15 +179,15 @@ Inside this site: the [blast-radius gates](#2026-07-17) session argued for deter
 
 ## Glossary
 
-- **Hook** — a handler (shell command, HTTP endpoint, MCP tool, prompt, or subagent) that Claude Code runs at a lifecycle point, such as before a tool call. It can allow, deny, or modify the call.
-- **`PreToolUse`** — the hook event that fires before a tool runs. The only common event that can both block a call and rewrite its input.
+- **Hook** — a handler (shell command, HTTP endpoint, MCP tool, prompt, or subagent) run at a lifecycle point such as before a tool call, which can allow, deny, or modify it.
+- **`PreToolUse`** — the hook event that fires before a tool runs; the only common one that can both block a call and rewrite its input.
 - **`matcher`** — the first filter, on the tool's *name*. Exact-match or unanchored regex depending on which characters the string contains.
 - **`if`** — the second filter, on the tool's *input*, written in permission-rule syntax. Tool events only, and explicitly best-effort.
 - **Permission-rule syntax** — the `Tool(argument-pattern)` spelling, e.g. `Bash(git *)` or `Edit(*.ts)`. Used by both `if` conditions and `permissions` rules, which is the root of the confusion this article is about.
 - **`permissions.deny`** — the settings list that actually enforces. A denied call cannot be interactively approved, which is the observable difference from a hook.
-- **Unanchored regex** — a pattern without `^` and `$`, so it matches anywhere inside the string. `mcp__github` matches `internal__mcp__github__admin`.
-- **Command substitution** — `$(...)` or backticks, which run a command and paste its output into another command. The `if` matcher deliberately looks inside these.
+- **Unanchored regex** — a pattern without `^` and `$`, so it matches anywhere inside the string: `mcp__github` matches `internal__mcp__github__admin`.
+- **Command substitution** — `$(...)` or backticks, which run a command and paste its output into another; the `if` matcher deliberately looks inside these.
 - **Fail-open** — when a check cannot reach a verdict, the action is allowed. The `if` condition and hook timeouts both fail open, which is right for workflow and wrong for policy.
-- **Exit code 2** — the hook exit code that blocks the action outright, using stderr as the reason. Any other non-zero code is non-blocking.
-- **`permissionDecision`** — the JSON field a hook returns to decide a call: `allow`, `deny`, or `escalate`. Richer than exit codes because the reason reaches the model.
+- **Exit code 2** — the hook exit code that blocks the action outright, using stderr as the reason; any other non-zero code is non-blocking.
+- **`permissionDecision`** — the JSON field a hook returns to decide a call (`allow`, `deny`, `escalate`); richer than exit codes because the reason reaches the model.
 - **`updatedInput`** — a `PreToolUse`-only JSON field that rewrites the tool's input instead of rejecting it, e.g. replacing a command with a safer one.

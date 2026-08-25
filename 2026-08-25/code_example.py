@@ -4,19 +4,15 @@ How a coding-agent hook decides to fire.
 Two filters run before your handler starts, both pattern matching over text
 rather than a parser you can trust as a gate:
 
-  1. `matcher`  -> filters on the TOOL NAME. Exact-match if the string contains
-                   only [A-Za-z0-9_-, |,]; otherwise an UNANCHORED regex. The
-                   characters you typed decide, not your intent.
-  2. `if`       -> filters on the TOOL INPUT, in permission-rule syntax such as
-                   Bash(rm *). For Bash it strips leading assignments, splits
-                   command chains, and descends into $() and backticks -- then
-                   glob-matches each piece. Documented as best-effort: when it
-                   cannot parse, the hook runs anyway.
+  1. `matcher` -> the TOOL NAME. Exact-match if the string holds only
+     [A-Za-z0-9_-, |,]; otherwise an UNANCHORED regex. The characters decide.
+  2. `if` -> the TOOL INPUT, in permission-rule syntax like Bash(rm *). For Bash
+     it strips leading assignments, splits chains, and descends into $() and
+     backticks, then glob-matches each piece. Best-effort by documentation:
+     when it cannot parse, the hook runs anyway.
 
-Both layers are implemented below exactly as documented, so you can point them
-at your own settings.json instead of guessing.
-
-    Edit MATCHERS / IF_RULES / COMMANDS at the bottom and re-run.
+Both are implemented below as documented. Point MATCHERS and CASES at your own
+settings.json, re-run, and read the rows marked `!`.
 
 Run:  python3 code_example.py     (pure stdlib, no network, no API key)
 """
@@ -26,8 +22,7 @@ import re
 
 # ---------------------------------------------------------------- liftable core
 
-# The exact-match character set. One character outside it promotes the whole
-# string to a regex -- this single line is the mode switch people trip over.
+# One character outside this set promotes the whole string to a regex.
 EXACT_ONLY = re.compile(r"^[A-Za-z0-9_\-, |,]+$")
 
 # Leading VAR=value assignments, which are stripped before matching.
@@ -55,11 +50,8 @@ def matches_tool(matcher, tool_name):
 
 
 def subcommands(command):
-    """Every command a shell would actually run, flattened.
-
-    Chains are split, leading assignments stripped, and substitutions descended
-    into -- recursively, since $(...) can nest a chain of its own.
-    """
+    """Every command a shell would actually run, flattened. Chains split,
+    assignments stripped, substitutions descended into -- recursively."""
     out = []
     inner = [m.group(1) or m.group(2) for m in SUBSTITUTION.finditer(command)]
     outer = SUBSTITUTION.sub(" ", command)
@@ -92,6 +84,7 @@ def matches_if(rule, tool_name, tool_input):
 
 def hook_fires(matcher, rule, tool_name, tool_input):
     """Both filters, in the order Claude Code applies them."""
+    # Not used by main() -- this is the entry point to lift into your own tooling.
     return matches_tool(matcher, tool_name) and matches_if(rule, tool_name, tool_input)
 
 
@@ -115,13 +108,16 @@ CASES = [
     ("Bash(rm *)",  "echo \"rm is dangerous\"",      False),
     ("Bash(cat *)", "grep x f && echo $(cat /etc/p)", False),  # 2.1.243's bug shape
     ("Bash(npm *)", "npx npm-check",                 False),
+    ("Bash(rm *)",  "find . -delete",                False),   # deletes, matches nothing
 ]
 
 
+def banner(text):
+    print("=" * 74 + f"\n{text}\n" + "=" * 74)
+
+
 def main():
-    print("=" * 74)
-    print("1. `matcher` -- the mode switch is invisible in the syntax")
-    print("=" * 74)
+    banner("1. `matcher` -- the mode switch is invisible in the syntax")
     for matcher, tool in MATCHERS:
         mode = matcher_mode(matcher)
         hit = matches_tool(matcher, tool)
@@ -129,9 +125,7 @@ def main():
         print(f"  {matcher:22} vs {tool:30} {mode:17} {str(hit):5}{flag}")
 
     print()
-    print("=" * 74)
-    print("2. `if` -- what the Bash walk really covers")
-    print("=" * 74)
+    banner("2. `if` -- what the Bash walk really covers")
     surprises = 0
     for rule, cmd, naive in CASES:
         actual = matches_if(rule, "Bash", cmd)
@@ -147,24 +141,9 @@ def main():
     print(f"  {surprises} of {len(CASES)} cases contradict the naive reading.")
     print("  Every one of them is documented behaviour, not a bug -- which is the point:")
     print("  the rule is cleverer than you expect AND still fails open when it cannot parse.")
-
-    print()
-    print("=" * 74)
-    print("3. Both filters together, as Claude Code applies them")
-    print("=" * 74)
-    combo = [
-        ("Bash", "Bash(rm *)", "Bash", "echo $(rm -rf /)"),
-        ("Edit|Write", "Bash(rm *)", "Bash", "rm -rf build"),
-        ("Bash", "Bash(rm *)", "Bash", "find . -delete"),
-    ]
-    for matcher, rule, tool, cmd in combo:
-        m1, m2 = matches_tool(matcher, tool), matches_if(rule, tool, cmd)
-        why = "matcher rejected" if not m1 else ("if rejected" if not m2 else "handler runs")
-        print(f'  matcher={matcher:11} if={rule:12} {cmd:22} -> {str(m1 and m2):5}  {why}')
-
-    print()
-    print("  `find . -delete` deletes files and matches no rule here. That is not a")
-    print("  gap in this implementation -- it is why policy belongs in permissions.deny.")
+    print("  Note the last row: `find . -delete` deletes files and matches no rule here.")
+    print("  That is not a gap in this implementation -- it is why policy belongs in")
+    print("  permissions.deny, which enforces, rather than in a hook, which is best-effort.")
 
 
 if __name__ == "__main__":

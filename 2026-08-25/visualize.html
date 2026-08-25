@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'" />
 <title>How a coding-agent hook decides to fire</title>
 <style>
   :root {
@@ -55,15 +56,16 @@
   .out { border: 1px solid var(--line); border-radius: 8px; padding: 13px; background: rgba(0,0,0,.22); }
   .out .big { font-family: var(--mono); font-size: 15px; font-weight: 700; margin: 0 0 4px; }
   .out p { margin: 0; font-size: 13px; color: var(--muted); }
+  .presets button.reset { margin-left: auto; border-color: var(--accent); color: var(--accent2); }
   .note { margin: 14px 0 0; font-size: 12.5px; color: var(--dim); border-left: 2px solid var(--line); padding-left: 11px; }
 </style>
 </head>
 <body>
-<div class="wrap" data-visualizer>
+<div class="wrap" data-visualizer="2026-08-25">
   <h1>How a hook decides to fire</h1>
   <p class="sub">Two filters, in order, as documented. Change the tool-name matcher, the command <code>if</code>, or the command itself &mdash; and watch which layer lets the handler run, or skips it with no log.</p>
 
-  <div class="presets" id="presets"></div>
+  <div class="presets" id="presets"><button type="button" id="reset" class="reset">Reset</button></div>
 
   <div class="field">
     <label for="matcher">matcher &mdash; filters on tool name</label>
@@ -197,10 +199,25 @@
   });
   ["matcher", "rule", "cmd"].forEach(function (id) { els[id].addEventListener("input", render); });
 
+  // Back to the article's own example -- the one whose result the write-up quotes.
+  var DEFAULTS = { matcher: "Bash", rule: "Bash(rm *)", cmd: "echo $(rm -rf /)" };
+  document.getElementById("reset").addEventListener("click", function () {
+    els.matcher.value = DEFAULTS.matcher;
+    els.rule.value = DEFAULTS.rule;
+    els.cmd.value = DEFAULTS.cmd;
+    render();
+  });
+
   function postHeight() {
-    try { parent.postMessage({ type: "adl-visualize-height", height: document.body.scrollHeight }, "*"); } catch (e) {}
+    try {
+      parent.postMessage({
+        type: "adl-visualize-height",
+        height: document.documentElement.scrollHeight
+      }, "*");
+    } catch (e) {}
   }
   window.addEventListener("load", postHeight);
+  if (window.ResizeObserver) new ResizeObserver(postHeight).observe(document.documentElement);
   render();
 })();
 </script>
