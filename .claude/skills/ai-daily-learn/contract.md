@@ -1,5 +1,12 @@
 # Session contract — required every day
 
+**This file governs both tracks.** A Frontier session (`frontier/YYYY-MM-DD/`) is written to
+exactly the same contract as a daily lab session — same metadata keys, same required sections,
+same `Implementing It` rules. There is no separate Frontier contract, deliberately: a second
+standard is a second thing to maintain, drift and argue about. The only differences are where the
+material is sourced, where the folder lives, and that a thin Frontier day is skipped rather than
+filled. Frontier sessions do not get a `journal.md` block.
+
 A daily session is incomplete until all five files exist **and** `journal.md` is updated.
 `build.js --check` only *warns* on a missing visualizer or diagram so old folders still
 build. **New sessions may not ship that way.** Do not stop after `topic.md`.
@@ -15,7 +22,8 @@ YYYY-MM-DD/                 # or YYYY-MM-DD-s2 if today already has a session
   articles.md               # required — Articles tab
 ```
 
-Never write today's article into `learn/`. That tree is the evergreen two-day track.
+Never write today's article into `learn/`. That tree is the evergreen two-day track. A Frontier
+session uses the identical layout under `frontier/YYYY-MM-DD/`.
 
 ## topic.md metadata (exact keys, exact allowed values)
 

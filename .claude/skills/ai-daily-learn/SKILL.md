@@ -119,6 +119,34 @@ on the legacy path"), and then say what it decides.
   publish anything. To publish as well, use `/ai-daily-learn-publish`, which runs this exact
   workflow and then pushes the session to GitHub.
 
+## Two tracks, one contract
+
+This skill produces sessions for two tracks. **Everything about how an article is written is
+identical on both** — the mission, the ELI5-first ladder, all five artifacts, `## Implementing It`
+as the longest section, the glossary, the acceptance test. Only three things differ, and none of
+them is a content rule:
+
+| | **Daily lab** (default) | **Frontier** (`--frontier`) |
+| --- | --- | --- |
+| Sources | Changelogs, docs, engineering blogs, production write-ups | Frontier lab research and papers — see [selection.md](selection.md) |
+| Output | `~/ai_learning/YYYY-MM-DD/` | `~/ai_learning/frontier/YYYY-MM-DD/` |
+| Cadence | **Never a blank day** | **Skip a thin day** — publish nothing rather than something padded |
+
+Run the Frontier track when the user asks for it by name ("frontier session", "do the frontier
+one", `/ai-daily-learn-publish --frontier`). Otherwise run the daily lab.
+
+**On the Frontier track, three steps change and no others:** Step 2 draws from the Frontier source
+list and may conclude *nothing today*; Step 4 writes to `frontier/YYYY-MM-DD/`; Step 10 is skipped
+(Frontier does not appear in `journal.md`, and never counts toward `--mix`). Steps 5-9 and 11-12
+run exactly as written.
+
+**If nothing clears the bar, stop and say so.** That is a successful run, not a failure. Name what
+you looked at and why none of it was worth an article. Do not lower the bar to fill the slot — the
+one failure that would kill this track is a reader learning the tab wastes their time.
+
+**Never skip the ELI5 because the audience is advanced.** This instinct returns every time you
+write for Frontier. Refuse it every time; the reasoning is in [selection.md](selection.md).
+
 ## Workflow
 
 ### Step 1: Check the Journal

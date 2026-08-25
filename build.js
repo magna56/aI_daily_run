@@ -322,6 +322,21 @@ function printMix() {
   console.log("");
 }
 
+/* The Frontier track: frontier-lab research and papers, sourced differently from
+   the daily lab and shown on its own tab, but written to the SAME contract — same
+   ELI5-first ladder, same five artifacts, same Implementing It. Only the sources,
+   the placement and the cadence rule differ (a thin day is skipped here, where the
+   lab may never miss one).
+
+   Ids carry a prefix because a Frontier piece and a lab session can land on the
+   same date, and both would otherwise claim site/<date>/ and data/<date>.json.
+   The prefix also keeps them out of mixRows(), which scans ROOT for bare dates —
+   Frontier must never count toward the reader-pyramid mix it exists to protect. */
+const FRONTIER_DIR = path.join(ROOT, "frontier");
+const FRONTIER_PREFIX = "frontier-";
+const isFrontier = (c) => c.kind === "frontier";
+const isLab = (c) => c.kind !== "learn" && c.kind !== "frontier";
+
 // A session folder: a date, optionally suffixed for a second session that day.
 const SESSION_RE = /^\d{4}-\d{2}-\d{2}(-s\d+)?$/;
 const IMAGE_RE = /\.(png|jpe?g|gif|svg|webp)$/i;
@@ -553,7 +568,9 @@ function compile(id, journal, runner, opts) {
     if (!TAGS.includes(t)) warn(`${id}: tag "${t}" is not in the TAGS vocabulary in build.js.`);
   }
 
-  const date = topic.meta.Date || (SESSION_RE.test(id) ? id.slice(0, 10) : "");
+  const date = topic.meta.Date
+    || (SESSION_RE.test(id) ? id.slice(0, 10) : "")
+    || (kind === "frontier" ? id.slice(FRONTIER_PREFIX.length, FRONTIER_PREFIX.length + 10) : "");
   const level = topic.meta.Level || "";
   const job = topic.meta.For || "";
   const hook = topic.meta.Hook || "";
@@ -717,7 +734,7 @@ function compile(id, journal, runner, opts) {
     date,
     meta: topic.meta,
     source,
-    insight: j["Key insight"] || (kind === "learn" ? hook : ""),
+    insight: j["Key insight"] || (kind === "learn" || kind === "frontier" ? hook : ""),
     hook,
     level,
     job,
@@ -728,7 +745,9 @@ function compile(id, journal, runner, opts) {
     articles,
     images: images.sort(),
     kind,
-    repo: kind === "learn" ? `${REPO_BLOB}/learn/${id}` : `${REPO_BLOB}/${id}`,
+    repo: kind === "learn" ? `${REPO_BLOB}/learn/${id}`
+      : kind === "frontier" ? `${REPO_BLOB}/frontier/${id.slice(FRONTIER_PREFIX.length)}`
+      : `${REPO_BLOB}/${id}`,
   };
 
   const card = {
@@ -1061,6 +1080,34 @@ function topicPageSpec(category, cardsInCategory) {
 
 // The homepage: the site's own metadata, plus a crawlable index of every topic
 // page and every session — the entry point for the whole link graph.
+function frontierPageSpec(frontierCards) {
+  const url = `${SITE_ORIGIN}/frontier/`;
+  const description = truncateWords(
+    "Frontier lab research and papers, explained from the ground up and made runnable — "
+    + "every piece ships a diagram, an interactive model and code that runs in your browser.", 155);
+  return {
+    pageTitle: "Frontier — The AI Commit",
+    description,
+    url,
+    ogType: "website",
+    ogImage: `${SITE_ORIGIN}/og/frontier.png`,
+    ogImageAlt: "Frontier — The AI Commit",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: "Frontier",
+      description,
+      url,
+      isPartOf: { "@type": "WebSite", name: "The AI Commit", url: SITE_ORIGIN + "/" },
+      publisher: PUBLISHER,
+    },
+    noscriptBody:
+      `<h1>Frontier</h1>\n<p>${escAttr(description)}</p>\n` +
+      `<ul>\n${frontierCards.map(sessionLinkItem).join("")}</ul>\n` +
+      `<p><a href="${SITE_ORIGIN}/">← The daily lab</a></p>\n`,
+  };
+}
+
 function homePageSpec(cards, categories) {
   const description =
     "Understand one real AI development in 30 minutes — a plain-English explanation, " +
@@ -1091,7 +1138,10 @@ function homePageSpec(cards, categories) {
       categories.map((c) =>
         `<li><a href="/topics/${escAttr(slugify(c))}/">${escAttr(c)}</a></li>\n`).join("") +
       `</ul>\n` +
-      `<h2>All sessions</h2>\n<ul>\n${cards.filter((c) => c.kind !== "learn").map(sessionLinkItem).join("")}</ul>\n` +
+      `<h2>All sessions</h2>\n<ul>\n${cards.filter(isLab).map(sessionLinkItem).join("")}</ul>\n` +
+      (cards.some(isFrontier)
+        ? `<h2>Frontier</h2>\n<ul>\n${cards.filter(isFrontier).map(sessionLinkItem).join("")}</ul>\n`
+        : "") +
       `<h2>AI basics</h2>\n<ul>\n${LEARN_TRACK.map((id) => cards.find((c) => c.id === id)).filter(Boolean).map(sessionLinkItem).join("")}</ul>\n` +
       `<h2>Intermediate basics</h2>\n<ul>\n${INTERMEDIATE_TRACK.map((id) => cards.find((c) => c.id === id)).filter(Boolean).map(sessionLinkItem).join("")}</ul>\n` +
       `</main>\n`,
@@ -1124,6 +1174,12 @@ function writeSitemap(cards, categories) {
       changefreq: "weekly",
       priority: "0.8",
     })),
+    ...(cards.some(isFrontier) ? [{
+      loc: `${SITE_ORIGIN}/frontier/`,
+      lastmod: cards.filter(isFrontier).map((c) => c.date).filter(Boolean).sort().pop(),
+      changefreq: "daily",
+      priority: "0.9",
+    }] : []),
     { loc: `${SITE_ORIGIN}/privacy.html`, changefreq: "monthly", priority: "0.3" },
     { loc: `${SITE_ORIGIN}/terms.html`, changefreq: "monthly", priority: "0.3" },
     ...cards.map((c) => ({
@@ -1224,6 +1280,14 @@ function main() {
     process.exit(1);
   }
 
+  // Newest first, same as the daily ids. An absent frontier/ is normal: the track
+  // is skipped entirely rather than rendering an empty tab.
+  const frontierDays = fs.existsSync(FRONTIER_DIR)
+    ? fs.readdirSync(FRONTIER_DIR)
+        .filter((n) => SESSION_RE.test(n) && fs.statSync(path.join(FRONTIER_DIR, n)).isDirectory())
+        .sort().reverse()
+    : [];
+
   const learnRoot = path.join(ROOT, "learn");
   for (const slug of LEARN_TRACK.concat(INTERMEDIATE_TRACK)) {
     const topicPath = path.join(learnRoot, slug, "topic.md");
@@ -1280,6 +1344,12 @@ function main() {
     if (out) writeSession(out);
   }
 
+  for (const day of frontierDays) {
+    const dir = path.join(FRONTIER_DIR, day);
+    const out = compile(FRONTIER_PREFIX + day, journal, runner, { check, dir, kind: "frontier" });
+    if (out) writeSession(out);
+  }
+
   const runStats = runner.finish();
 
   if (!check) {
@@ -1313,14 +1383,24 @@ function main() {
             : { id };
         }),
       }) + ";\n" +
+      "window.FRONTIER = " + JSON.stringify({
+        title: "Frontier",
+        blurb: "Frontier lab research and papers, explained from the ground up and made runnable — "
+          + "the same five artifacts as the daily lab, sourced from the edge of the field. "
+          + "Published when there is something worth publishing.",
+        sessions: cards.filter(isFrontier).map((c) => ({
+          id: c.id, title: c.title, hook: c.hook, insight: c.insight, slug: c.slug,
+          date: c.date, minutes: c.minutes, tags: c.tags, code: c.code, codeLines: c.codeLines,
+        })),
+      }) + ";\n" +
       "window.SESSIONS = " + JSON.stringify(cards, null, 2) + ";\n"
     );
     // Categories that actually have sessions, in CATEGORIES (tier) order so
     // the topic index reads the same way the skill's rotation does.
-    const covered = CATEGORIES.filter((cat) => cards.some((c) => c.category === cat));
+    const covered = CATEGORIES.filter((cat) => cards.some((c) => c.category === cat && isLab(c)));
 
     for (const cat of covered) {
-      const inCat = cards.filter((c) => c.category === cat && c.kind !== "learn");
+      const inCat = cards.filter((c) => c.category === cat && isLab(c));
       const dir = path.join(SITE, "topics", slugify(cat));
       fs.mkdirSync(dir, { recursive: true });
       const last = inCat.map((c) => c.date).filter(Boolean).sort().pop() || "";
@@ -1331,6 +1411,15 @@ function main() {
     // The homepage is generated here rather than copied by the Makefile, so it
     // can carry the crawlable <noscript> index — same move already made for
     // sitemap.xml. site/ exists by now: mkdirSync(DATA_DIR, {recursive:true}).
+    const frontierCards = cards.filter(isFrontier);
+    if (frontierCards.length) {
+      const dir = path.join(SITE, "frontier");
+      fs.mkdirSync(dir, { recursive: true });
+      const last = frontierCards.map((c) => c.date).filter(Boolean).sort().pop() || "";
+      writeOgCard("frontier.png", "Frontier", "Research, made runnable", last);
+      fs.writeFileSync(path.join(dir, "index.html"), renderShell(frontierPageSpec(frontierCards)));
+    }
+
     fs.writeFileSync(path.join(SITE, "index.html"), renderShell(homePageSpec(cards, covered)));
 
     writeSitemap(cards, covered);

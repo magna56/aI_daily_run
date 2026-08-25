@@ -248,3 +248,38 @@ reached it for free — the real gap was that nothing *gated* the live push.
   reader is about to implement, not decoration that restates the write-up.
 - **Changed**: `selection.md` — a sixth shortlist gate, **Leaves them capable**: name what an
   engineer can do afterwards that they could not before. "Understand X better" fails it.
+
+## 2026-08-24 — the Frontier track
+
+- **Note**: a separate track for frontier-lab research and papers, for advanced AI engineers, on
+  its own tab and never in the card grid. Then, across the design: "still explain from basic ELI5,
+  a software engineer learning before diving deep", "just the source changes for sourcing the
+  articles, our core vision still remains same", "if there is a thin day you feel it's not worth
+  it we don't publish", "we need SEO and searchability on Google", "all should be covered in our
+  /ai-daily-learn-publish skill".
+- **Verdict**: new track, one contract. Two proposals were made and rejected during the design,
+  both worth recording because both will be tempting again.
+- **Rejected — "assume fluency, drop the ELI5 for an advanced audience."** It optimises for
+  readers who already understand the material: the smallest audience and the one least served by
+  this site existing. The mission is carrying a working software engineer from an analogy to
+  implementing the mechanism. Depth is earned in the back half, never bought by cutting the front.
+- **Rejected — a separate Frontier contract** with its own acceptance test, dominant section and
+  code rule. Over-engineering, and a second standard to maintain and drift. The existing contract
+  fits research *better* than the fork did: "implement the mechanism from scratch" is already the
+  rule for papers, *How you know it worked* becomes "does your toy reproduce the claim?", and
+  *When not to* becomes where the evidence stops.
+- **Changed**: `build.js` — compiles `frontier/YYYY-MM-DD/` with `kind: "frontier"` and a
+  `frontier-` id prefix (a lab and a Frontier piece can share a date and would otherwise collide
+  on `site/<date>/`). Excluded from the grid, from category pages and from `mixRows()`; included
+  in the sitemap, RSS, search, its own OG card and a new crawlable `/frontier/` landing page with
+  `CollectionPage` JSON-LD.
+- **Changed**: `index.html` — nav pill, `#frontier` route, the dated index list (no cards), the
+  homepage strip showing the newest piece, `← Frontier` back link. Pill and strip stay hidden
+  until the track has content: an empty tab is worse than no tab.
+- **Changed**: `selection.md` / `SKILL.md` / `contract.md` — the Frontier sourcing lane, the
+  two-track table, and one line making explicit that `contract.md` governs both. No new contract
+  file, by design.
+- **Changed**: `publish.sh` + the publish skill — publishes `frontier/<date>`, skips the audience
+  gate as not applicable, names the track in the commit subject, and states that a Frontier run
+  publishing nothing is a **successful** run.
+- **Not changed**: skipped days render silently — no gap row in the index.

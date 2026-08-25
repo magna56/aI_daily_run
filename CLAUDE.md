@@ -18,6 +18,13 @@ articles.md          # 3-5 curated sources with summaries
 
 A `-s2` suffix (`2026-08-03-s2`) means a second session that day. `learn/<slug>/` is the
 evergreen two-day track (same five files, `**Kind**: Learn`) — curriculum, not today's news.
+`frontier/YYYY-MM-DD/` is the **Frontier** track: frontier-lab research and papers, written to the
+*same* contract as a daily session (same five files, same required sections) and differing only in
+sourcing, placement and cadence. It never enters the card grid, never appears in `journal.md`, and
+never counts toward `node build.js --mix` — the track exists so frontier material stops competing
+for the daily slot. Compiled with `kind: "frontier"` and a `frontier-` id prefix so a lab and a
+Frontier piece can share a date; it still gets its own page, OG card, sitemap and RSS entries plus
+a crawlable `/frontier/` landing page. A thin Frontier day is skipped; a thin lab day is not.
 `journal.md` is the running index of *daily* sessions: `## <id> — <Title>` blocks with
 `- **Key**: value` bullets, most importantly `Key insight`, which the reader uses as the
 card blurb. Learn cards use `Hook` instead.

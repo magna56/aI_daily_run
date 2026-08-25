@@ -6,8 +6,9 @@
 # No branch, no PR. Idempotent: a no-op when there is nothing new to commit.
 #
 # Usage:
-#   publish.sh                 # publish today's session (YYYY-MM-DD)
-#   publish.sh 2026-08-18-s2   # publish a specific session directory
+#   publish.sh                       # publish today's session (YYYY-MM-DD)
+#   publish.sh 2026-08-18-s2         # publish a specific session directory
+#   publish.sh frontier/2026-08-25   # publish a Frontier session
 #
 # Exit codes: 0 ok / nothing to do, 1 setup or push failure.
 
@@ -17,6 +18,14 @@ ROOT="${AI_LEARNING_DIR:-$HOME/ai_learning}"
 REMOTE_URL="${AI_LEARNING_REMOTE:-git@github.com:magna56/aI_daily_run.git}"
 BRANCH="main"
 SESSION="${1:-$(date +%F)}"
+# A Frontier session lives at frontier/<date>. It publishes through the same path
+# as a lab session; what differs is that the audience gate does not apply to it —
+# the track is deliberately excluded from the reader-pyramid mix it exists to
+# protect, so there is nothing for that gate to judge.
+case "$SESSION" in
+  frontier/*) IS_FRONTIER=1 ;;
+  *)          IS_FRONTIER=0 ;;
+esac
 
 say()  { printf '[publish] %s\n' "$*"; }
 die()  { printf '[publish] ERROR: %s\n' "$*" >&2; exit 1; }
@@ -89,6 +98,12 @@ content_gate() {
   # due category); by the time the article exists, shipping it beats binning the day.
   # Captured rather than piped: a pipeline's exit status needs PIPESTATUS, which is
   # bash-only, and this should not depend on which shell ran the script.
+  if [ "$IS_FRONTIER" = "1" ]; then
+    say "audience gate not applicable to a Frontier session"
+    say "content gate passed for $SESSION"
+    return 0
+  fi
+
   local mix_out mix_rc
   mix_out=$(node build.js --mix "$SESSION" 2>&1); mix_rc=$?
   printf '%s\n' "$mix_out" | sed 's/^/[publish] /'
@@ -131,7 +146,11 @@ title=""
 if [ -f "$SESSION/topic.md" ]; then
   title=$(sed -n 's/^# //p' "$SESSION/topic.md" | head -1)
 fi
-subject="$SESSION: ${title:-AI daily learn session}"
+if [ "$IS_FRONTIER" = "1" ]; then
+  subject="Frontier ${SESSION#frontier/}: ${title:-Frontier session}"
+else
+  subject="$SESSION: ${title:-AI daily learn session}"
+fi
 
 git commit -q -m "$subject" -m "Automated by the /ai-daily-learn skill. $n_files file(s).
 

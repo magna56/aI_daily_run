@@ -251,6 +251,43 @@
     background: var(--card);
     display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
   }
+  /* Frontier: the newest piece itself, so the strip doubles as proof the track is
+     alive. A generic "check out our new section" card would say nothing, and this
+     one degrades honestly on a skipped day by simply showing an older date. */
+  .frontier-strip {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap; text-decoration: none;
+    background: var(--card); border: 1px solid var(--line); border-left: 2px solid var(--accent);
+    border-radius: 8px; padding: 12px 14px; margin: 0 0 14px; color: inherit;
+  }
+  .frontier-strip:hover { background: var(--card-hi); }
+  .frontier-strip .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent2); margin: 0 0 4px; }
+  .frontier-strip .t { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.34; }
+  .frontier-strip .m { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); font-family: var(--mono); }
+  .frontier-strip .go { margin-left: auto; font-family: var(--mono); font-size: 12.5px; color: var(--accent2); white-space: nowrap; }
+  @media (max-width: 560px) { .frontier-strip .go { margin-left: 0; } }
+
+  /* The Frontier index: a dated list, not cards. This audience scans indexes, and
+     a list absorbs the gaps a skipped day leaves without looking broken. */
+  .frontier-list { list-style: none; margin: 0 0 30px; padding: 0; border-top: 1px solid var(--line); }
+  .frontier-list li { border-bottom: 1px solid var(--line); }
+  .frontier-list a {
+    display: grid; grid-template-columns: 78px 1fr; gap: 14px; align-items: start;
+    padding: 14px 2px; text-decoration: none; color: inherit;
+  }
+  .frontier-list a:hover .ft { color: var(--accent2); }
+  .frontier-list .fd { font-family: var(--mono); font-size: 11.5px; color: var(--dim); padding-top: 3px; font-variant-numeric: tabular-nums; }
+  .frontier-list .ft { margin: 0; font-size: 15.5px; font-weight: 600; color: var(--ink); line-height: 1.34; }
+  .frontier-list .fs { margin: 4px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+  .frontier-list .fm { margin: 8px 0 0; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+  .frontier-chip {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; padding: 2px 7px;
+    border-radius: 4px; border: 1px solid var(--line); color: var(--dim);
+  }
+  .frontier-chip.run { color: var(--accent2); border-color: rgba(167,139,250,.38); background: rgba(167,139,250,.12); }
+  @media (max-width: 560px) { .frontier-list a { grid-template-columns: 1fr; gap: 4px; } }
+
+  .tag.kind-frontier { font-family: var(--mono); background: rgba(167,139,250,.14); color: var(--accent2); border-color: rgba(167,139,250,.32); }
+
   .mlc-invite .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 0 0 4px; }
   .mlc-invite p { margin: 0; color: var(--ink); font-size: 14.5px; line-height: 1.45; max-width: 460px; }
   .mlc-invite a {
@@ -269,6 +306,18 @@
   body.on-learn .count,
   body.on-learn .course-invite,
   body.on-learn .mlc-invite { display: none; }
+  body.on-frontier .tagline,
+  body.on-frontier .subtitle,
+  body.on-frontier .trust,
+  body.on-frontier .stats,
+  body.on-frontier .controls,
+  body.on-frontier .pills,
+  body.on-frontier .levels,
+  body.on-frontier .count,
+  body.on-frontier .frontier-strip,
+  body.on-frontier .nl-home,
+  body.on-frontier .course-invite,
+  body.on-frontier .mlc-invite { display: none; }
   .lessons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
   .lesson {
     display: flex; align-items: baseline; gap: 14px;
@@ -738,6 +787,7 @@
       <nav class="top-nav" aria-label="Site">
         <a href="#" class="nav-lab on" id="navLab">Daily lab</a>
         <a href="#learn" class="nav-course" id="navCourse">AI basics</a>
+        <a href="#frontier" class="nav-frontier" id="navFrontier" hidden>Frontier</a>
       </nav>
       <p class="trust">Picked daily from papers, changelogs, and engineering blogs from the last 48 hours — not a content calendar. Every session links its real sources, and every code example runs live in your browser so you can check it yourself.</p>
     </header>
@@ -770,6 +820,7 @@
         </div>
         <a href="#learn/intermediate">Open the primers →</a>
       </div>
+      <a class="frontier-strip" id="frontierStrip" href="#frontier" hidden></a>
       <div class="stats" id="stats"></div>
       <hr class="sep" />
 
@@ -863,7 +914,15 @@
   var INTERMEDIATE = window.INTERMEDIATE_TRACK || { ids: [], sessions: [] };
 
   function isLearn(s) { return s && s.kind === "learn"; }
-  function labSessions() { return DATA.filter(function (s) { return !isLearn(s); }); }
+  function isFrontier(s) { return s && s.kind === "frontier"; }
+  // The grid is the daily lab only. Frontier lives on its own tab by design, and
+  // Learn is the evergreen track — both stay searchable, neither is a card.
+  function labSessions() { return DATA.filter(function (s) { return !isLearn(s) && !isFrontier(s); }); }
+  function frontierSessions() {
+    return DATA.filter(isFrontier).slice().sort(function (a, b) {
+      return String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id));
+    });
+  }
   function orderedLearn(track) {
     var order = (track && track.ids) || [];
     return DATA.filter(function (s) { return isLearn(s) && order.indexOf(s.id) !== -1; })
@@ -1451,12 +1510,15 @@
   // topic name is that page's h1. Either way the document ends up with exactly
   // one h1 — checked at boot rather than guessed per render.
   var HEADER_HAS_H1 = !!document.querySelector("header.top h1");
-  function renderTopicHead(cat, tag, level, learn) {
+  function renderTopicHead(cat, tag, level, learn, frontier) {
     var el = $("topicHead");
     if (!el) return;
-    if (!cat && !tag && !level && !learn) { el.innerHTML = ""; return; }
+    if (!cat && !tag && !level && !learn && !frontier) { el.innerHTML = ""; return; }
     var name, blurb;
-    if (learn) {
+    if (frontier) {
+      name = (window.FRONTIER && window.FRONTIER.title) || "Frontier";
+      blurb = (window.FRONTIER && window.FRONTIER.blurb) || "";
+    } else if (learn) {
       name = LEARN.title || "AI basics";
       blurb = LEARN.blurb || "Eleven short lessons, then six mechanism primers. Start here if you are new. This is not the daily lab.";
     } else if (level) {
@@ -1473,7 +1535,7 @@
     var h = HEADER_HAS_H1 ? "h2" : "h1";
     el.innerHTML =
       '<div class="topic-head">' +
-        '<a class="back" href="' + SITE_ROOT + '/">' + (learn ? "← Daily lab" : "← All sessions") + "</a>" +
+        '<a class="back" href="' + SITE_ROOT + '/">' + (learn || frontier ? "← Daily lab" : "← All sessions") + "</a>" +
         "<" + h + ">" + esc(name) + "</" + h + ">" +
         (blurb ? '<p class="subtitle">' + esc(blurb) + "</p>" : "") +
       "</div>";
@@ -1572,9 +1634,14 @@
   function chip(on, label) { return '<span class="chip' + (on ? "" : " off") + '">' + label + "</span>"; }
 
   function renderGrid() {
+    var grid = $("grid");
+    // The Frontier index is a dated list, not cards — it reuses the grid slot so
+    // routing, scroll and the shell stay identical.
+    if (state.frontier) { grid.className = "frontier-wrap"; grid.innerHTML = renderFrontierIndex(); return; }
+    grid.className = "grid";
+
     var rows = filtered();
     var read = readSet();
-    var grid = $("grid");
 
     var total = pool().length;
     $("count").innerHTML = rows.length + " of " + total + " session" + (total === 1 ? "" : "s") +
@@ -1743,7 +1810,7 @@
 
     var head =
       '<div class="rbar"><div class="rbar-top">' +
-        '<button class="back" id="back">' + (p.kind === "learn" ? "← AI basics" : "← All sessions") + "</button>" +
+        '<button class="back" id="back">' + (p.kind === "learn" ? "← AI basics" : p.kind === "frontier" ? "← Frontier" : "← All sessions") + "</button>" +
         "<h1>" + esc(plain(p.title)) + "</h1>" +
         '<div class="nav">' +
           '<button id="goPrev" title="Older session ([)" aria-label="Older session"' + (prev ? "" : " disabled") + ">←</button>" +
@@ -1817,7 +1884,9 @@
     document.title = plain(p.title) + " — The AI Commit";
     renderPane(p, pane);
 
-    $("back").addEventListener("click", function () { location.hash = p.kind === "learn" ? "learn" : ""; });
+    $("back").addEventListener("click", function () {
+      location.hash = p.kind === "learn" ? "learn" : p.kind === "frontier" ? "frontier" : "";
+    });
     $("goPrev").addEventListener("click", function () { if (prev) location.hash = sessionHash(prev); });
     $("goNext").addEventListener("click", function () { if (next) location.hash = sessionHash(next); });
     $("markRead").addEventListener("click", function () {
@@ -2194,6 +2263,9 @@
       if (!parts[1] || parts[1] === "intermediate") return { learnIndex: true, learnBand: parts[1] || "" };
       return { id: parts[1], pane: parts[2] || "overview" };
     }
+    // Bare #frontier is the track index. Session ids carry the date as part of
+    // the id (frontier-2026-08-25), so they fall through to the reader below.
+    if (parts[0] === "frontier") return { frontierIndex: true };
     return { id: parts[0], pane: parts[1] || "overview" };
   }
 
@@ -2211,9 +2283,49 @@
 
   function syncChrome() {
     document.body.classList.toggle("on-learn", !!state.learn);
-    var lab = $("navLab"), course = $("navCourse");
-    if (lab) lab.classList.toggle("on", !state.learn);
+    document.body.classList.toggle("on-frontier", !!state.frontier);
+    var lab = $("navLab"), course = $("navCourse"), front = $("navFrontier");
+    if (lab) lab.classList.toggle("on", !state.learn && !state.frontier);
     if (course) course.classList.toggle("on", !!state.learn);
+    if (front) front.classList.toggle("on", !!state.frontier);
+  }
+
+  // The nav pill and the homepage strip only appear once the track has something
+  // in it — an empty tab is worse than no tab.
+  function initFrontierChrome() {
+    var items = frontierSessions();
+    var nav = $("navFrontier");
+    if (nav && items.length) nav.hidden = false;
+    var strip = $("frontierStrip");
+    if (!strip || !items.length) return;
+    var newest = items[0];
+    var meta = [newest.date, newest.codeLines ? "runnable in " + newest.codeLines + " lines" : ""]
+      .filter(Boolean).join(" · ");
+    strip.innerHTML =
+      "<div><p class=\"k\">Frontier · latest</p>" +
+      '<p class="t">' + esc(stripMd(newest.title)) + "</p>" +
+      '<p class="m">' + esc(meta) + "</p></div>" +
+      '<span class="go">All Frontier →</span>';
+    strip.hidden = false;
+  }
+
+  function renderFrontierIndex() {
+    var items = frontierSessions();
+    if (!items.length) return '<p class="empty">Nothing here yet.</p>';
+    return '<ul class="frontier-list">' + items.map(function (s) {
+      var blurb = stripMd(s.hook || s.insight || "");
+      var chips = "";
+      if (s.code && s.codeLines) chips += '<span class="frontier-chip run">runs · ' + s.codeLines + " lines</span>";
+      (s.tags || []).slice(0, 2).forEach(function (t) {
+        chips += '<span class="frontier-chip">' + esc(t) + "</span>";
+      });
+      return "<li><a href=\"#" + esc(s.id) + "\">" +
+        '<span class="fd">' + esc(s.date || "") + "</span><div>" +
+        '<p class="ft">' + esc(stripMd(s.title)) + "</p>" +
+        (blurb ? '<p class="fs">' + esc(blurb) + "</p>" : "") +
+        (chips ? '<p class="fm">' + chips + "</p>" : "") +
+        "</div></a></li>";
+    }).join("") + "</ul>";
   }
 
   function route() {
@@ -2223,7 +2335,7 @@
     // #topic/<slug> and #tag/<slug> are filtered GRID views — they preset the
     // same state the pills and chips already drive, so the filtering itself is
     // untouched; all that is new is that it now has a shareable address.
-    if (target && (target.topic || target.tag || target.level || target.learnIndex)) {
+    if (target && (target.topic || target.tag || target.level || target.learnIndex || target.frontierIndex)) {
       var cat = target.topic ? categoryFromSlug(target.topic) : null;
       var level = target.level ? levelFromSlug(target.level) : null;
       if (target.topic && !cat) {
@@ -2241,11 +2353,14 @@
       state.tag = target.tag || "";
       state.level = level || "";
       state.learn = !!target.learnIndex;
+      state.frontier = !!target.frontierIndex;
       syncChrome();
       rdEl.classList.add("hidden");
       idxEl.classList.remove("hidden");
-      document.title = (target.learnIndex ? (LEARN.title || "AI basics") : (level || cat || ("#" + state.tag))) + " — The AI Commit";
-      renderTopicHead(cat, state.tag, level, target.learnIndex);
+      document.title = (target.frontierIndex ? ((window.FRONTIER && window.FRONTIER.title) || "Frontier")
+        : target.learnIndex ? (LEARN.title || "AI basics")
+        : (level || cat || ("#" + state.tag))) + " — The AI Commit";
+      renderTopicHead(cat, state.tag, level, target.learnIndex, target.frontierIndex);
       renderStats();
       renderLevels();
       renderPills();
@@ -2266,6 +2381,7 @@
       state.tag = "";
       state.level = "";
       state.learn = false;
+      state.frontier = false;
       syncChrome();
       rdEl.classList.add("hidden");
       idxEl.classList.remove("hidden");
@@ -2373,6 +2489,9 @@
     cards.forEach(function (c, i) { c.classList.toggle("kbd", i === kbdIndex); });
     cards[kbdIndex].scrollIntoView({ block: "nearest", behavior: "smooth" });
   });
+
+  // Reveal the Frontier pill and the homepage strip only if the track has content.
+  initFrontierChrome();
 
   window.addEventListener("hashchange", route);
 

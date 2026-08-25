@@ -19,6 +19,31 @@ verified: llm
 This skill is **the `ai-daily-learn` skill plus a publish step**. It deliberately does not restate
 the session workflow, so the two skills can never drift apart.
 
+## Which track
+
+This skill publishes both tracks. They are **one product with one contract** — same ELI5-first
+ladder, same five artifacts, same `## Implementing It`. Only the sources, the folder and the
+cadence rule differ.
+
+| | **Daily lab** (default) | **Frontier** |
+| --- | --- | --- |
+| Invoked by | `/ai-daily-learn-publish` | `/ai-daily-learn-publish --frontier` (or "frontier session") |
+| Folder | `YYYY-MM-DD/` | `frontier/YYYY-MM-DD/` |
+| Cadence | **Never a blank day** | **Skip a thin day** |
+| `journal.md` | Gets a block | No block — Frontier is not in the daily index |
+| Audience gate | Applies | **Not applicable** — the track is excluded from `--mix` by design |
+| Newsletter | Sends | **No separate send.** Mention it in the next daily email instead |
+| Everywhere else | RSS, sitemap, search, its own OG card, its own page — identical ||
+
+**A Frontier run that publishes nothing is a successful run.** If nothing cleared the bar, say
+what you looked at and why none of it was worth an article, and stop. Do not lower the bar to fill
+the slot, do not retry into something thinner, and do not report it as an error — the unattended
+job must not treat a skipped Frontier day as a failure. The one thing that would kill this track
+is a reader learning that the tab wastes their time.
+
+The daily lab has the opposite rule and it is just as firm: **never end a lab run with the day
+empty.** See Error Handling.
+
 ## Step A: Run the full session
 
 Execute the entire `ai-daily-learn` workflow, Steps 1 through 12, exactly as written:
@@ -113,7 +138,8 @@ for CAND in \
 done
 [ -n "$PUB" ] || echo "publish.sh not found — see Manual fallback below"
 
-bash "$PUB" YYYY-MM-DD    # the exact session dir name from Step A
+bash "$PUB" YYYY-MM-DD            # the exact session dir name from Step A
+bash "$PUB" frontier/YYYY-MM-DD  # a Frontier session
 ```
 
 The script is self-healing and idempotent: it initialises the repo and remote if missing, commits
@@ -153,6 +179,14 @@ publishes, so a successful deploy always carries all three — there is no separ
 and no file to hand-edit. That is exactly why this check is worth thirty seconds: the failure mode
 is not a forgotten step, it is a deploy that reported success while serving stale output, which
 looks identical from here.
+
+For a **Frontier** session the id carries a `frontier-` prefix on the site (so a lab piece and a
+Frontier piece can share a date without colliding), and the track has its own landing page:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' https://theaicommit.com/frontier/          # expect 200
+curl -s https://theaicommit.com/sitemap.xml | grep -c "frontier-YYYY-MM-DD"          # expect >= 1
+```
 
 ```bash
 S=YYYY-MM-DD    # the session id from Step A
@@ -213,7 +247,10 @@ republishing the back catalog never trips it.
 - `audience gate` warning in the log → the session's tier or `**For**` layer was already at cap.
   It published. Name the miss in the summary and correct it in tomorrow's pick.
 
-**No gate may ever cost a day.** The daily cadence is the product; one session's mix is repaired
+- A **Frontier** run that found nothing worth publishing → report it as done, name what you
+  checked, and stop. Not an error, not a retry, not a thinner article.
+
+**No gate may ever cost a lab day.** The daily cadence is the product; one session's mix is repaired
 by what gets picked tomorrow, and one missing section is repaired by writing it. So there is
 always a path that ends in publishing:
 

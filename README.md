@@ -121,6 +121,21 @@ sections carry that, and both are required — including on Tier C:
   document. A technique with no stated downside reads as marketing; a reader who cannot tell
   whether the change took has been given a suggestion rather than an implementation.
 
+## Frontier
+
+A third track (`frontier/YYYY-MM-DD/`) for frontier-lab research and papers, on its own tab and
+never in the card grid. It is **the same product, sourced differently** — identical contract, same
+ELI5-first ladder, same five artifacts — so there is one standard to maintain rather than two.
+
+Three things differ, none of them a content rule: where the material comes from, where it appears,
+and that a thin Frontier day is skipped rather than filled. It is deliberately excluded from
+`make mix` so it can never distort the daily reader pyramid, and it is fully indexed — its own
+page, OG card, sitemap and RSS entries, plus a crawlable `/frontier/` landing page.
+
+```
+/ai-daily-learn-publish --frontier
+```
+
 ## Running a session manually
 
 Two skills, same session workflow — they differ only in whether the result leaves your machine.

@@ -235,6 +235,63 @@ for this", it loses to any Tier A candidate. Check the paper budget before openi
 
 ---
 
+---
+
+## The Frontier track — sources only
+
+Frontier is a **sourcing lane, not a second product.** A Frontier piece is written to the exact
+same contract as a lab session: ELI5 first, basics before depth, all five artifacts,
+`## Implementing It` as the longest section carrying *How you know it worked* and *When not to*,
+the full glossary, and the same acceptance test — could a competent engineer ship (or reproduce)
+this from the article alone? **Nothing about the writing changes. Only where the material comes
+from, where it appears, and when it publishes.**
+
+A paper is not an exception to any of that. The spec already says that when nothing is directly
+shippable you implement the mechanism from scratch — that *is* the assignment here. *How you know
+it worked* becomes "does your toy reproduce the effect the paper claims?", which is a sharper
+verification than most lab sessions get. *When not to* becomes the honest read of where the
+evidence stops.
+
+**Never skip the ELI5 because the audience is advanced.** That instinct will return every time
+you write for this track; refuse it every time. An article that assumes fluency serves only
+readers who already have it — the smallest audience and the one that needs this site least. Depth
+is earned in the back half of a piece, never bought by cutting the front.
+
+### Where a Frontier session goes
+
+`frontier/YYYY-MM-DD/` — same five files. Not `YYYY-MM-DD/`, not `learn/`. It never enters the
+card grid, never appears in `journal.md`, and never counts toward `node build.js --mix`; the track
+exists precisely so frontier material stops competing for the daily slot.
+
+### Cadence: skip a thin day
+
+The daily lab may never miss a day. **Frontier is the opposite: if nothing is worth publishing,
+publish nothing.** Padding the track because the slot exists is the one failure mode that would
+kill it — this audience will stop opening a tab that wastes their time once. Report the skip as a
+normal outcome, not an error, and say what you looked at and why none of it cleared the bar.
+
+### Sources
+
+- **Primary** — https://arxiv.org/list/cs.AI/recent, https://arxiv.org/list/cs.LG/recent,
+  https://arxiv.org/list/cs.CL/recent
+- **Primary** — https://huggingface.co/papers — the daily filter; use it instead of raw listings
+- **Primary** — https://www.anthropic.com/research and https://transformer-circuits.pub/ —
+  interpretability and alignment research with unusual mechanical detail
+- **Primary** — https://deepmind.google/discover/blog/ and https://ai.meta.com/research/
+- **Primary** — https://www.interconnects.ai/ — post-training and model reviews from someone who
+  trains them. Excellent for *finding* the thing worth explaining; go to the primary source to
+  build on it
+- Secondary — https://magazine.sebastianraschka.com/ and https://lilianweng.github.io/ — papers
+  already translated into engineering terms; often a better route in than the paper itself
+- Secondary — https://allenai.org/blog, https://mistral.ai/news, https://qwenlm.github.io/blog/,
+  https://api-docs.deepseek.com/news/ — open-weights releases **with technical reports**
+- Secondary — https://www.lesswrong.com/ and https://openreview.net/ for review threads when the
+  argument about a paper is the story
+
+The same four source quality gates below apply, with gate 3 reading: the source must contain
+enough for you to implement the core mechanism from scratch. If it does not — no algorithm, no
+released code, no reproducible detail — that is a thin day, and thin days are skipped.
+
 ### Source quality gates
 
 Before building a session on a source, all four must hold. Any failure sends you back to the
