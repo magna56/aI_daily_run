@@ -82,56 +82,150 @@ compare — you grabbed the first interesting link.
 - Second paper-led session inside the last 7
 - A Learn-track slug (`tokens`, `the agent loop`, `RAG` as a recap) dressed up as news
 
-## Sources
+## Sources — keyed to the category
 
-Scan the **category's list**, then HN for framing. Do not start on arXiv unless the paper
-budget is open and the category is Tier C.
+The category is chosen first (Step 0-1), so this list is keyed to the **category**, not to a
+reader. That ordering is deliberate and it is a fix, not a formatting choice: when the only
+concrete high-yield feeds in this file were two coding-agent changelogs and one generic
+"everything else" bucket, six of the eleven categories had no list of their own — and arXiv was
+the path of least resistance, always fresh, always fetchable, always interesting. The frontier
+tier drifted to double its cap. A category with no sources listed is a category that will lose
+to a category that has them.
 
-### Every day (framing + what practitioners are arguing)
+**Primary** is what the session is built on. **Secondary** is the second perspective and the
+`articles.md` further reading. Never open arXiv first unless the paper budget is open *and* the
+category is Tier C.
 
-- https://news.ycombinator.com/
-- https://simonwillison.net/
-- https://www.latent.space/
-- https://www.deeplearning.ai/the-batch/
+### Every day, whatever is due
 
-### Intermediate / basics — scan every day
+- https://news.ycombinator.com/ — framing, and what practitioners are actually arguing about
+- https://simonwillison.net/ — the single best filter for "does this matter to an engineer"
+- https://www.latent.space/ and https://www.deeplearning.ai/the-batch/ — trend context
+- https://mlconcepts.viveksingh-heritage.workers.dev/ — ML Concepts: interactive primers (LoRA,
+  self-attention, embeddings, calibration, backprop, agents in prod). **On-ramp only, never the
+  news lead.** Use it when Level is `Start here`, or as `articles.md` further reading. Do not
+  re-teach a `learn/` chapter as "today's article."
 
-- https://mlconcepts.viveksingh-heritage.workers.dev/ — ML Concepts: interactive
-  primers (LoRA, self-attention, embeddings, calibration, backpropagation,
-  build-an-LLM, agents in prod). **On-ramp only, not the news lead.** Use it
-  when today's Level should be Start here / intermediate, or as `articles.md`
-  further reading when the session touches one of those concepts. Do not build
-  the daily article on this site if a changelog or eng post in the due category
-  has a Monday action. Do not re-teach a `learn/` chapter as "today's article."
+---
 
-### Reader 1 — using tools (Tier A: Coding Agents)
+## Tier A — ship it this week (50% of sessions)
 
-- https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md
-- https://cursor.com/changelog
-- Codex / Gemini CLI release notes (WebSearch the current URL)
-- https://www.anthropic.com/engineering
+### Coding Agents & Productivity  ·  `For: Using tools`  ·  target 3 per 10
 
-### Reader 2 — becoming an AI engineer (Tier A/B: agents, evals, production, techniques)
+The widest reader tier and the deepest bench — 90% of professional developers drive one of these
+daily. Changelogs are the highest-yield feed on the whole list because they are dated, specific,
+and describe something the reader already has installed.
 
-- https://www.anthropic.com/engineering — harnesses, evals, context
-- https://huggingface.co/blog — models, serving, fine-tune how-tos
-- https://ai.meta.com/blog/ — Llama, PyTorch, production numbers
-- https://developers.googleblog.com/ — Gemini / API, the practical Google feed
-- https://blog.google/technology/ai/ — Gemini announcements (use developers blog for how-to)
-- https://openai.com/blog — model/API (WebFetch often 403; use HN or the cookbook mirror)
-- Platform cookbooks / docs when the topic is "how do I call this": OpenAI Cookbook,
-  Anthropic docs, Gemini API docs
-- https://blog.langchain.com/ and LlamaIndex engineering posts — RAG / agent orchestration
-  *when the post has a measured result*, not a product launch
+- **Primary** — https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md
+- **Primary** — https://docs.claude.com/en/docs/claude-code/overview (hooks, skills, subagents,
+  settings; pair a changelog line with the doc that explains it)
+- **Primary** — https://cursor.com/changelog
+- **Primary** — https://www.anthropic.com/engineering — harness design, context, agent patterns
+- **Primary** — https://github.com/openai/codex/releases and
+  https://github.com/google-gemini/gemini-cli/releases — cross-tool comparison
+- Secondary — https://github.blog/changelog/ (Copilot), https://aider.chat/HISTORY.html
+- Secondary — https://newsletter.pragmaticengineer.com/ — adoption and workflow reporting
 
-### Frontier only (Tier C, capped)
+### Building Agents & MCP  ·  `For: Building agents`  ·  target 3 per 10
 
-- https://www.anthropic.com/research
+- **Primary** — https://modelcontextprotocol.io/specification/latest — the spec is the primary
+  source; read the revision's own changelog before any commentary on it
+- **Primary** — https://github.com/modelcontextprotocol/servers — reference servers and SDK
+  releases; the code is the spec's ground truth
+- **Primary** — https://www.anthropic.com/engineering — agent architecture, tool design
+- **Primary** — https://docs.claude.com/en/docs/claude-code/overview — Agent SDK, tool schemas
+- Secondary — https://blog.langchain.com/ and https://www.llamaindex.ai/blog — orchestration,
+  **only when the post carries a measured result**, never a product launch
+- Secondary — https://blog.cloudflare.com/tag/agents/ — remote MCP, deployment shape
+
+### AI Engineering Practices  ·  `For: Shipping AI`  ·  target 2-3 per 10
+
+The biggest measured pain in the audience: developers now spend **11.4 hrs/week reviewing
+AI-written code vs 9.8 writing new code**, and while 84% use these tools only 29% trust the
+output. Reviewing, testing and trusting agent-written code is the richest under-served seam on
+this whole list.
+
+- **Primary** — https://www.anthropic.com/engineering — review workflows, verification
+- **Primary** — https://github.blog/changelog/ — code review, CI and agent surfaces
+- **Primary** — https://dora.dev/research/ — the measured research on delivery practice
+- Secondary — https://survey.stackoverflow.co/ and https://www.thoughtworks.com/radar — what
+  teams actually report doing, useful for the "you are not alone" framing
+- Secondary — https://newsletter.pragmaticengineer.com/, https://simonwillison.net/
+
+### Evals & Reliability  ·  `For: Shipping AI`  ·  target 1-2 per 10
+
+- **Primary** — https://hamel.dev/ — the best practical writing on LLM evals anywhere
+- **Primary** — https://www.anthropic.com/engineering — eval design, guardrails
+- **Primary** — https://www.braintrust.dev/blog and https://blog.langchain.com/ — harness
+  tooling, again only with a measured result
+- Secondary — https://eugeneyan.com/writing/ — applied ML evaluation and RAG measurement
+- Secondary — https://www.swebench.com/, https://lmsys.org/blog/, https://artificialanalysis.ai/
+  — benchmark methodology and where leaderboards mislead
+
+---
+
+## Tier B — understand the machine (30%)
+
+### New Models & APIs  ·  `For: Using tools` / `Shipping AI`  ·  target 1-2 per 10
+
+- **Primary** — https://docs.claude.com/en/release-notes/api and
+  https://platform.openai.com/docs/changelog — dated API changes beat launch posts
+- **Primary** — https://developers.googleblog.com/ — the practical Google feed
+- **Primary** — https://ai.meta.com/blog/ — Llama, PyTorch, real production numbers
+- Secondary — https://huggingface.co/blog, https://artificialanalysis.ai/ (measured comparison
+  rather than vendor claims), https://cookbook.openai.com/
+- `openai.com/blog` often 403s to WebFetch — use the platform changelog, the cookbook, or HN
+
+### AI in Production  ·  `For: Shipping AI`  ·  target 1-2 per 10
+
+- **Primary** — https://blog.vllm.ai/ — serving internals with numbers
+- **Primary** — https://modal.com/blog and https://www.baseten.co/blog/ — inference economics
+- **Primary** — https://lmsys.org/blog/ — SGLang, throughput, scheduling
+- Secondary — https://blog.cloudflare.com/tag/agents/, https://developer.nvidia.com/blog/
+
+### Hands-on Techniques  ·  `For: Shipping AI` / `Building agents`  ·  target 1-2 per 10
+
+- **Primary** — https://huggingface.co/blog — the densest how-to feed on the list
+- **Primary** — https://docs.unsloth.ai/ — fine-tuning that runs on one GPU
+- **Primary** — https://qdrant.tech/blog/, https://www.pinecone.io/blog/ — retrieval with
+  measured results
+- Secondary — https://jina.ai/news/ — embeddings, reranking
+- Secondary — https://eugeneyan.com/writing/ — RAG patterns and their failure modes
+
+---
+
+## Tier C — frontier (20%, and only 1 per 10 for `How models work`)
+
+Capped, not banned. A Tier C session still owes a Monday action; if the honest answer is "watch
+for this", it loses to any Tier A candidate. Check the paper budget before opening arXiv.
+
+- https://www.anthropic.com/research, https://huggingface.co/papers (the daily filter — use it
+  instead of raw arXiv listings)
 - https://arxiv.org/list/cs.AI/recent and https://arxiv.org/list/cs.LG/recent
-- Provider research blogs (x.ai, Meta, Google) when the paper has working code or a number
-  an engineer can reuse
+- https://magazine.sebastianraschka.com/ and https://lilianweng.github.io/ — papers already
+  translated into engineering terms, which is usually the better source than the paper itself
+- **AI Hardware** — https://semianalysis.com/, https://chipsandcheese.com/,
+  https://developer.nvidia.com/blog/
+- **Multimodal** — https://huggingface.co/blog, https://blog.roboflow.com/
+- **AI Safety & Alignment** — https://www.anthropic.com/research; hardest category to give a
+  Monday action, so hold it until Tier C is genuinely under weight
 
-`openai.com` often returns 403 to WebFetch — use the arXiv or HN mirror.
+---
+
+### Source quality gates
+
+Before building a session on a source, all four must hold. Any failure sends you back to the
+category list, not forward into writing.
+
+1. **Dated and primary.** A changelog entry, a spec revision, a docs page, an engineering post
+   with numbers. Not a recap, not a roundup, not another blog's summary of it.
+2. **Something changed.** "Here is what X is" is a `learn/` chapter. "Here is what changed and
+   what it costs you" is a session.
+3. **Implementable from what it says.** If the source does not contain enough for you to write
+   `## Implementing It` with real code for every role the change touches, it is not enough
+   source — find the docs or the reference implementation that fills the gap, or pick again.
+4. **Verified, not remembered.** Fetch it. Quote its own numbers. Never write a session from
+   recollection of a release; the whole value of a dated log is that its facts are checkable.
 
 ## Worked example (last five sessions)
 

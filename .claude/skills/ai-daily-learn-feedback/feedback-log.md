@@ -119,3 +119,24 @@ reached it for free — the real gap was that nothing *gated* the live push.
 - **Changed**: `Makefile` (`make mix`) and `CLAUDE.md` command list.
 - **Not changed**: the back catalog. Bands are deliberately loose (ten sessions cannot land on
   50/30/20 exactly) so the warning can actually go quiet once the mix is corrected.
+
+## 2026-08-24 — sources, keyed to category
+
+- **Note**: "I'm concerned about the quality — what sources will we use to gather info and
+  generate articles? Give me a list for each category."
+- **Verdict**: standing rule, and the root cause of the tier drift logged above.
+- **Diagnosis**: the Sources section was keyed to *reader* (Reader 1 / Reader 2 / Frontier), not
+  to category — but selection picks a category first. Six of eleven categories had no list of
+  their own, while arXiv was listed, always fresh and always fetchable. The path of least
+  resistance ran straight to Tier C. A category with no sources loses to a category that has
+  them, every time.
+- **Changed**: `selection.md` — Sources rewritten per category, in tier order, each entry marked
+  Primary (what a session is built on) or Secondary (second perspective, articles.md), with a
+  note on what each feed is good for. Coding Agents & Productivity and AI Engineering Practices
+  got the deepest benches, matching their 3-per-10 targets and the measured audience pain
+  (11.4 hrs/week reviewing AI-written code; 84% use, 29% trust).
+- **Changed**: `selection.md` — new **Source quality gates**: dated and primary; something
+  changed; implementable from what the source says (enough to write `## Implementing It` with
+  code for every role); verified by fetching, never written from recollection.
+- **Verified**: all 52 URLs in the file return 200. One candidate (`blog.langchain.com/tag/
+  langsmith/`) 404'd and was dropped rather than shipped.
