@@ -400,6 +400,39 @@ function parseTopic(raw, rel) {
 // topic.md body -> Map of "## Heading" -> its text. Used by the content checks;
 // deliberately ignores headings inside fenced blocks, since a code sample may well
 // contain a markdown "## " line of its own.
+/**
+ * The fenced blocks inside one section, as arrays of lines.
+ *
+ * `## Implementing It` must be the longest section, but the measurement has to
+ * be of the *guidance*, not of pasted code — otherwise the cheapest way to pass
+ * the rule is to drop `code_example.py` into the write-up, which is the thing
+ * the article is least supposed to be. So code is pulled out and counted
+ * separately from prose.
+ */
+function fencedBlocks(section) {
+  const out = [];
+  let cur = null;
+  for (const line of String(section).split("\n")) {
+    if (/^\s*```/.test(line)) {
+      if (cur) { out.push(cur); cur = null; } else cur = [];
+      continue;
+    }
+    if (cur) cur.push(line);
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+function proseOnly(section) {
+  const out = [];
+  let fenced = false;
+  for (const line of String(section).split("\n")) {
+    if (/^\s*```/.test(line)) { fenced = !fenced; continue; }
+    if (!fenced) out.push(line);
+  }
+  return out.join("\n");
+}
+
 function splitSections(body) {
   const out = new Map();
   let name = null, buf = [], fenced = false;
@@ -610,15 +643,47 @@ function compile(id, journal, runner, opts) {
       // Structural: a single required section cannot outweigh nine explanatory ones
       // unless it is actually the biggest thing in the document. Measured across the
       // first 22 sessions the split was 97% prose / 3% implementation.
-      const words = (t) => (t.trim().match(/\S+/g) || []).length;
+      const words = (t) => (proseOnly(t).trim().match(/\S+/g) || []).length;
       let longest = "", longestN = 0;
       for (const [name, body] of sections) {
         const n = words(body);
         if (n > longestN) { longestN = n; longest = name; }
       }
       if (longest && longest !== "Implementing It") {
-        warn(`${id}: "${longest}" (${longestN} words) is longer than "Implementing It" `
-          + `(${words(impl)}) — tighten the explanatory sections, do not pad the implementation.`);
+        warn(`${id}: "${longest}" (${longestN} words of prose) is longer than "Implementing It" `
+          + `(${words(impl)}) — tighten the explanatory sections, do not pad the implementation. `
+          + `Fenced code is excluded from both counts; a pasted program does not carry this rule.`);
+      }
+      /* The article is the guidance; code_example.py is the runnable artifact.
+         A block long enough to be a program has crossed from one to the other. */
+      if (date >= ARTIFACT_CONTRACT_SINCE) {
+        for (const b of fencedBlocks(impl)) {
+          if (b.length > 30) {
+            warn(`${id}: "Implementing It" has a ${b.length}-line fenced block (cap 30) — the `
+              + `write-up shows the lines that change; the whole program belongs in code_example.py.`);
+            break;
+          }
+        }
+        /* The two artifacts complement each other or one of them is redundant.
+           Measured on non-trivial lines so shared imports and `def` headers do
+           not trip it — this is looking for a pasted slab, not a coincidence. */
+        const codeSrc = readIfExists(path.join(dir, "code_example.py"));
+        if (codeSrc) {
+          const codeLines = new Set(
+            codeSrc.split("\n").map((l) => l.trim()).filter((l) => l.length > 24));
+          for (const b of fencedBlocks(impl)) {
+            const meaty = b.map((l) => l.trim()).filter((l) => l.length > 24);
+            if (meaty.length < 5) continue;
+            const shared = meaty.filter((l) => codeLines.has(l)).length;
+            if (shared / meaty.length > 0.7) {
+              warn(`${id}: a fenced block in "Implementing It" is ${Math.round(100 * shared / meaty.length)}% `
+                + `verbatim code_example.py — the two artifacts must complement each other, not `
+                + `restate each other. Keep the lines the reader has to change here and let the `
+                + `runnable file carry the rest.`);
+              break;
+            }
+          }
+        }
       }
     }
     /* "Why It Matters" is where a session quietly turns into a press release: the

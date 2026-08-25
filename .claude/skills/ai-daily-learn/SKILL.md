@@ -390,11 +390,28 @@ whole difference: an internal doc names the file, gives the real config key, say
 time, and admits where the approach is wrong. It never pads, because the audience is people whose
 time you will have to face on Monday.
 
-**`## Implementing It` must be the longest section in the document.** This is a structural rule
-with a number behind it: measured across the first 22 sessions the shape was **97% explanatory
-prose, 3% implementation, and zero fenced code blocks in the write-up** — an explainer with an
-appendix bolted on. A single required section cannot outweigh nine explanatory ones. Everything
-else gets tightened until the implementation is the spine, not the epilogue.
+**`## Implementing It` must be the longest section in the document** — measured on **prose,
+with fenced code excluded from every section's count**. This is a structural rule with a number
+behind it: measured across the first 22 sessions the shape was **97% explanatory prose, 3%
+implementation, and zero fenced code blocks in the write-up** — an explainer with an appendix
+bolted on. A single required section cannot outweigh nine explanatory ones. Everything else gets
+tightened until the implementation is the spine, not the epilogue.
+
+Code is excluded from that measurement on purpose, because the cheapest way to pass the rule
+would otherwise be to paste `code_example.py` into the write-up — and **the article is not the
+implementation.** The two artifacts have different jobs and must not restate each other:
+
+| | owns | looks like |
+| --- | --- | --- |
+| `topic.md` → `Implementing It` | the **decisions** — what changes, in which file, for which role, the real config key and function name, how to tell it worked, when not to | the lines that *change*: a config block, a changed handler signature, a payload, a before/after pair |
+| `code_example.py` | the **complete runnable artifact** — the whole mechanism end to end, liftable into the reader's own repo | a program that runs and prints something that proves the claim |
+
+So the write-up shows enough code to make each decision concrete and unambiguous, and stops
+there. A fenced block long enough to be a program has crossed the line — **cap any single block
+in `Implementing It` at 30 lines**, and if a block is a verbatim slab of `code_example.py`, one
+of the two is redundant. Both are `--check` warnings. The reader should finish the article
+knowing exactly what to type, and open the Code tab to get the finished thing, not to get the
+same thing again.
 
 **No space filler.** Every section must carry something no other section has. These are the
 patterns that produce padding, and each one is a cut, not a rewrite:
@@ -596,6 +613,15 @@ lives with it. Required on every session.
   `code_example.py` does not discharge this — most readers never open the Code tab, and nobody
   reading on a phone is going to run Python. The block belongs next to the sentence that
   motivates it.
+- **Show the lines that change, not the program that contains them.** This is the other half of
+  the rule above and the one that gets overshot: the article is judged on whether an engineer
+  can act, not on whether the article compiles. Give the config block, the changed signature,
+  the payload, the before/after — and let `code_example.py` carry the runnable whole.
+  - ✗ a 60-line script in the write-up that the Code tab then repeats verbatim
+    → ✓ the eight lines the reader edits, then "the full matcher, with a corpus to test your own
+    rules against, is in `code_example.py`"
+  - A single fenced block over 30 lines, or one that is a verbatim slab of `code_example.py`,
+    warns in `--check`.
 - **Prefer a before/after pair** whenever something changed: the request as you sent it last
   month and as you must send it now; the handler as it was and as it must be. A diff is the
   fastest way an engineer confirms they understood.
@@ -639,9 +665,10 @@ engineering document from a tutorial, and they are the two most often skipped:
   audience is professionally suspicious of it. If it genuinely has no downside, say what you
   checked to be sure.
 
-Length follows from the structural rule above: this section is the longest in the document. If it
-is not, tighten the explanatory sections rather than padding this one — padding here fails the
-same anti-filler test as padding anywhere else.
+Length follows from the structural rule above: this section has the most **prose** in the
+document. If it does not, tighten the explanatory sections rather than padding this one — padding
+here fails the same anti-filler test as padding anywhere else, and padding it with pasted code
+fails on top of that, because code is not counted and the article is not the implementation.
 
 **`## Glossary`** — closes the document as reference, in the order terms first appear. It is
 reference, not teaching, and it competes with the code for the reader's attention: **one sentence
@@ -662,6 +689,12 @@ padding whatever the individual entries say.
 Write `~/ai_learning/YYYY-MM-DD/code_example.py`. **The test is not whether it runs — it is
 whether an engineer can lift it into their own repo.** A script they execute once, watch print
 something interesting, and close has taught them nothing they can use on Monday.
+
+**This file completes the article; it does not repeat it.** `Implementing It` gave the reader the
+decisions and the lines that change — this is where the whole mechanism actually exists, running,
+with the knobs at the top for them to point at their own inputs. If someone could read the article
+and then find nothing new in the Code tab, this file has not done its job; if they could skip the
+article because this file contains it all, the article has not done its.
 
 - **Write the thing, not a demonstration of the thing.** The client that builds and validates the
   request, the cache that honours the TTL, the retry loop, the scheduler, the chunker — in the

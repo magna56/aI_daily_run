@@ -328,3 +328,36 @@ reached it for free — the real gap was that nothing *gated* the live push.
 - **Not changed**: the session folder itself, and the new checks are gated from 2026-08-26 so the
   published record does not warn forever. Offered to fix the title, the Why It Matters tail, the
   visualizer contract and the 21 extra code lines in place.
+
+## 2026-08-25 — spec-wide (the article/code division of labour)
+
+- **Note**: "the article should be practical enough for the engineers to implement; the code we
+  provide should complement it, not make the article itself an implementation."
+- **Verdict**: standing rule, and a **deliberate rebalancing of an existing one** — flagged here
+  because it modifies rules written on 2026-08-24 rather than adding beside them. Those rules
+  ("`Implementing It` must be the longest section", "a link to `code_example.py` does not satisfy
+  the fenced-block requirement") were correct against the failure of the day, which was an
+  article with *no* code at all. Applied without a ceiling they push the other way, until the
+  write-up becomes the program and the Code tab repeats it.
+- **Changed**: `SKILL.md` — a division-of-labour table at the structural rule. `topic.md` owns
+  the **decisions** (what changes, which file, which role, the real config key, how you know it
+  worked, when not to) and shows the lines that *change*; `code_example.py` owns the **complete
+  runnable artifact**. Neither restates the other: "if someone could read the article and find
+  nothing new in the Code tab, this file has not done its job; if they could skip the article
+  because this file contains it all, the article has not done its."
+- **Changed**: `SKILL.md` + `contract.md` — the longest-section rule is now measured on **prose,
+  with fenced code excluded from every section's count**. This is the load-bearing part: with
+  code counted, the cheapest way to pass the rule was to paste the program into the write-up,
+  which is exactly the failure this note names. The 97/3 justification is unchanged — the rule
+  still says the explainers may not outweigh the implementation, it just can no longer be bought
+  with a code dump.
+- **Changed**: `SKILL.md` Step 6 — `code_example.py` written up as the *completion* of the
+  article rather than an appendix to it.
+- **Changed**: `build.js` — `proseOnly()` and `fencedBlocks()` helpers; the longest-section check
+  measures prose; a single fenced block in `Implementing It` over **30 lines** warns; a block
+  more than **70% verbatim `code_example.py`** (on lines over 24 characters, so shared imports
+  and `def` headers do not trip it) warns. Verified on a throwaway fixture: an oversized block
+  and a pasted block each trip their own warning, and no real session trips either.
+- **Not changed**: `Implementing It` stays required, with its three labelled parts. The note was
+  about the *balance* between the two artifacts, not about dropping the section — checked against
+  the first entry in this log before editing, per the rule at the top of this file.
