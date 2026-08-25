@@ -140,3 +140,28 @@ reached it for free — the real gap was that nothing *gated* the live push.
   code for every role); verified by fetching, never written from recollection.
 - **Verified**: all 52 URLs in the file return 200. One candidate (`blog.langchain.com/tag/
   langsmith/`) 404'd and was dropped rather than shipped.
+
+## 2026-08-24 — publish path honours the audience mix
+
+- **Note**: "update the skill which publishes so we honour this from next articles"
+- **Verdict**: standing rule. The generator already inherits the mix rules through Step 0; what
+  was missing was enforcement at the moment of publishing.
+- **The distinction that shaped the design**: trailing-window *drift* must never block a publish,
+  because the only way out of drift is to publish the sessions that correct it — a blocking drift
+  check deadlocks. What can be blocked is a *per-session* question: did this session take a slot
+  that was already at cap in the ten before it? That has a yes/no answer on the day, which is
+  exactly what nobody could evaluate when three consecutive Tier C sessions shipped.
+- **Changed**: `build.js` — `--mix <id>` judges one session against the window strictly preceding
+  it and exits 3 if its tier or `For` layer was already at cap. Bare `--mix` still prints the
+  readout. Verified retroactively: 2026-08-22 passes, 2026-08-21 (the third consecutive Tier C)
+  is caught with both reasons named.
+- **Changed**: `publish.sh` — the audience gate runs inside `content_gate()` and refuses the
+  publish on exit 3. Output is captured rather than piped, so the check does not depend on
+  `PIPESTATUS` and therefore on which shell ran the script.
+- **Changed**: `ai-daily-learn-publish/SKILL.md` — Step A½ documents both gates and states plainly
+  that drift warnings are advisory; Step C now prints `--mix` after publishing so the next run
+  starts from the moved mix; Error Handling names the blank-day trade-off explicitly and points at
+  `ADL_SKIP_GATE=1` as the deliberate override.
+- **Trade-off recorded**: a blocked publish means no article that day. Accepted on the grounds
+  that a fourth consecutive frontier session costs more than a blank day and the block is
+  recoverable by regenerating. Flagged to the user as reversible to warn-only.

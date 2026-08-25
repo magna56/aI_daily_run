@@ -81,6 +81,22 @@ content_gate() {
     printf '[publish] Fix the session, then re-run. See .claude/skills/ai-daily-learn/contract.md\n' >&2
     exit 1
   fi
+
+  # Did this session take a slot the audience mix said was already at cap? This is
+  # a question about the one session, not about trailing drift — drift must never
+  # block, since the only way out of it is to publish the sessions that correct it.
+  # Captured rather than piped: a pipeline's exit status needs PIPESTATUS, which
+  # is bash-only, and this gate is too important to depend on which shell ran it.
+  local mix_out mix_rc
+  mix_out=$(node build.js --mix "$SESSION" 2>&1); mix_rc=$?
+  printf '%s\n' "$mix_out" | sed 's/^/[publish] /'
+  if [ "$mix_rc" = "3" ]; then
+    printf '[publish] ERROR: audience gate — %s ignores what was due.\n' "$SESSION" >&2
+    printf '[publish] Regenerate for the due category, or publish with ADL_SKIP_GATE=1 if this\n' >&2
+    printf '[publish] session is deliberately out of band. See selection.md (the reader pyramid).\n' >&2
+    exit 1
+  fi
+
   say "content gate passed for $SESSION"
 }
 

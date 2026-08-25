@@ -62,6 +62,21 @@ never fix it by loosening the spec. The blocking ones:
   never open and nobody reading on a phone will run.
 - anything about `visualize.html` — a session without a working visualizer has no Visualize tab.
 
+Then the **audience gate** — did this session take a slot that was already at cap?
+
+```bash
+cd ~/ai_learning && node build.js --mix YYYY-MM-DD    # exit 3 = it ignored what was due
+```
+
+This asks about the one session, not about the trailing average: was its tier, or its `**For**`
+layer, already at its cap in the ten sessions before it? Three consecutive Tier C sessions once
+shipped because nobody could answer that on the day. `publish.sh` runs this itself and refuses
+the publish on exit 3.
+
+Trailing-window **drift** warnings (`audience mix: Tier C is 4 of the last 10 …`) are advisory and
+must never block, because the only way out of drift is to publish the sessions that correct it.
+Read them as instructions for tomorrow's pick, not as a reason to hold today's.
+
 Other warnings are advisory and do not block: a `code_example.py` that exits non-zero is a
 *rendered traceback* by design, not a broken build.
 
@@ -141,6 +156,15 @@ a fresh push, so wait and retry once; if it is still missing, re-run `make deplo
 **before** reporting the session as live. Reporting a URL that crawlers and feed readers cannot see
 is the one failure this skill should never produce silently.
 
+Finally, print what is due next so tomorrow's run starts informed rather than guessing:
+
+```bash
+cd ~/ai_learning && node build.js --mix
+```
+
+Include its **DUE NEXT** line in the summary. The mix moved when this session published, and the
+next session is chosen from where it moved to.
+
 Then report. Use the same summary block as `ai-daily-learn` Step 12, but replace its "Read it" block and
 closing line with the published deep link — that URL opens the rendered session directly and is
 the thing worth sharing:
@@ -175,7 +199,15 @@ republishing the back catalog never trips it.
 - Session generation failed in Step A → do not publish a partial session. Report the failure.
 - `publish.sh` aborted with `content gate` → the session does not meet `contract.md`. Fix the
   session (usually: write the `## Implementing It` section, with real code in `topic.md`) and
-  re-run. `ADL_SKIP_GATE=1` exists for a deliberate override and should stay unused by the
+  re-run.
+- `publish.sh` aborted with `audience gate` → the session's tier or `**For**` layer was already
+  at cap before it. The right fix is to regenerate for the category `node build.js --mix` says is
+  due, not to publish anyway: this is the specific failure that let the frontier tier reach double
+  its cap. Override only for a session that is deliberately out of band, and say so.
+- **A blocked publish means no article that day.** That is the intended trade: a fourth
+  consecutive frontier session costs more than a blank day, and the block is recoverable in the
+  time it takes to regenerate. If a blank day is ever worse — a streak that matters, a session
+  the user asked for by name — `ADL_SKIP_GATE=1` is the deliberate override, not a workaround. `ADL_SKIP_GATE=1` exists for a deliberate override and should stay unused by the
   scheduled job — publishing past this gate is how the site drifts back into announcement recaps.
 - Everything else → see `ai-daily-learn`'s own Error Handling section.
 

@@ -6,6 +6,7 @@
                                node build.js --check    (lint only, write nothing)
                                node build.js --no-run   (skip executing examples)
                                node build.js --mix      (what to publish next; writes nothing)
+                               node build.js --mix <id> (did that session respect the mix? exit 3 if not)
 
    Session folders are the source of truth and are never modified: /ai-daily-learn
    writes YYYY-MM-DD/{topic.md,visualize.html,diagram.excalidraw,code_example.py,articles.md} and
@@ -245,6 +246,47 @@ function mixDrift(sum) {
       "this is a wider reader tier than its coverage suggests");
   }
   return out;
+}
+
+// With an id, judge that one session against the window that preceded it: did it
+// take a slot the mix said was already at cap? That is a per-session question with
+// a yes/no answer, unlike trailing-window drift — which must never block a publish,
+// because the only way out of drift is to publish the sessions that correct it.
+// Returns 3 when the session breached a cap, 0 otherwise.
+function checkMixFor(id) {
+  const rows = mixRows();
+  const idx = rows.findIndex((r) => r.id === id);
+  if (idx === -1) {
+    console.log(`  mix: ${id} has no topic.md metadata to judge — skipping.`);
+    return 0;
+  }
+  const target = rows[idx];
+  const sum = mixSummary(rows.slice(0, idx));   // strictly what came before it
+  const n = sum.win.length;
+  const viol = [];
+
+  const tier = CATEGORY_TIER[target.category];
+  if (tier) {
+    const cap = MIX_BANDS.tier[tier][1];
+    if (sum.tier[tier] >= cap) {
+      viol.push(`Tier ${tier} was already ${sum.tier[tier]} of the preceding ${n} (cap ${cap}), `
+        + `and "${target.category}" is Tier ${tier}`);
+    }
+  }
+  const band = MIX_BANDS.job[target.job];
+  if (band && sum.job[target.job] >= band[1]) {
+    viol.push(`"For: ${target.job}" was already ${sum.job[target.job]} of the preceding ${n} `
+      + `(cap ${band[1]})`);
+  }
+
+  if (!viol.length) {
+    console.log(`  mix: ${id} is inside the bands (Tier ${tier || "?"}, For: ${target.job || "-"}).`);
+    return 0;
+  }
+  console.error(`  mix: ${id} takes a slot that was already at cap:`);
+  viol.forEach((v) => console.error(`    - ${v}`));
+  console.error(`  Run 'node build.js --mix' to see what was due instead.`);
+  return 3;
 }
 
 function printMix() {
@@ -1118,7 +1160,14 @@ function main() {
   const noRun = process.argv.includes("--no-run") || process.env.NORUN === "1";
 
   // Read-only: what to publish next, before anything is built or executed.
-  if (process.argv.includes("--mix")) { printMix(); return; }
+  // `--mix <id>` instead judges that one session against what preceded it.
+  const mixAt = process.argv.indexOf("--mix");
+  if (mixAt !== -1) {
+    const id = (process.argv[mixAt + 1] || "").replace(/\/$/, "");
+    if (SESSION_RE.test(id)) process.exitCode = checkMixFor(id);
+    else printMix();
+    return;
+  }
 
   const ids = fs.readdirSync(ROOT)
     .filter((name) => SESSION_RE.test(name) && fs.statSync(path.join(ROOT, name)).isDirectory())
