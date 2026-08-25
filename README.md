@@ -106,8 +106,20 @@ sampling each got double.
 10. Multimodal Engineering
 11. AI Safety & Alignment
 
-Every session — including Tier C — carries a **What This Means for You** section:
-when it matters, how it affects you, and what to actually do about it.
+## What every session owes the reader
+
+The test each session is written against: **does the reader leave with something they can build
+with?** Better informed but no more capable is a failed session, however accurate it is. Two
+sections carry that, and both are required — including on Tier C:
+
+- **What This Means for You** — when it matters, how it affects you, and what to actually do
+  about it. At least one item has to be a change, not an audit.
+- **Implementing It** — the code, in the write-up itself rather than deferred to the Code tab,
+  for *every* role a change touches rather than only the one the announcement addressed. It
+  carries **How you know it worked** (the number that moves, the log line, the assertion) and
+  **When not to** (the counter-case and what it costs), and it is the longest section in the
+  document. A technique with no stated downside reads as marketing; a reader who cannot tell
+  whether the change took has been given a suggestion rather than an implementation.
 
 ## Running a session manually
 
@@ -135,8 +147,14 @@ the session already exists on disk.
 Create `YYYY-MM-DD/` with any of the five files and add a `journal.md` block.
 `topic.md` must start with an `# H1` title followed by `**Key**: value` metadata
 lines — `Category` and `Date` drive the grid, and the journal block's
-`- **Key insight**:` line becomes the card blurb. Everything else is optional:
-sessions missing a visualizer, diagram, or articles file simply show fewer tabs.
+`- **Key insight**:` line becomes the card blurb. Sessions missing a visualizer,
+diagram, or articles file simply show fewer tabs.
+
+New sessions additionally need an `## Implementing It` section carrying real fenced code, its
+**How you know it worked** and **When not to** parts, and enough length to be the longest section
+in the document. `make check` enforces all four; the back catalog predates the rule and is exempt
+by date. Run `make mix` before choosing a topic — it prints which reader tier and category are
+due, and which are at their cap.
 
 `visualize.html` is copied as a standalone artifact and loaded only when its pane opens. The
 reader runs it in a script-only sandbox without same-origin, popup, form, storage, or network
