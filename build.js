@@ -20,6 +20,8 @@
                               session's own title/description/canonical/JSON-LD;
                               otherwise byte-identical (see writePerSessionShell)
      site/sitemap.xml        generated here, not hand-written — lists every session
+     site/feed.xml           RSS 2.0 of daily sessions (title + key insight + link)
+     site/og/<id>.png        per-session Open Graph card (1200×630)
 
    The split matters: the grid must stay fast as sessions accumulate, so the
    heavy parts (rendered SVG, source, captured output) load only on demand.
@@ -33,6 +35,7 @@ const vm = require("vm");
 
 const { renderExcalidrawSVG } = require("./lib/excalidraw-svg");
 const { createRunner } = require("./lib/runner");
+const { renderOgPng } = require("./lib/og-png");
 
 const ROOT = __dirname;
 const SITE = path.join(ROOT, "site");
@@ -149,6 +152,14 @@ const TAGS = [
   // use-case / provenance
   "from-scratch", "paper", "production", "interview",
 ];
+
+// `## Implementing It` — the code the reader has to write — became a required
+// section of topic.md on this date, along with the rule that it carry at least one
+// fenced code block in the write-up itself rather than deferring to code_example.py.
+// The check is deliberately date-gated: the back catalog predates the rule and is a
+// dated log, not a backlog, so warning on forty old folders would only train everyone
+// to ignore the warnings that matter.
+const IMPLEMENT_SECTION_SINCE = "2026-08-25";
 
 // A session folder: a date, optionally suffixed for a second session that day.
 const SESSION_RE = /^\d{4}-\d{2}-\d{2}(-s\d+)?$/;
@@ -372,6 +383,15 @@ function compile(id, journal, runner, opts) {
   if (!job) warn(`${id}: no For in topic.md (${JOBS.join(" / ")}).`);
   else if (!JOBS.includes(job)) warn(`${id}: For "${job}" is not one of ${JOBS.join(", ")}.`);
   if (!hook) warn(`${id}: no Hook in topic.md — the card will fall back to the journal insight.`);
+
+  if (kind === "daily" && date >= IMPLEMENT_SECTION_SINCE) {
+    if (!/^##\s+Implementing It\s*$/m.test(topic.body)) {
+      warn(`${id}: topic.md has no "## Implementing It" section — see contract.md.`);
+    } else if (!/^```/m.test(topic.body)) {
+      warn(`${id}: topic.md has no fenced code block — "Implementing It" must show real code, `
+        + `not point at code_example.py.`);
+    }
+  }
   const assetDir = path.join(ASSET_DIR, id);
   const writing = !opts.check;
 
@@ -669,9 +689,17 @@ function makeShellTemplate() {
    * metadata block and their <noscript> body — every byte of CSS and JS is
    * shared, which is what keeps the SPA identical whichever URL you enter by.
    *
-   * spec: { pageTitle, description, url, ogType, jsonLd, noscriptBody }
+   * spec: { pageTitle, description, url, ogType, jsonLd, noscriptBody,
+   *         ogImage?, ogImageAlt?, publishedTime?, section? }
    */
   return function render(spec) {
+    const ogImage = spec.ogImage || `${SITE_ORIGIN}/og-image.png`;
+    const ogAlt = spec.ogImageAlt || spec.pageTitle;
+    const articleTags = spec.ogType === "article"
+      ? (spec.publishedTime ? `      <meta property="article:published_time" content="${escAttr(spec.publishedTime)}" />\n` : "") +
+        (spec.section ? `      <meta property="article:section" content="${escAttr(spec.section)}" />\n` : "")
+      : "";
+
     const meta =
       `<!-- META:START -->\n` +
       `<title>${escAttr(spec.pageTitle)}</title>\n` +
@@ -685,14 +713,17 @@ function makeShellTemplate() {
       `<meta property="og:site_name" content="The AI Commit" />\n` +
       `<meta property="og:title" content="${escAttr(spec.pageTitle)}" />\n` +
       `<meta property="og:description" content="${escAttr(spec.description)}" />\n` +
-      `<meta property="og:image" content="${SITE_ORIGIN}/og-image.png" />\n` +
+      `<meta property="og:image" content="${escAttr(ogImage)}" />\n` +
       `<meta property="og:image:width" content="1200" />\n` +
       `<meta property="og:image:height" content="630" />\n` +
+      `<meta property="og:image:alt" content="${escAttr(ogAlt)}" />\n` +
       `<meta property="og:url" content="${escAttr(spec.url)}" />\n` +
+      articleTags +
       `<meta name="twitter:card" content="summary_large_image" />\n` +
       `<meta name="twitter:title" content="${escAttr(spec.pageTitle)}" />\n` +
       `<meta name="twitter:description" content="${escAttr(spec.description)}" />\n` +
-      `<meta name="twitter:image" content="${SITE_ORIGIN}/og-image.png" />\n\n` +
+      `<meta name="twitter:image" content="${escAttr(ogImage)}" />\n` +
+      `<meta name="twitter:image:alt" content="${escAttr(ogAlt)}" />\n\n` +
       `<script type="application/ld+json">\n${jsonLdSafe(spec.jsonLd)}\n</script>\n` +
       `<!-- OG:END -->`;
 
@@ -744,12 +775,17 @@ function sessionPageSpec(payload, card) {
   const url = `${SITE_ORIGIN}/${card.slug}/`;
   const description = truncateWords(stripMd(payload.insight) || title, 155);
   const topicHref = payload.category ? `/topics/${slugify(payload.category)}/` : "";
+  const ogImage = `${SITE_ORIGIN}/og/${card.id}.png`;
 
   return {
     pageTitle: `${title} — The AI Commit`,
     description,
     url,
     ogType: "article",
+    ogImage,
+    ogImageAlt: title,
+    publishedTime: payload.date || undefined,
+    section: payload.category || undefined,
     jsonLd: {
       "@context": "https://schema.org",
       "@type": "TechArticle",
@@ -759,7 +795,7 @@ function sessionPageSpec(payload, card) {
       keywords: (payload.tags || []).join(", ") || undefined,
       url,
       mainEntityOfPage: url,
-      image: `${SITE_ORIGIN}/og-image.png`,
+      image: ogImage,
       publisher: PUBLISHER,
     },
     noscriptBody:
@@ -779,12 +815,15 @@ function topicPageSpec(category, cardsInCategory) {
   const url = `${SITE_ORIGIN}/topics/${slug}/`;
   const description = truncateWords(
     CATEGORY_BLURBS[category] || `Every ${category} session on The AI Commit.`, 155);
+  const ogImage = `${SITE_ORIGIN}/og/topic-${slug}.png`;
 
   return {
     pageTitle: `${category} — The AI Commit`,
     description,
     url,
     ogType: "website",
+    ogImage,
+    ogImageAlt: category,
     jsonLd: {
       "@context": "https://schema.org",
       "@type": "CollectionPage",
@@ -835,6 +874,7 @@ function homePageSpec(cards, categories) {
       description,
       url: SITE_ORIGIN + "/",
       publisher: PUBLISHER,
+      sameAs: ["https://github.com/magna56/aI_daily_run"],
     },
     // No <h1> here: the visible tagline is promoted to the homepage's h1 (see
     // HOME_H1), and a second one in the noscript index would compete with it
@@ -863,8 +903,15 @@ function writeSitemap(cards, categories) {
     .sort()
     .pop();
 
+  const newestDaily = cards
+    .filter((c) => c.kind !== "learn")
+    .map((c) => c.date)
+    .filter(Boolean)
+    .sort()
+    .pop();
+
   const urls = [
-    { loc: `${SITE_ORIGIN}/`, changefreq: "daily", priority: "1.0" },
+    { loc: `${SITE_ORIGIN}/`, lastmod: newestDaily, changefreq: "daily", priority: "1.0" },
     ...categories.map((cat) => ({
       loc: `${SITE_ORIGIN}/topics/${slugify(cat)}/`,
       lastmod: newestIn(cat),
@@ -892,6 +939,57 @@ function writeSitemap(cards, categories) {
     path.join(SITE, "sitemap.xml"),
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`
   );
+}
+
+function rfc822(date) {
+  // Session dates are calendar days, not timestamps. Noon UTC keeps the day
+  // stable across timezones instead of rolling a US evening back to yesterday.
+  const d = new Date(String(date) + "T12:00:00.000Z");
+  return Number.isNaN(d.getTime()) ? new Date().toUTCString() : d.toUTCString();
+}
+
+function writeFeed(cards) {
+  const items = cards
+    .filter((c) => c.kind !== "learn")
+    .slice()
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id)));
+  const newest = items[0] && items[0].date;
+  const body = items.map((c) => {
+    const link = `${SITE_ORIGIN}/${c.slug}/`;
+    const title = stripMd(c.title);
+    const desc = stripMd(c.insight || c.hook || title);
+    return (
+      `    <item>\n` +
+      `      <title>${escAttr(title)}</title>\n` +
+      `      <link>${escAttr(link)}</link>\n` +
+      `      <guid isPermaLink="true">${escAttr(link)}</guid>\n` +
+      (c.date ? `      <pubDate>${rfc822(c.date)}</pubDate>\n` : "") +
+      (c.category ? `      <category>${escAttr(c.category)}</category>\n` : "") +
+      `      <description>${escAttr(desc)}</description>\n` +
+      `    </item>`
+    );
+  }).join("\n");
+  fs.writeFileSync(
+    path.join(SITE, "feed.xml"),
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n` +
+    `  <channel>\n` +
+    `    <title>The AI Commit</title>\n` +
+    `    <link>${SITE_ORIGIN}/</link>\n` +
+    `    <description>One real AI development in 30 minutes: explanation, diagram, and code that runs in the browser.</description>\n` +
+    `    <language>en-us</language>\n` +
+    `    <atom:link href="${SITE_ORIGIN}/feed.xml" rel="self" type="application/rss+xml"/>\n` +
+    (newest ? `    <lastBuildDate>${rfc822(newest)}</lastBuildDate>\n` : "") +
+    body + `\n` +
+    `  </channel>\n` +
+    `</rss>\n`
+  );
+}
+
+function writeOgCard(fileName, title, kicker, date) {
+  const dir = path.join(SITE, "og");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, fileName), renderOgPng({ title, kicker, date }));
 }
 
 /* ---- main ------------------------------------------------------------------ */
@@ -936,6 +1034,12 @@ function main() {
     cards.push(out.card);
     if (!check) {
       fs.writeFileSync(path.join(DATA_DIR, out.card.id + ".json"), JSON.stringify(out.payload));
+      writeOgCard(
+        out.card.id + ".png",
+        stripMd(out.card.title),
+        out.card.category || "",
+        out.card.date || ""
+      );
       const html = renderShell(sessionPageSpec(out.payload, out.card));
       // The bare <id>/ page keeps already-shared/indexed links working; its
       // canonical tag (baked into `html` above) points at the slug page, so
@@ -1003,6 +1107,8 @@ function main() {
       const inCat = cards.filter((c) => c.category === cat && c.kind !== "learn");
       const dir = path.join(SITE, "topics", slugify(cat));
       fs.mkdirSync(dir, { recursive: true });
+      const last = inCat.map((c) => c.date).filter(Boolean).sort().pop() || "";
+      writeOgCard("topic-" + slugify(cat) + ".png", cat, "Topic", last);
       fs.writeFileSync(path.join(dir, "index.html"), renderShell(topicPageSpec(cat, inCat)));
     }
 
@@ -1012,6 +1118,7 @@ function main() {
     fs.writeFileSync(path.join(SITE, "index.html"), renderShell(homePageSpec(cards, covered)));
 
     writeSitemap(cards, covered);
+    writeFeed(cards);
   }
 
   warnings.forEach((w) => console.warn("  warn: " + w));

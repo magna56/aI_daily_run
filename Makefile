@@ -29,7 +29,7 @@ check: ## Lint every session without writing anything (use in review/CI)
 site: build ## Assemble the publishable site/ folder
 	mkdir -p $(OUTPUT_DIR)
 	# index.html is NOT copied — build.js generates it (with the crawlable
-	# <noscript> index baked in), same as sitemap.xml. Copying it here would
+	# <noscript> index baked in), same as sitemap.xml and feed.xml. Copying it
 	# clobber that, since this target runs after `build`.
 	cp 404.html about.html privacy.html terms.html manifest.json robots.txt $(OUTPUT_DIR)/
 	cp favicon.svg favicon-16.png favicon-32.png apple-touch-icon.png icon-192.png icon-512.png og-image.png $(OUTPUT_DIR)/
