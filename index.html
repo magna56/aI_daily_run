@@ -2303,7 +2303,7 @@
       .filter(Boolean).join(" · ");
     strip.innerHTML =
       "<div><p class=\"k\">Frontier · latest</p>" +
-      '<p class="t">' + esc(stripMd(newest.title)) + "</p>" +
+      '<p class="t">' + esc(plain(newest.title)) + "</p>" +
       '<p class="m">' + esc(meta) + "</p></div>" +
       '<span class="go">All Frontier →</span>';
     strip.hidden = false;
@@ -2313,7 +2313,7 @@
     var items = frontierSessions();
     if (!items.length) return '<p class="empty">Nothing here yet.</p>';
     return '<ul class="frontier-list">' + items.map(function (s) {
-      var blurb = stripMd(s.hook || s.insight || "");
+      var blurb = plain(s.hook || s.insight || "");
       var chips = "";
       if (s.code && s.codeLines) chips += '<span class="frontier-chip run">runs · ' + s.codeLines + " lines</span>";
       (s.tags || []).slice(0, 2).forEach(function (t) {
@@ -2321,7 +2321,7 @@
       });
       return "<li><a href=\"#" + esc(s.id) + "\">" +
         '<span class="fd">' + esc(s.date || "") + "</span><div>" +
-        '<p class="ft">' + esc(stripMd(s.title)) + "</p>" +
+        '<p class="ft">' + esc(plain(s.title)) + "</p>" +
         (blurb ? '<p class="fs">' + esc(blurb) + "</p>" : "") +
         (chips ? '<p class="fm">' + chips + "</p>" : "") +
         "</div></a></li>";
