@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Hook Matcher Tester</title>
+<title>How a coding-agent hook decides to fire</title>
 <style>
   :root {
     --bg: #111217; --ink: #e7e2d8; --muted: #9a9488; --dim: #857f70;
@@ -60,8 +60,8 @@
 </head>
 <body>
 <div class="wrap" data-visualizer>
-  <h1>Which layer stops your hook?</h1>
-  <p class="sub">Both filters, implemented as documented. Change either box and watch where the call is caught &mdash; or isn't.</p>
+  <h1>How a hook decides to fire</h1>
+  <p class="sub">Two filters, in order, as documented. Change the tool-name matcher, the command <code>if</code>, or the command itself &mdash; and watch which layer lets the handler run, or skips it with no log.</p>
 
   <div class="presets" id="presets"></div>
 

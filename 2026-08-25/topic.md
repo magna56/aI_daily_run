@@ -1,24 +1,24 @@
-# `Bash(rm *)` Even Catches `echo $(rm -rf /)`. It's Still Not a Gate.
+# How a Coding-Agent Hook Decides to Fire (And Why It Still Isn't a Gate)
 
 **Category**: Coding Agents & Productivity
 **Tags**: coding-agents, security, reliability
 **Date**: 2026-08-25
 **Level**: Building
 **For**: Using tools
-**Hook**: The rules you write to stop your coding agent running dangerous commands are cleverer than most people expect and weaker than most people assume — and the difference decides whether they are a workflow tool or a safety net that isn't there.
+**Hook**: A hook runs only after two text checks say yes — one on the tool name, one on the command — and neither check is the permission system that can actually block the call.
 **Time to read**: ~10 minutes
 
 ## Explain Like I'm 5
 
-Imagine you hire a very fast assistant and pin a note above their desk: "check with me before you throw anything away." The note is good. It catches them when they say "throw this away," and it even catches them when they say "do whatever that other note says" and *that* note says throw something away. Clever. But the note is still just a note. If your assistant phrases the request in a way the note's wording doesn't cover, they don't stop — and nobody rings a bell to tell you the note was skipped. A locked bin is a different thing from a note about the bin. Most people writing rules for AI coding assistants have written a very good note and believe they installed a lock.
+Imagine you hire a very fast assistant and pin a note above their desk: "check with me before you throw anything away." Before the note is even read, two other checks run. First: is this a throwing-away job at all, or a different job? Second: does the request's wording match the note? Those checks are cleverer than they look — they even peek inside "do whatever that other note says." They are still just checks. If the wording is too tangled to read, the assistant does the job anyway, and nobody rings a bell. A locked bin is a different thing from a note about the bin.
 
 ## The Problem
 
-Claude Code lets you attach hooks to your agent — small programs that run before a tool call and can block it. Most people's first hook is a safety rule: stop `rm`, stop `git push --force`, stop writes to production config. The rule looks like `"if": "Bash(rm *)"`, it reads like a firewall rule, and it goes into a settings file next to the permission settings. So it gets treated as a boundary. Then two things happen that nobody expects: it matches commands you never wrote, and it misses commands you did. Version 2.1.243 shipped a fix for exactly the first case — hook `if` conditions "firing on unrelated Bash commands when containing `$()`" — which is a good bug report and a better hint about what these rules actually are.
+A coding-agent hook does not run the moment the model asks for a tool. Two filters decide whether the handler even starts: one on the **tool name** (`matcher`), then one on the **tool input** (`if`). Most people's first hook is a safety rule — stop `rm`, stop `git push --force`, stop writes to production config. The rule looks like `"if": "Bash(rm *)"`, it reads like a firewall rule, and it sits in the same settings file as permissions. So the two-step fire decision gets treated as a boundary. Then two things happen that nobody expects: those filters match commands you never wrote, and they miss commands you did. Version 2.1.243 shipped a fix for exactly the first case — hook `if` conditions "firing on unrelated Bash commands when containing `$()`" — which is a good bug report and a better hint about what the decision actually is.
 
 ## For a Software Engineer
 
-**This is a lexer masquerading as a parser, and you have shipped this bug yourself.** Anyone who has written a regex to validate email addresses, or grepped a log for `ERROR` and caught `ERROR_SUPPRESSED`, has met this exact shape: a pattern language that is good enough to feel authoritative and not structured enough to be one. The matcher does not build a syntax tree of your shell command and reason about it. It does light structural work over text.
+**This is a request pipeline with two cheap classifiers in front of your script.** Tool name first, command text second, handler last. Anyone who has written a regex to validate email addresses, or grepped a log for `ERROR` and caught `ERROR_SUPPRESSED`, has met this exact shape: a pattern language that is good enough to feel authoritative and not structured enough to be a parser. The matcher does not build a syntax tree of your shell command and reason about it. It does light structural work over text.
 
 **The light structural work is better than you'd guess.** `Bash(git *)` matches `FOO=bar git push`, because leading environment assignments are stripped first. It matches `npm test && git push`, because each subcommand of a chain is checked separately. And `Bash(rm *)` matches `echo $(rm -rf /)`, because commands inside `$()` and backticks are checked too. That is real analysis, and it catches the three tricks people actually try.
 
@@ -44,7 +44,7 @@ Claude Code lets you attach hooks to your agent — small programs that run befo
 
 A Claude Code hook is a handler — a shell command, an HTTP endpoint, an MCP tool, a prompt, or a subagent — attached to a lifecycle event. The events that matter here fire per tool call: `PreToolUse`, `PostToolUse`, `PermissionRequest`, `PermissionDenied`. The handler receives a JSON object on stdin carrying `tool_name`, `tool_input`, `session_id`, `cwd` and `permission_mode`, and answers with an exit code, JSON on stdout, or both.
 
-Whether a handler runs at all is decided by **three** filters in sequence, and this is the part worth internalising because each filter has different semantics:
+Whether that handler **fires** is decided by **three** filters in sequence. This is the decision path in the title — and each step has different semantics:
 
 1. **`matcher`** — filters on the *tool name* (or, for non-tool events, the event reason). Exact-match or unanchored regex depending on the characters used.
 2. **`if`** — filters on the *tool input*, written in permission-rule syntax like `Bash(git *)` or `Edit(*.ts)`. Only evaluated on tool events. Best-effort.
@@ -73,7 +73,7 @@ What makes this worth thirty minutes rather than a footnote is that hooks are be
 
 ## Implementing It
 
-**The change.** Two audiences here, and they need opposite things. If you are **writing hooks**, the job is to stop guessing what your matchers match. If you are **relying on hooks for policy**, the job is to move that policy somewhere that enforces it.
+**The change.** A hook fires only after `matcher` (tool name) and `if` (tool input) both pass. Two audiences then need opposite things. If you are **writing hooks**, the job is to stop guessing what those two steps match. If you are **relying on hooks for policy**, the job is to move that policy somewhere that enforces it.
 
 *Hook author — make the matcher mode explicit.* The classification rule is small enough to implement, which means it is small enough to test:
 

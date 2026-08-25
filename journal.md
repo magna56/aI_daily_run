@@ -119,8 +119,8 @@
 - **Code**: `2026-08-24/code_example.py` — measures the literal request bodies from the spec, then prices a 40-call agent session four ways and sweeps the cache lifetime to show where the cost actually lives
 - **Articles**: 6 sources collected
 
-## 2026-08-25 — `Bash(rm *)` Even Catches `echo $(rm -rf /)`. It's Still Not a Gate.
+## 2026-08-25 — How a Coding-Agent Hook Decides to Fire (And Why It Still Isn't a Gate)
 - **Category**: Coding Agents & Productivity
-- **Key insight**: The rules you write to stop a coding agent running dangerous commands do more work than most people expect — they strip environment assignments, split command chains, and look inside command substitutions. They also fail open the moment they cannot parse the shell, and nothing records that a rule was skipped. Anything you would be upset to have bypassed belongs in the permission system, not a hook.
+- **Key insight**: A coding-agent hook runs only after two text checks both say yes: one on the tool name, one on the command. Those checks do more work than they look — they strip environment assignments, split command chains, and look inside nested commands — then fail open if they cannot parse, with nothing logged. The thing that actually blocks a call is the permission list, not the hook.
 - **Code**: `2026-08-25/code_example.py` — implements both matching layers as documented: the character-set mode switch that silently turns a matcher into an unanchored regex, and the Bash walk (assignment stripping, chain splitting, recursive descent into `$()` and backticks). Runs a corpus of matchers and commands and flags every result that contradicts the naive reading — 4 of 8 on the shipped set, all documented behaviour. `find . -delete` deletes files and matches nothing.
 - **Articles**: 5 sources (Claude Code hooks reference + settings/permissions docs + CHANGELOG 2.1.243 + Anthropic Engineering + Cursor 19 Aug release as the cross-tool check)

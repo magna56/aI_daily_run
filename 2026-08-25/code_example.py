@@ -1,8 +1,8 @@
 """
-What your Claude Code hook matchers actually match.
+How a coding-agent hook decides to fire.
 
-Two filters decide whether a hook handler runs, and both are pattern matching
-over text rather than a parser you can trust as a gate:
+Two filters run before your handler starts, both pattern matching over text
+rather than a parser you can trust as a gate:
 
   1. `matcher`  -> filters on the TOOL NAME. Exact-match if the string contains
                    only [A-Za-z0-9_-, |,]; otherwise an UNANCHORED regex. The

@@ -1,4 +1,4 @@
-# Further Reading: `Bash(rm *)` Even Catches `echo $(rm -rf /)`
+# Further Reading: How a Coding-Agent Hook Decides to Fire
 
 ## Articles
 
