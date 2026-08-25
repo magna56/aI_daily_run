@@ -34,11 +34,17 @@ Never write today's article into `learn/`. That tree is the evergreen two-day tr
 Required `##` sections, in this order:
 
 Explain Like I'm 5 → The Problem → For a Software Engineer → What This Means for You
-→ What It Is → Why It Matters → Key Technical Details → How It Connects to What You Know
-→ Try It Yourself → Glossary
+→ What It Is → Why It Matters → Key Technical Details → Implementing It
+→ How It Connects to What You Know → Try It Yourself → Glossary
 
 `What This Means for You` is three labelled parts: **When this matters**, **How it affects you**,
 **What to do about it**. Required on Tier C too.
+
+`Implementing It` is a hard requirement, and it is the one most easily faked. It must contain at
+least one **fenced code block or literal payload in `topic.md` itself** — a link to
+`code_example.py` does not satisfy it — and it must say what each role the change touches has to
+write, not only the role the source announcement addresses. A session whose deepest content is a
+description of what a release says has not met this contract, however long it is.
 
 ## journal.md
 

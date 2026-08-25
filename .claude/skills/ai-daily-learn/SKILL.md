@@ -34,11 +34,26 @@ The same page has to work for three entry points — do not pick one and abandon
 you use it. Then go as deep as the topic deserves. Depth lives in the second half of the
 write-up, not in the title or the first paragraph.
 
+**Depth means implementation detail, not more description.** A longer, better-sourced account
+of what a release says is still a summary. The reader is depth-satisfied when they could go
+write the thing: the actual payload, the handler, the config key, the retry, the cache. If a
+session's deepest section could be retitled "what the announcement announced", it is not deep,
+however many numbers it quotes.
+
 **CRITICAL: Keep everything practical and software-engineering relevant.** Every topic must
 connect to something a working engineer can build, deploy, optimize, or integrate. No pure
 theory without application. Code examples should demonstrate real patterns, not toy demos.
 Topics like "how to use X in production" or "implementing Y from scratch" beat "understanding
 the math behind Z".
+
+**Write for the engineer who has to implement it, never for the ecosystem that shipped it.**
+This is not a newsletter about how important a release is. Momentum reporting — "the largest
+revision since launch", "adoption was unusually fast", "the SDKs shipped within days", a vendor
+advocate quoted approving of it — is advertising copy wearing technical vocabulary, and it is
+the fastest way to read as a press release to an audience that is professionally suspicious of
+one. Every such sentence is a sentence not spent on what the reader has to type. Mention
+adoption only where it decides something ("the Rust SDK is still beta, so a Rust client stays
+on the legacy path"), and then say what it decides.
 
 ## Session Parameters
 
@@ -64,6 +79,11 @@ the math behind Z".
 - **Excalidraw**: Open at excalidraw.com (drag & drop)
 - **Cursor twin**: `.cursor/skills/ai-daily-learn/SKILL.md` runs this same spec from Cursor.
   Edit this file (and visualize.md / contract.md) when the format changes.
+- **Feedback loop**: this spec is meant to change. When a session comes back with a note — a
+  section that dragged, a title that oversold, a diagram that explained nothing —
+  `/ai-daily-learn-feedback` decides whether it is a standing rule and edits the right file here,
+  so the same note is never given twice. Do not hand-patch these rules ad hoc; route notes through
+  that skill so every change lands in the section that owns it and gets logged.
 - **Scope**: local only. This skill writes to disk and stops — it does not commit, push, or
   publish anything. To publish as well, use `/ai-daily-learn-publish`, which runs this exact
   workflow and then pushes the session to GitHub.
@@ -261,6 +281,10 @@ do about it — see the rules below. REQUIRED on every session, including Tier C
 ## Key Technical Details
 [Open with a short **Background first** paragraph, then the bullets — see the rules below.]
 
+## Implementing It
+[The code the reader has to write, in fenced blocks, for every role the change touches —
+see the rules below. REQUIRED on every session.]
+
 ## How It Connects to What You Know
 [Connect to something they already ship — caches, CI, code review, HTTP — then to earlier
 sessions. If this daily piece assumes a chapter (tokens, the agent loop, RAG, the harness),
@@ -388,9 +412,24 @@ Rules:
 - **Required on every session, including Tier C.** A frontier paper still owes the reader this.
   If the honest answer is "this won't affect your work for a year", *say that* — a truthful
   "not yet, and here's what would change that" is far better than an invented use case.
+- **At least one item must be a change, not an audit.** "Go check whether your client honours
+  the TTL" only tells the reader to open a file; it does not tell them what to write once they
+  are in it. An audit is a fine *first* step, but every audit item owes its second half — "and
+  if the answer is bad, here is the fix" — pointing at `## Implementing It` rather than
+  restating it.
 - **Never invent applicability.** Overstating relevance is worse than admitting there is little;
   this section is the site's credibility, not its marketing.
 - Write it in second person, plainly. This is the least academic section in the document.
+
+**`## Why It Matters`** — significance in engineering terms, never in industry terms.
+- Compare to prior work by what it *costs or enables* — bytes, latency, money, a class of bug
+  that stops happening — not by how it was received.
+- **No momentum reporting.** How fast the ecosystem adopted it, how large the release is next to
+  past releases, and who publicly praised it are facts about a market, not about a system. A
+  named person's quote earns its place only when it carries a technical claim the reader can go
+  check; never as an endorsement.
+- Criticism belongs here at full strength. If there is a real objection ("has this just
+  rediscovered REST?"), state the strongest version of it and answer it with a mechanism.
 
 **`## Key Technical Details`** — keep the depth, but stop dropping the reader into it cold. This
 section is where the write-up historically loses people: it opens on config constants and
@@ -409,6 +448,39 @@ specialist names the reader has never met.
   spot — "NaViT's patch-n-pack (packing many images into one sequence)" — even though it also
   appears in the glossary. Do not make them scroll to follow a sentence.
 - Depth is not the problem and must not be reduced. The entry to it is the problem.
+
+**`## Implementing It`** — the section that makes this site worth reading instead of the
+changelog it came from. Every section above explains the change; this one shows the code that
+lives with it. Required on every session.
+
+- **Put real code or a real payload in a fenced block, in `topic.md` itself.** Pointing at
+  `code_example.py` does not discharge this — most readers never open the Code tab, and nobody
+  reading on a phone is going to run Python. The block belongs next to the sentence that
+  motivates it.
+- **Prefer a before/after pair** whenever something changed: the request as you sent it last
+  month and as you must send it now; the handler as it was and as it must be. A diff is the
+  fastest way an engineer confirms they understood.
+- **Cover every role the change touches, not only the one the announcement was written for.**
+  Almost every change moves work between two parties — client and server, producer and consumer,
+  caller and callee, training and serving — and a release note is written by one of them, about
+  their own half. Name both sides and give each its own code:
+  - ✗ "servers no longer need a session store, and clients should honour the cache header"
+    → ✓ **Server:** the handler that returns `405` on `GET` and rejects a header/body mismatch
+    with `-32020`. **Client:** the TTL cache keyed on `cacheScope`, the `InputRequiredResult`
+    retry loop, the version probe and its fallback.
+  - If one side genuinely has nothing to do, say so in a sentence. Silence reads as an omission,
+    because it usually is one.
+- **Name the file and the function, not the intention.** "Add a check" is not implementable;
+  "in your client's `list_tools()`, key the cache on `(server_url, cacheScope)` and store
+  `fetched_at + ttlMs`" is.
+- **Say what breaks if they get it wrong**, with the signature they would actually see — the
+  error string, the log line, the metric that moves. A rule with a visible failure mode gets
+  followed; one without gets skipped.
+- Use the real API, field and config names throughout. Never write pseudocode for something that
+  has an actual name in the source.
+- 3-6 short blocks and at least one fenced code block. If the honest answer is that nothing is
+  implementable yet (a paper with no released code), implement the *mechanism* from the paper in
+  a dozen lines instead — that is what "implementing Y from scratch" means here.
 
 **`## Glossary`** — closes the document as reference, in the order terms first appear.
 - Cover **every** acronym and domain term used anywhere above — no exceptions, including ones
@@ -430,6 +502,12 @@ Write `~/ai_learning/YYYY-MM-DD/code_example.py` — a **runnable** pure Python 
 - Include print output so results are visible immediately
 - For hardware/business topics: write analysis, visualization, or comparison code
 - For algorithm topics: implement a minimal working version from scratch
+- **Implement the mechanism; do not only price it.** For a protocol, API, config or algorithm
+  change, the script must contain a working version of the thing — the client that builds and
+  validates the request, the cache that honours the TTL, the retry loop, the scheduler — in a
+  shape the reader can lift into their own code. Byte counts and cost curves are a *result* the
+  implementation prints, never the whole script. A script that only measures a change tells the
+  reader what to expect; one that implements it tells them what to write.
 - **Library dependencies**: if the script needs numpy, matplotlib, or other packages, add a **`# REQUIRES: numpy==1.24.3, matplotlib==3.7.1`** line in the first few comments (exact versions, comma-separated). The reader uses this to auto-install libraries when running the code in the browser. Prefer stdlib whenever possible; use external packages only when essential.
 
 ### Step 7: Generate diagram.excalidraw
@@ -609,8 +687,18 @@ node build.js --check
 
 Fix every warning that names today's id — missing `visualize.html`, missing viewport /
 `data-visualizer` / `adl-visualize-height`, external `fetch`/`<script src>`, invalid JS,
-unknown Category / Level / For / tag, no Hook, unrenderable diagram. Do not present the
+unknown Category / Level / For / tag, no Hook, unrenderable diagram, **no
+`## Implementing It` section**, **no fenced code block in `topic.md`**. Do not present the
 summary until today's id is clean.
+
+Two content rules no linter can check, so check them by eye before you stop:
+
+- `## Implementing It` gives code for **every role the change touches** — client *and* server,
+  producer *and* consumer — not only the role the source announcement was written for. A section
+  that is all server and one sentence of "clients should check X" has failed this.
+- `## Why It Matters` carries no momentum reporting: no "largest release since", no "adoption was
+  unusually fast", no advocate quoted approving of it. Those are the two ways a session reads as
+  a press release rather than as something an engineer can use.
 
 ### Step 12: Present the Summary
 

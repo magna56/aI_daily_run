@@ -1,0 +1,73 @@
+# Feedback Log
+
+> Every note that changed (or deliberately did not change) the AI Daily Learn spec.
+> Appended by the `ai-daily-learn-feedback` skill, newest at the bottom.
+>
+> This exists because spec edits compound. Without a record, a later note can quietly
+> reverse an earlier one and leave the spec contradicting itself, with nobody able to
+> say which rule was intended to win.
+
+---
+
+## 2026-08-24 — 2026-08-24 (MCP Deleted Its Handshake)
+
+- **Note**: "it lack depth and also lacked what a client needs to do; we want our articles to be
+  implementation heavy, this seems very advertisement type — how can you improve it so the
+  engineers can actually use it"
+- **Verdict**: standing rule (all four points)
+- **Changed**: `SKILL.md` — "Depth means implementation detail, not more description": a longer
+  account of what a release *says* is still a summary, however many numbers it quotes.
+- **Changed**: `SKILL.md` — new required `## Implementing It` section between Key Technical
+  Details and How It Connects: real code or a literal payload in fenced blocks *in topic.md
+  itself*, before/after pairs, and separate code for **every role the change touches** — not
+  only the role the source announcement was written for. This is the rule that answers "lacked
+  what a client needs to do".
+- **Changed**: `SKILL.md` — new `## Why It Matters` rules block banning momentum reporting
+  ("largest revision since launch", "adoption was unusually fast", a vendor advocate quoted
+  approving of it). That prose is what read as advertisement. Named quotes now have to carry a
+  checkable technical claim.
+- **Changed**: `SKILL.md` — top-of-file rule: write for the engineer who has to implement it,
+  never for the ecosystem that shipped it; report adoption only where it decides something.
+- **Changed**: `SKILL.md` — `What to do about it` must contain at least one *change*, not only
+  an audit. "Go check whether your client honours the TTL" now owes its "and here is the fix"
+  half, pointing at `Implementing It`.
+- **Changed**: `SKILL.md` Step 6 — `code_example.py` must **implement** the mechanism, not only
+  price it. Byte counts and cost curves are a result the implementation prints, never the whole
+  script. (Today's example was a pure cost model — it measured the change without ever showing
+  a compliant client.)
+- **Changed**: `contract.md` — `Implementing It` added to the required section order and written
+  up as a hard requirement: at least one fenced code block in `topic.md`, both roles covered, a
+  link to `code_example.py` does not satisfy it.
+- **Changed**: `selection.md` — new **Implementable** gate in the shortlist scoring (can you
+  name the code that changes, for every role?) and a new hard reject for topics whose honest
+  write-up would be a description of an announcement.
+- **Changed**: `build.js` — `--check` now warns when a daily session dated on/after
+  `IMPLEMENT_SECTION_SINCE` (2026-08-25) has no `## Implementing It` heading, or has the heading
+  but no fenced code block anywhere in `topic.md`. Date-gated on purpose: the back catalog
+  predates the rule, and warning on forty old folders trains everyone to ignore the warnings.
+- **Not changed**: the published 2026-08-24 article. Offered, not done — the back catalog is a
+  dated log and the standing preference is to leave old sessions alone. The spec change is what
+  the note was for.
+
+### Follow-up, same note — the publish path
+
+Asked to bring `/ai-daily-learn-publish` into accordance. It already delegates the whole session
+workflow to `/ai-daily-learn` and deliberately restates none of it, so the new content rules
+reached it for free — the real gap was that nothing *gated* the live push.
+
+- **Changed**: `ai-daily-learn-publish/SKILL.md` — new **Step A½: Gate the session before it goes
+  live**, between generation and publish. Re-runs `node build.js --check` and blocks on any
+  content-contract warning naming today's id (`Implementing It`, fenced code block, anything
+  about `visualize.html`). Other warnings stay advisory — a `code_example.py` that exits non-zero
+  is a rendered traceback by design. Also names the two rules no linter can see: both roles
+  covered, no momentum reporting.
+- **Changed**: `ai-daily-learn-publish/scripts/publish.sh` — the same gate as a deterministic
+  `content_gate()` that runs before staging and exits 1 with the offending warnings. The prose
+  gate only binds a model that reads it; the 11:00 LaunchAgent runs unattended with nobody
+  reading the log, which is exactly where a non-compliant article would ship unnoticed.
+  `ADL_SKIP_GATE=1` is the deliberate override.
+- **Changed**: `ai-daily-learn/SKILL.md` Step 11 — the two new warnings added to the fix-before-
+  you-stop list, plus the by-eye pair. Step 11 was the checklist the workflow already ran, so the
+  rule lands where it will actually be read rather than only in the section that defines it.
+- **Not changed**: the Cursor twins. Both are thin runners that link to the canonical files and
+  copy no section list, so they inherit all of this.

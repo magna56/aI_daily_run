@@ -57,6 +57,35 @@ if ! git remote get-url origin >/dev/null 2>&1; then
   git remote add origin "$REMOTE_URL" || die "could not add origin"
 fi
 
+# --- Content gate -------------------------------------------------------------
+# The unattended 11:00 run has nobody reading its log, so a session that missed a
+# content rule would reach the live site and the newsletter unnoticed. `--check`
+# writes nothing, and only the contract-breaking warnings block: a code_example.py
+# that exits non-zero is a rendered traceback by design, not a broken build.
+# Sessions predating the contract are exempt inside build.js itself (date-gated),
+# so republishing the back catalog never trips this.
+content_gate() {
+  [ "${ADL_SKIP_GATE:-0}" = "1" ] && { say "content gate skipped (ADL_SKIP_GATE=1)"; return 0; }
+  [ -d "$SESSION" ] || return 0
+  [ -f build.js ] || return 0
+  command -v node >/dev/null 2>&1 || { say "WARN: node not found — content gate skipped"; return 0; }
+
+  local blocking
+  blocking=$(node build.js --check 2>&1 \
+    | grep -F "$SESSION:" \
+    | grep -E 'Implementing It|fenced code block|visualize\.html|no topic\.md' || true)
+
+  if [ -n "$blocking" ]; then
+    printf '[publish] ERROR: content gate — %s does not meet contract.md:\n' "$SESSION" >&2
+    printf '%s\n' "$blocking" | sed 's/^/[publish]   /' >&2
+    printf '[publish] Fix the session, then re-run. See .claude/skills/ai-daily-learn/contract.md\n' >&2
+    exit 1
+  fi
+  say "content gate passed for $SESSION"
+}
+
+content_gate
+
 # --- Stage the session --------------------------------------------------------
 # Staging and committing happen BEFORE the rebase: `git rebase` refuses to run
 # against a dirty working tree, so syncing first would fail on every real run.

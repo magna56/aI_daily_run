@@ -34,6 +34,7 @@ Write down three candidates (title, URL, category, one-line claim). Score each 0
 | --- | --- |
 | **Monday action** | Reader 1 can change a setting, measure a number, or stop a bad habit after the first third |
 | **Mechanism** | Reader 2 learns *why*, not just a product announcement |
+| **Implementable** | You can already name the code that changes — the payload, the handler, the config key — for *every* role the change touches, not only the one the announcement is addressed to |
 | **Fits 30 min** | One claim, not a survey |
 | **Primary source** | A changelog, doc, eng blog, or paper you can fetch — not a recap of a recap |
 | **Not a repeat** | Journal does not already have this claim |
@@ -49,6 +50,8 @@ compare — you grabbed the first interesting link.
 - Method-name title you cannot rewrite as a surprise, a cost, or a question the reader has asked
 - No honest "What to do about it" that is not "wait a year"
 - Invented applicability (overstating relevance is worse than skipping)
+- Nothing to implement: the honest write-up would be a description of an announcement, with no
+  code the reader could write on either side of it
 - Second paper-led session inside the last 7
 - A Learn-track slug (`tokens`, `the agent loop`, `RAG` as a recap) dressed up as news
 

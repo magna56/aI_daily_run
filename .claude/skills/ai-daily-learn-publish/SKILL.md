@@ -38,10 +38,37 @@ If the Skill tool is unavailable, read this checkout first:
 
 Fall back to `~/.claude/plugins/tp-mcp-config/skills/ai-daily-learn/SKILL.md` or
 `~/tp_claude/plugins/tp-mcp-config/skills/ai-daily-learn/SKILL.md` only if those
-are missing. Do not publish a session that lacks `visualize.html`.
+are missing.
 
 Note the exact session directory name it produced — `YYYY-MM-DD`, or `YYYY-MM-DD-s2` for a second
-session on the same day. Step B needs it.
+session on the same day. Steps A½ and B need it.
+
+## Step A½: Gate the session before it goes live
+
+Publishing is the irreversible half of this skill, and the 11:00 job runs it unattended with
+nobody reading the output — so a session that quietly missed a content rule reaches the live site
+and the newsletter before anyone sees it. Re-run the lint here rather than trusting that Step A
+finished clean:
+
+```bash
+cd ~/ai_learning && node build.js --check 2>&1 | grep "YYYY-MM-DD"
+```
+
+**A content-contract warning naming today's id blocks the publish.** Fix the session and re-run;
+never fix it by loosening the spec. The blocking ones:
+
+- `no "## Implementing It" section` — the write-up never shows the code the reader has to write.
+- `no fenced code block` — the section exists but defers to `code_example.py`, which most readers
+  never open and nobody reading on a phone will run.
+- anything about `visualize.html` — a session without a working visualizer has no Visualize tab.
+
+Other warnings are advisory and do not block: a `code_example.py` that exits non-zero is a
+*rendered traceback* by design, not a broken build.
+
+Then confirm by eye the two things no linter can see (`ai-daily-learn` Step 11 has the same pair):
+`## Implementing It` gives code for **every role the change touches**, and `## Why It Matters`
+carries no momentum reporting. `publish.sh` enforces the machine-checkable half of this gate
+itself, so the unattended run is protected even when nobody reads its log.
 
 ## Step B: Publish (push to GitHub, deploy to both hosts)
 
@@ -113,7 +140,9 @@ say so and give the retry command rather than the link.
 
 If the user asks to publish a session that already exists — "publish yesterday's", "push the
 2026-08-18 session" — **skip Step A entirely** and run Step B against that directory. Do not
-regenerate a session that is already on disk.
+regenerate a session that is already on disk. Step A½ still applies and `publish.sh` still runs
+its own gate, but sessions predating the content contract are exempt by date in `build.js`, so
+republishing the back catalog never trips it.
 
 ## Error Handling
 
@@ -121,6 +150,10 @@ regenerate a session that is already on disk.
   re-run `bash "$PUB" YYYY-MM-DD` later. **Never** force-push, and never open a PR instead.
 - Rebase conflict in `~/ai_learning` → the script aborts the rebase and stops; resolve by hand.
 - Session generation failed in Step A → do not publish a partial session. Report the failure.
+- `publish.sh` aborted with `content gate` → the session does not meet `contract.md`. Fix the
+  session (usually: write the `## Implementing It` section, with real code in `topic.md`) and
+  re-run. `ADL_SKIP_GATE=1` exists for a deliberate override and should stay unused by the
+  scheduled job — publishing past this gate is how the site drifts back into announcement recaps.
 - Everything else → see `ai-daily-learn`'s own Error Handling section.
 
 ## Scheduling
