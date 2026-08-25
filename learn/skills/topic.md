@@ -1,4 +1,4 @@
-# What a skill is
+# How Skills Work
 
 **Category**: Building Agents & MCP
 **Tags**: coding-agents, agents
@@ -60,7 +60,7 @@ Once "skill" means "lazy-loaded markdown," you stop scheduling a fine-tune for a
 
 pytest plugins: the core publishes verbs, packages register nouns. A skill is the instruction-pack version of that. MCP (lesson 8) is the same idea across a process boundary.
 
-Previous: [Coding agents 101](#learn/coding-agents-101). Next: [How retrieval works](#learn/retrieval).
+Previous: [How Coding Agents Work](#learn/coding-agents-101). Next: [How Retrieval Works](#learn/retrieval).
 
 The daily lab on [2026-07-13](#2026-07-13) is the in-process plugin case study (`llm` + pluggy).
 

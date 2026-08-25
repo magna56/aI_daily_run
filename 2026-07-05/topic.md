@@ -1,4 +1,4 @@
-# Building Coding Agents from Scratch — and the Tool Schema Trap
+# How Coding Agents Call Tools — and Why the Schema Leaks
 
 **Category**: Building Agents & MCP
 **Date**: 2026-07-05

@@ -1,4 +1,4 @@
-# Further Reading: ContextSniper & Token-Efficient Code Memory
+# Further Reading: How Coding Agents Retrieve Code Without Loading the Whole Repo
 
 ## Papers
 

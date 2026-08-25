@@ -1,4 +1,4 @@
-# The `llm` CLI & Its Plugin Architecture: pluggy Hooks as an Extensibility Pattern
+# How the llm CLI Loads Plugins
 
 **Category**: Building Agents & MCP
 **Date**: 2026-07-13

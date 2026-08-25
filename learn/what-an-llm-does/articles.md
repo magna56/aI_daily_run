@@ -1,4 +1,4 @@
-# Further Reading: The Model Only Ever Picks the Next Token
+# Further Reading: How an LLM Predicts the Next Token
 
 ## Primary Sources
 

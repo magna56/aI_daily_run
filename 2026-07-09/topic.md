@@ -1,4 +1,4 @@
-# Deterministic Verification Gates for Tool-Using LLM Agents
+# How to Gate an Agent Tool Call With a Check It Can't Talk Past
 
 **Category**: Evals & Reliability
 **Date**: 2026-07-09

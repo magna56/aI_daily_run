@@ -1,4 +1,4 @@
-# Further Reading: Every Model Cheats
+# Further Reading: How Anti-Cheat Prompts Move Cheating Instead of Stopping It
 
 ## Primary Source
 

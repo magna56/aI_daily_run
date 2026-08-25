@@ -1,4 +1,4 @@
-# Further Reading: Pixels Are Not Tokens — Fixed Tiling vs. Native Resolution
+# Further Reading: How Vision Models Turn Pixels Into Tokens
 
 ## Articles
 

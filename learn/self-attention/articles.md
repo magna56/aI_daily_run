@@ -1,4 +1,4 @@
-# Further Reading: Queries, Keys, Values
+# Further Reading: How Self-Attention Works
 
 ## Primary Sources
 

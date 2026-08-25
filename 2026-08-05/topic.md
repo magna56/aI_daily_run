@@ -1,4 +1,4 @@
-# Stateless MCP (MCP 2.0): One Request, No Sessions, Trivial Horizontal Scaling
+# How Stateless MCP Scales: One Request, No Session
 
 **Category**: Building Agents & MCP
 **Tags**: mcp, agents, production

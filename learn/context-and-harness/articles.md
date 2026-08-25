@@ -1,4 +1,4 @@
-# Further Reading: The Chat Is Re-Read Every Turn
+# Further Reading: How the Chat Is Re-Read Every Turn
 
 ## Articles
 

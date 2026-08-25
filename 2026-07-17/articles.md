@@ -1,4 +1,4 @@
-# Further Reading: Friction as a Feature — Blast-Radius Gates for Agent-Driven Architecture Changes
+# Further Reading: How to Gate Agent Architecture Changes by Blast Radius
 
 ## Articles
 

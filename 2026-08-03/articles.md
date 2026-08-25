@@ -1,4 +1,4 @@
-# Further Reading: Model Cascades in the Price-Collapse Era
+# Further Reading: How Model Cascades Route Cheap Calls vs Frontier Calls
 
 ## Articles
 

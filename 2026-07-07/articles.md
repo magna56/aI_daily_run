@@ -1,4 +1,4 @@
-# Further Reading: Listwise RAG Context Pruning
+# Further Reading: How Listwise Pruning Shrinks RAG Context
 
 ## Articles
 

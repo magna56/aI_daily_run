@@ -1,4 +1,4 @@
-# Embeddings
+# How Embeddings Work
 
 **Category**: Hands-on Techniques
 **Tags**: embeddings, rag
@@ -59,7 +59,7 @@ Cost hides here: embedding a corpus is a batch job; embedding every query is a l
 
 A hash table is exact match. An embedding index is nearest-neighbor search — the same family as "find similar images" and "users also bought." You already distrust a fuzzy search that you never fixture-tested. This is that, with more dimensions.
 
-Next: [Build an LLM](#learn/build-an-llm) — what happens after the neighbors land in the prompt.
+Next: [How to Build a Tiny LLM](#learn/build-an-llm) — what happens after the neighbors land in the prompt.
 
 ## Try It Yourself
 

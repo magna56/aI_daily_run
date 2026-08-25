@@ -1,4 +1,4 @@
-# Agents in Prod
+# How to Run Agents in Production
 
 **Category**: AI in Production
 **Tags**: agents, production, cost

@@ -1,4 +1,4 @@
-# Further Reading: The `llm` CLI & Plugin Architecture
+# Further Reading: How the llm CLI Loads Plugins
 
 ## Primary Sources
 

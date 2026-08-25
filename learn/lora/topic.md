@@ -1,4 +1,4 @@
-# LoRA
+# How LoRA Works
 
 **Category**: Hands-on Techniques
 **Tags**: fine-tuning, training, cost
@@ -59,7 +59,7 @@ It is also why a LoRA is not a new brain. It can steer tone, format, and a narro
 
 A Git patch is a small delta on a frozen tree. LoRA is a patch on a matrix. A plugin that does not fork the host app is the product version of the same idea. You already accept that a 200-line adapter can change a 2-million-line product. This is that, for weights.
 
-Next: [Self-Attention](#learn/self-attention) — the layer LoRA most often sits on.
+Next: [How Self-Attention Works](#learn/self-attention) — the layer LoRA most often sits on.
 
 ## Try It Yourself
 

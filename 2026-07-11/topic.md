@@ -1,4 +1,4 @@
-# LUMI: Tokenizer-Agnostic LLM-Based Lossless Image Compression
+# How an LLM Compresses Images Without Its Tokenizer
 
 **Category**: Multimodal Engineering
 **Date**: 2026-07-11

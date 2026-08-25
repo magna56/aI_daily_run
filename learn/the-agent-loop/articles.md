@@ -1,4 +1,4 @@
-# Further Reading: Observe / Think / Act
+# Further Reading: How the Agent Loop Works
 
 ## Articles
 

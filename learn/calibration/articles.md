@@ -1,4 +1,4 @@
-# Further Reading: When 80% Should Mean 80%
+# Further Reading: How Model Calibration Works
 
 ## Primary Sources
 

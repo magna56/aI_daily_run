@@ -1,4 +1,4 @@
-# Further Reading: Deterministic Verification Gates for Tool-Using Agents
+# Further Reading: How to Gate an Agent Tool Call With a Check It Can't Talk Past
 
 ## Papers
 

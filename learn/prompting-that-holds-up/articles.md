@@ -1,4 +1,4 @@
-# Further Reading: Specs and Examples Beat Vague Prompts
+# Further Reading: How to Write Prompts That Hold Up
 
 ## Primary Sources
 

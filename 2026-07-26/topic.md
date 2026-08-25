@@ -1,4 +1,4 @@
-# How Many Bits Can an Adapter Write? — The Real Capacity of LoRA
+# How Many Bits a LoRA Adapter Can Write
 
 **Category**: Hands-on Techniques
 **Date**: 2026-07-26

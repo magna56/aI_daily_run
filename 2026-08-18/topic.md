@@ -1,4 +1,4 @@
-# Prefill-Pressure Adaptive Scheduling: Why `max_num_batched_tokens` Has No Right Value
+# How vLLM Chooses a Prefill Token Budget
 
 **Category**: AI in Production
 **Tags**: inference-serving, latency, production

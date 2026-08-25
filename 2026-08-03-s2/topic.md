@@ -1,4 +1,4 @@
-# A Language Model on a 6502: BitNet Ternary Weights as Hardware-Aware Design
+# How to Run a Language Model With Zero Multiplies
 
 **Category**: AI Hardware for Engineers
 **Tags**: quantization, from-scratch, transformers

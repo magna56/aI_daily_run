@@ -1,4 +1,4 @@
-# Further Reading: Debate Training Reduces Reward Hacking in RLAIF
+# Further Reading: How Debate Training Stops Reward Hacking of an LLM Judge
 
 ## Papers
 

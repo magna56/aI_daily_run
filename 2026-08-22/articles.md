@@ -1,4 +1,4 @@
-# Further Reading: Context Is a Budget You Re-Pay Every Turn
+# Further Reading: How Agent Context Gets Re-Read Every Turn
 
 ## Articles
 

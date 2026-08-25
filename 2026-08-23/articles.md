@@ -1,4 +1,4 @@
-# Further Reading: AutoRAG: Treating a RAG Pipeline Like a Hyperparameter Search, Not a Guess
+# Further Reading: How to Grid-Search RAG Chunk Size
 
 ## Articles
 

@@ -1,4 +1,4 @@
-# Further Reading: The Loop Is Not the Product
+# Further Reading: How to Run Agents in Production
 
 ## Primary Sources
 
@@ -20,7 +20,7 @@
 **Source**: modelcontextprotocol.io | **Read time**: ~15 min
 > Tools as a typed interface. Still needs allowlists, timeouts, and tenant isolation.
 
-### 5. [The agent loop](https://theaicommit.com/#learn/the-agent-loop)
+### 5. [How the Agent Loop Works](https://theaicommit.com/#learn/the-agent-loop)
 **Source**: theaicommit.com | **Read time**: ~10 min
 > Day-2 lesson: the loop itself. This primer is the cache, the bill, and the latch.
 

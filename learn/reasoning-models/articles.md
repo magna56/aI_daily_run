@@ -1,4 +1,4 @@
-# Further Reading: Thinking Longer Is a Product Choice
+# Further Reading: How Reasoning Models Work
 
 ## Primary Sources
 

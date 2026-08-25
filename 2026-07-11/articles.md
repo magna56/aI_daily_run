@@ -1,4 +1,4 @@
-# Further Reading: LUMI & the Prediction–Compression Duality
+# Further Reading: How an LLM Compresses Images Without Its Tokenizer
 
 ## Papers
 

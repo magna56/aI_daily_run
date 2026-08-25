@@ -1,4 +1,4 @@
-# The Bun-in-Rust Rewrite: Engineering Practices for Trusting 1M+ Lines of Agent-Generated Code
+# How to Trust a Million Lines of Agent-Written Code
 
 **Category**: AI Engineering Practices
 **Date**: 2026-07-15

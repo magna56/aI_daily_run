@@ -1,4 +1,4 @@
-# ContextSniper: Token-Efficient Code Memory for Repo-Level AI Agents
+# How Coding Agents Retrieve Code Without Loading the Whole Repo
 
 **Category**: New Models & APIs
 **Date**: 2026-07-04

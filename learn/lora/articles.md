@@ -1,4 +1,4 @@
-# Further Reading: Freeze W, Train BA
+# Further Reading: How LoRA Works
 
 ## Primary Sources
 

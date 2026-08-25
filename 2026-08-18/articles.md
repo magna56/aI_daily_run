@@ -1,4 +1,4 @@
-# Further Reading: Prefill-Pressure Adaptive Scheduling
+# Further Reading: How vLLM Chooses a Prefill Token Budget
 
 ## Papers
 

@@ -1,4 +1,4 @@
-# Nobody Re-Tests Their RAG Chunk Size — One Grid Search Cut It 88%
+# How to Grid-Search RAG Chunk Size
 
 **Category**: Hands-on Techniques
 **Tags**: rag, benchmarks, cost

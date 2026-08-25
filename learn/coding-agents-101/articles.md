@@ -1,4 +1,4 @@
-# Further Reading: The Chat Box Isn't the Agent — The Repo Is
+# Further Reading: How Coding Agents Work
 
 ## Primary Sources
 

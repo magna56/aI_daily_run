@@ -1,4 +1,4 @@
-# Further Reading: A Skill Is a Reusable Instruction Pack
+# Further Reading: How Skills Work
 
 ## Articles
 

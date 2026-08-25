@@ -1,4 +1,4 @@
-# How retrieval works
+# How Retrieval Works
 
 **Category**: Hands-on Techniques
 **Tags**: rag, embeddings
@@ -60,7 +60,7 @@ Most RAG failures are retrieval failures labeled as model failures. Chunk size s
 
 This is search, then a template. Lucene + a mail merge. The vector index is another posting list.
 
-Previous: [What a skill is](#learn/skills). Next: [Context and the harness](#learn/context-and-harness).
+Previous: [How Skills Work](#learn/skills). Next: [How the Chat Is Re-Read Every Turn](#learn/context-and-harness).
 
 Lab: [Nobody re-tests their RAG chunk size](#2026-08-23).
 

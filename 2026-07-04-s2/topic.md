@@ -1,4 +1,4 @@
-# NVFP4 Quantization: 4-Bit Floating Point for LLM Inference on Blackwell
+# How 4-Bit Floating Point Speeds Up LLM Inference
 
 **Category**: AI Hardware for Engineers
 **Date**: 2026-07-04 (session 2)

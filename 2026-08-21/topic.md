@@ -1,4 +1,4 @@
-# Pixels Are Not Tokens: Fixed Tiling vs. Native Resolution in VLM Input Pipelines
+# How Vision Models Turn Pixels Into Tokens
 
 **Category**: Multimodal Engineering
 **Tags**: multimodal, cost, inference-serving

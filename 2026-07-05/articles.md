@@ -1,4 +1,4 @@
-# Further Reading: Building Coding Agents & The Tool Schema Trap
+# Further Reading: How Coding Agents Call Tools — and Why the Schema Leaks
 
 ## Articles
 

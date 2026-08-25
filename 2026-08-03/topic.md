@@ -1,4 +1,4 @@
-# Model Cascades in the Price-Collapse Era: Routing Between Flash and Frontier Tiers
+# How Model Cascades Route Cheap Calls vs Frontier Calls
 
 **Category**: New Models & APIs
 **Tags**: cost, latency, production

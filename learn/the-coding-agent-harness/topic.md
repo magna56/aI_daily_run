@@ -1,4 +1,4 @@
-# How a coding agent is built
+# How a Coding-Agent Harness Is Built
 
 **Category**: Building Agents & MCP
 **Tags**: coding-agents, agents, mcp
@@ -70,7 +70,7 @@ Once you see the harness, changelogs stop looking random: background review, sub
 
 A job queue, a worker pool, and a permissions service. The model is not the orchestrator. The harness is.
 
-Previous: [How the forward pass runs](#learn/how-the-forward-pass-runs). That is the last lesson. The daily lab on the homepage is the ongoing case studies.
+Previous: [How the Forward Pass Runs](#learn/how-the-forward-pass-runs). That is the last lesson. The daily lab on the homepage is the ongoing case studies.
 
 Labs that assume this map: [2026-08-22](#2026-08-22) (budget), [2026-07-05](#2026-07-05) (schema).
 

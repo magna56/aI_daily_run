@@ -1,4 +1,4 @@
-# Context Is a Budget You Re-Pay Every Turn
+# How Agent Context Gets Re-Read Every Turn
 
 **Category**: Coding Agents & Productivity
 **Tags**: coding-agents, cost, caching, context-engineering

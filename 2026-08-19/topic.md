@@ -1,4 +1,4 @@
-# Debate Training Reduces Reward Hacking in RLAIF
+# How Debate Training Stops Reward Hacking of an LLM Judge
 
 **Category**: Applied Research
 **Tags**: training, reliability, paper

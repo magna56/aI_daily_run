@@ -1,4 +1,4 @@
-# Further Reading: Truncated Jump Sampling & Diffusion Acceleration
+# Further Reading: How Diffusion Samplers Skip Steps Without Retraining
 
 ## Primary Paper
 

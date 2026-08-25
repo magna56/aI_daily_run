@@ -1,4 +1,4 @@
-# MCP Deleted Its Handshake. Your Server Got Simpler; Your Client Didn't.
+# How MCP Dropped the Handshake: Server vs Client
 
 **Category**: Building Agents & MCP
 **Tags**: mcp, caching, production, latency

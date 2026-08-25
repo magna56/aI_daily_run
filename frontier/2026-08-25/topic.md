@@ -1,4 +1,4 @@
-# Don't Skip the Boring Tokens — Read Them in 8 Bits
+# How to Read Skipped Tokens in 8 Bits
 
 **Category**: AI Hardware for Engineers
 **Tags**: quantization, inference-serving, paper, latency

@@ -1,4 +1,4 @@
-# Further Reading: The Stack Has Five Verbs
+# Further Reading: How to Build a Tiny LLM
 
 ## Primary Sources
 
@@ -20,7 +20,7 @@
 **Source**: jalammar.github.io | **Read time**: ~20 min
 > Pictures of the five verbs. Use after you have run this folder's toy trainer.
 
-### 5. [What an LLM does](https://theaicommit.com/#learn/what-an-llm-does)
+### 5. [How an LLM Predicts the Next Token](https://theaicommit.com/#learn/what-an-llm-does)
 **Source**: theaicommit.com | **Read time**: ~10 min
 > Day-1 lesson: pick, append, repeat. This primer opens the box those picks come from.
 

@@ -1,4 +1,4 @@
-# Truncated Jump Sampling: Training-Free Diffusion Acceleration via Endpoint Decodability
+# How Diffusion Samplers Skip Steps Without Retraining
 
 **Category**: Applied Research
 **Date**: 2026-07-08

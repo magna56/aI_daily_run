@@ -1,4 +1,4 @@
-# Listwise Context Pruning for Production RAG Systems
+# How Listwise Pruning Shrinks RAG Context
 
 **Category**: AI in Production
 **Date**: 2026-07-07

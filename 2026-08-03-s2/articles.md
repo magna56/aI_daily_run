@@ -1,4 +1,4 @@
-# Further Reading: A Language Model on a 6502 (BitNet Ternary Weights)
+# Further Reading: How to Run a Language Model With Zero Multiplies
 
 ## Articles
 

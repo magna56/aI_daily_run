@@ -1,4 +1,4 @@
-# Further Reading: Don't Skip the Boring Tokens
+# Further Reading: How to Read Skipped Tokens in 8 Bits
 
 ## Articles
 

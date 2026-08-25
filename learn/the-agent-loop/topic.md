@@ -1,4 +1,4 @@
-# The agent loop
+# How the Agent Loop Works
 
 **Category**: Building Agents & MCP
 **Tags**: agents, mcp
@@ -64,7 +64,7 @@ Frameworks hide the cycle and then you cannot debug it. The 2026-07-05 `llm-codi
 
 A worker that reads a queue, calls a service by name, writes the result. The name *is* the API. MCP is microservices for tools; the loop is the worker.
 
-Previous: [Context and the harness](#learn/context-and-harness). Next: [Reasoning models](#learn/reasoning-models).
+Previous: [How the Chat Is Re-Read Every Turn](#learn/context-and-harness). Next: [How Reasoning Models Work](#learn/reasoning-models).
 
 Lab: [Building coding agents from scratch — and the tool schema trap](#2026-07-05).
 

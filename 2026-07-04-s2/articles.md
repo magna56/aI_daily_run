@@ -1,4 +1,4 @@
-# Further Reading: NVFP4 Quantization & LLM Inference Hardware
+# Further Reading: How 4-Bit Floating Point Speeds Up LLM Inference
 
 ## Primary Source
 

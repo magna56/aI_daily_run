@@ -1,4 +1,4 @@
-# Further Reading: Nearby Points Are the Retrieve Decision
+# Further Reading: How Embeddings Work
 
 ## Primary Sources
 

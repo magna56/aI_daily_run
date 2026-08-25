@@ -1,4 +1,4 @@
-# Further Reading: Your Coding-Agent Benchmark Score Might Just Be a Bigger VM
+# Further Reading: How Memory Limits Move Coding-Agent Benchmark Scores
 
 ## Articles
 

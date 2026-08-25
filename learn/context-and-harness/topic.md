@@ -1,4 +1,4 @@
-# The Chat Is Re-Read Every Turn; the Harness Is the Program Around the Model
+# How the Chat Is Re-Read Every Turn
 
 **Category**: Coding Agents & Productivity
 **Tags**: context-engineering, caching, coding-agents
@@ -60,7 +60,7 @@ Changelog noise becomes one theme: get work out of the main conversation, keep t
 
 Build caches and HTTP ETags: one byte change upstream invalidates everything downstream. Same here.
 
-Previous: [Retrieval](#learn/retrieval). Next: [The agent loop](#learn/the-agent-loop).
+Previous: [How Retrieval Works](#learn/retrieval). Next: [How the Agent Loop Works](#learn/the-agent-loop).
 
 Lab: [Context is a budget you re-pay every turn](#2026-08-22).
 

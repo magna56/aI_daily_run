@@ -1,4 +1,4 @@
-# Build an LLM
+# How to Build a Tiny LLM
 
 **Category**: New Models & APIs
 **Tags**: from-scratch, transformers, training
@@ -65,7 +65,7 @@ This is also why training from scratch is almost never the Monday job. The stack
 
 A compiler frontend is tokenize → parse → IR → emit. This stack is tokenize → mix → classify next → emit, looping. An interpreter's eval loop is the closer cousin: one step, append, again. You do not look for a second interpreter inside `eval`.
 
-Next: [Agents in Prod](#learn/agents-in-prod) — wrapping this stack in tools and a bill.
+Next: [How to Run Agents in Production](#learn/agents-in-prod) — wrapping this stack in tools and a bill.
 
 ## Try It Yourself
 

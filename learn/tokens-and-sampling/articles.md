@@ -1,4 +1,4 @@
-# Further Reading: Temperature Is a Knob, Not a Personality
+# Further Reading: How Tokens and Sampling Work
 
 ## Primary Sources
 

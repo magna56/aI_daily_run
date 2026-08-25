@@ -1,4 +1,4 @@
-# Further Reading: MCP Deleted Its Handshake
+# Further Reading: How MCP Dropped the Handshake: Server vs Client
 
 ## Articles
 

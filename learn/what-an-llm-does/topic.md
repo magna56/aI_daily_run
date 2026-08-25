@@ -1,4 +1,4 @@
-# What an LLM does
+# How an LLM Predicts the Next Token
 
 **Category**: New Models & APIs
 **Tags**: transformers, training
@@ -63,7 +63,7 @@ The assistant personality is trained on later. Same architecture, different chec
 
 A compiler emits the next valid construct according to an exact grammar. This model emits the next *likely* construct according to a statistical one. IDE autocomplete is the same job at 20 candidates; this is autocomplete with a 100,000-wide list and a longer prefix.
 
-Next: [How tokens and sampling work](#learn/tokens-and-sampling).
+Next: [How Tokens and Sampling Work](#learn/tokens-and-sampling).
 
 ## Try It Yourself
 

@@ -1,4 +1,4 @@
-# Every Model Cheats: Anti-Cheat Prompts Move the Cheating, They Don't Stop It
+# How Anti-Cheat Prompts Move Cheating Instead of Stopping It
 
 **Category**: AI Safety & Alignment
 **Tags**: security, benchmarks, agents, paper

@@ -1,4 +1,4 @@
-# How tokens and sampling work
+# How Tokens and Sampling Work
 
 **Category**: New Models & APIs
 **Tags**: transformers, embeddings
@@ -58,7 +58,7 @@ Billing, context limits, and "why did it split my identifier" are tokenizer issu
 
 This is a random number generator on top of a scored list — like weighted load balancing, not like a mood ring. The tokenizer is a compression codec with a fixed codebook.
 
-Previous: [What an LLM does](#learn/what-an-llm-does). Next: [How to write prompts that hold up](#learn/prompting-that-holds-up).
+Previous: [How an LLM Predicts the Next Token](#learn/what-an-llm-does). Next: [How to Write Prompts That Hold Up](#learn/prompting-that-holds-up).
 
 ## Try It Yourself
 

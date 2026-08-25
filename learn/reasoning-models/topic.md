@@ -1,4 +1,4 @@
-# How reasoning models work
+# How Reasoning Models Work
 
 **Category**: New Models & APIs
 **Tags**: training, cost
@@ -58,7 +58,7 @@ If you do not name the trade, someone will set the org default to the thinking S
 
 You already buy latency with more CPU on a request. This is that, billed per token. Speculative decoding and cascades (cheaper model first) are the other side of the same budget.
 
-Previous: [The agent loop](#learn/the-agent-loop). Next: [How the forward pass runs](#learn/how-the-forward-pass-runs).
+Previous: [How the Agent Loop Works](#learn/the-agent-loop). Next: [How the Forward Pass Runs](#learn/how-the-forward-pass-runs).
 
 ## Try It Yourself
 

@@ -1,4 +1,4 @@
-# Further Reading: RAG Without Mystique
+# Further Reading: How Retrieval Works
 
 ## Articles
 

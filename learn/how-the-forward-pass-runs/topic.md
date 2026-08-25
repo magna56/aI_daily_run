@@ -1,4 +1,4 @@
-# How the forward pass runs
+# How the Forward Pass Runs
 
 **Category**: New Models & APIs
 **Tags**: transformers, caching
@@ -60,7 +60,7 @@ Two budgets: compute (prefill vs decode) and memory (KV grows with length). Prod
 
 A materialized view or a prefix-sum: you keep the work for 1..n and only add n+1. Edit index 2 and you recompute.
 
-Previous: [How reasoning models work](#learn/reasoning-models). Next: [How a coding agent is built](#learn/the-coding-agent-harness).
+Previous: [How Reasoning Models Work](#learn/reasoning-models). Next: [How a Coding-Agent Harness Is Built](#learn/the-coding-agent-harness).
 
 ## Try It Yourself
 

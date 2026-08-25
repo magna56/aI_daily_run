@@ -1,4 +1,4 @@
-# Friction as a Feature: Blast-Radius Gates for Agent-Driven Architecture Changes
+# How to Gate Agent Architecture Changes by Blast Radius
 
 **Category**: AI Engineering Practices
 **Date**: 2026-07-17

@@ -1,4 +1,4 @@
-# Further Reading: The Coding-Agent Harness
+# Further Reading: How a Coding-Agent Harness Is Built
 
 ## Primary Sources
 
