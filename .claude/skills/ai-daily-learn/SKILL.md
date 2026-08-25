@@ -113,9 +113,22 @@ and name the two losers in the final summary. Do not grab the first interesting 
 
 If the user provided a topic argument, use that. Otherwise:
 
-1. Determine which **category** is due next — **by tier weight, not flat rotation** (see
-   Category Tiers below). Read the last ~10 entries in `journal.md` and pick a category from
-   whichever tier is currently under its target share:
+0. **Ask what is due. Do not estimate it.**
+
+   ```bash
+   cd ~/ai_learning && node build.js --mix
+   ```
+
+   It prints the trailing-10 tier mix, the `For` mix, what is **DUE NEXT** and what to
+   **AVOID**, straight from every `topic.md`. Writes nothing, runs no code examples, takes a
+   second. Pick inside what it says is due, and say in the summary which constraint it gave you.
+
+   Do not count journal entries by hand instead. That is what was being done, and the frontier
+   tier drifted to **double its cap** — 32% against a 20% target — while every individual day's
+   pick looked defensible. A rule nobody can evaluate on the day is not a rule.
+
+1. Determine which **category** is due — **by tier weight, not flat rotation** (see Category
+   Tiers below), inside whatever `--mix` reported:
    - **Tier A ≈ 50%** of sessions (about 3-4 of every 7)
    - **Tier B ≈ 30%** (about 2 of every 7)
    - **Tier C ≈ 20%** (about 1-2 of every 7)
@@ -123,6 +136,9 @@ If the user provided a topic argument, use that. Otherwise:
    - If any category has **never** appeared in `journal.md`, it jumps the queue *within its
      own tier* — a new category shouldn't wait out a full cycle, but it also shouldn't break
      the tier weighting to get in.
+   - **A `For` layer named as due outranks the category rotation.** `For` is the field that
+     tracks the reader; category is a proxy and the proxy leaks. See the reader pyramid at the
+     top of [selection.md](selection.md).
 
    Flat one-at-a-time rotation across all 11 categories is what this replaces, and why: equal
    weighting guaranteed the single most relevant category (Coding Agents & Productivity) got
@@ -324,7 +340,14 @@ glossary, it failed.
   covers every nuance. `**Hook**` on the card and the write-up carry the precision.
 
 **`**Level**` and `**For**`** — required. Pick exactly one of each from the lists in the
-template. Level is runway, not prestige:
+template.
+
+**Aim for 3 `Start here` / 6 `Building` / 1 `Deeper` per ten sessions**, and treat `Deeper` as
+the rationed one. The measured mix was 2 / 4 / 4 — `Deeper` tied for the most common level on a
+site whose widest reader has never trained a model. `Deeper` is a budget, not a compliment to
+the topic; spend it when the mechanism genuinely cannot be shown any other way.
+
+Level is runway, not prestige:
 - **Start here** — a tool user can finish the first third and act on it
 - **Building** — assumes they have shipped a skill, tool, or small agent
 - **Deeper** — the machine under the tools; still opens with an analogy

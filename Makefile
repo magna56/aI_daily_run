@@ -18,13 +18,16 @@ ifeq ($(NORUN),1)
 BUILD_FLAGS := --no-run
 endif
 
-.PHONY: build check site serve deploy clean help
+.PHONY: build check mix site serve deploy clean help
 
 build: ## Regenerate site/data/ from the session folders
 	node build.js $(BUILD_FLAGS)
 
 check: ## Lint every session without writing anything (use in review/CI)
 	node build.js --check
+
+mix: ## What to publish next: trailing-10 audience mix, what's due, what to avoid
+	@node build.js --mix
 
 site: build ## Assemble the publishable site/ folder
 	mkdir -p $(OUTPUT_DIR)

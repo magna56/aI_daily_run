@@ -1,25 +1,52 @@
 # Topic selection — audience, sources, how to pick
 
-Two readers, same page:
+## The reader pyramid
 
-1. **Software engineer learning AI** — uses Cursor / Claude / ChatGPT on real work. Has not
-   trained a model. Needs a Monday-morning action and an analogy first.
-2. **On the path to AI engineer** — shipping a small agent, a RAG path, or an eval. Needs the
-   mechanism and the failure mode, still not a paper club.
+The audience is a pyramid, widest at the top, and the `**For**` field on each session is which
+layer it serves. This is the number that actually tracks the reader; category is a proxy for it
+and the proxy leaks.
 
-A topic that only works for reader 2 and abandons reader 1 is the wrong pick. Depth is allowed;
-starting in the middle of a paper is not.
+| Layer | `**For**` | How many readers | Target per 10 |
+| --- | --- | --- | --- |
+| Uses AI on real work — productivity, code writing, driving Claude Code / Cursor | `Using tools` | **Most of them.** 90% of professional developers use a coding agent weekly, 68% daily | **3** |
+| Authors things — skills, MCP servers, a small agent | `Building agents` | Many | 3 |
+| Ships it — production, evals, reviewing agent-written code | `Shipping AI` | Many | 3 |
+| Model internals — inference, training, post-training verification | `How models work` | **Fewest** | **1** |
+
+The pyramid is not aspirational. Measured over the first 22 sessions the site published **9%**
+for `Using tools` and **32%** for `How models work` — as much for the narrowest layer as for the
+second-widest — while every single day's pick looked defensible on the day. That is the failure
+mode this file exists to prevent: not a bad choice, an unwatched average.
+
+The layers below the top are not "advanced readers"; they are *fewer* readers. A session that
+serves only the bottom layer is a session most of the audience has no reason to open.
 
 ## How a winner is chosen (do this in order)
 
-### 1. Category first, not "whatever is hot"
+### 0. Ask what is due — do not estimate it
 
-Read the last ~10 `journal.md` entries. Count tiers. Pick a category from the **under-weight**
-tier (A 50% / B 30% / C 20%). Inside that tier, least-recent category wins. A category that
-has never appeared jumps the queue *inside its tier only*.
+```bash
+cd ~/ai_learning && node build.js --mix
+```
 
-If Tier C is already at or above 20% of the last 10, **do not pick Tier C today** even if a
-famous paper dropped. Cite it later; do not build the session on it.
+This reads every `topic.md` and prints the trailing-10 mix, what is **DUE NEXT**, and what to
+**AVOID**. It writes nothing, runs no code examples, and takes a second. Run it before you look
+at a single source, and pick inside what it says is due — counting journal entries by hand is
+how the tier weighting drifted to double its cap without anyone noticing.
+
+If `--mix` names a `For` layer as due, that constraint outranks the category rotation: pick a
+category that can serve that layer. `Using tools` due means Coding Agents & Productivity is the
+obvious answer, not a fallback.
+
+### 1. Category inside what is due
+
+Pick from the **under-weight** tier (A 50% / B 30% / C 20%). Inside that tier, least-recent
+category wins. A category that has never appeared jumps the queue *inside its tier only*.
+
+If `--mix` puts Tier C at its cap, **do not pick Tier C today** even if a famous paper dropped.
+Cite it later; do not build the session on it. The same applies to `How models work` at its cap —
+a Tier B category written entirely for model internals breaches the pyramid just as surely as a
+Tier C one, which is why `For` is checked separately from tier.
 
 ### 2. Scan sources for that category only
 

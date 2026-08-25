@@ -91,3 +91,31 @@ reached it for free — the real gap was that nothing *gated* the live push.
   then report" and given three curl checks (feed, sitemap, OG card) to run before reporting the
   session as live. The failure mode being guarded is a deploy that reports success while serving
   stale output, which is indistinguishable from a good one without asking the live site.
+
+## 2026-08-24 — corpus-wide, audience mix
+
+- **Note**: "audience is engineers... many are learning AI for productivity and code writing,
+  some are creating skills/MCPs/agents, some are deploying in prod, fewer are doing LLM
+  modelling or inference. I felt some articles are tough to understand and not implementation
+  focused. What topics, content and difficulty should we focus on?"
+- **Verdict**: standing rule, and a compliance gap — the rule already existed and was not
+  being followed, because nothing made it checkable on the day.
+- **Measured first** (22 daily sessions): `For: Using tools` 9% vs `For: How models work` 32%,
+  an inverted pyramid; Tier C at 32% overall and 40% of the last 10 against a documented 20%
+  cap, including three consecutive Tier C sessions (08-19, 08-20, 08-21); Tier A at 41% against
+  a 50% floor; `Coding Agents & Productivity` 1 of 22 despite the spec naming it the single most
+  relevant category; Level skewed `Deeper` 36% vs `Start here` 23%.
+- **Changed**: `build.js` — `CATEGORY_TIERS` is now the source and `CATEGORIES` is derived from
+  it, so tier membership is machine-readable and cannot drift from the list. Added a trailing-10
+  audience-mix model (`MIX_BANDS`, `mixRows`, `mixSummary`, `mixDrift`) with a new read-only
+  `--mix` flag that prints the mix, DUE NEXT and AVOID without building or running any code, and
+  drift warnings that surface in every build and `--check`.
+- **Changed**: `selection.md` — rewritten around an explicit **reader pyramid** keyed on `For`
+  rather than category alone, with per-10 targets (3 / 3 / 3 / 1), and a new Step 0 that runs
+  `--mix` before any source is opened. A `For` layer named as due now outranks the category
+  rotation.
+- **Changed**: `SKILL.md` Step 2 — same Step 0, plus a Level budget of 3 `Start here` / 6
+  `Building` / 1 `Deeper` per ten, with `Deeper` called out as rationed.
+- **Changed**: `Makefile` (`make mix`) and `CLAUDE.md` command list.
+- **Not changed**: the back catalog. Bands are deliberately loose (ten sessions cannot land on
+  50/30/20 exactly) so the warning can actually go quiet once the mix is corrected.

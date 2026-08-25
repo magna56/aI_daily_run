@@ -5,6 +5,7 @@
    Dependency-free. Run with:  node build.js            (write site/data/)
                                node build.js --check    (lint only, write nothing)
                                node build.js --no-run   (skip executing examples)
+                               node build.js --mix      (what to publish next; writes nothing)
 
    Session folders are the source of truth and are never modified: /ai-daily-learn
    writes YYYY-MM-DD/{topic.md,visualize.html,diagram.excalidraw,code_example.py,articles.md} and
@@ -56,22 +57,37 @@ const REPO_BLOB = process.env.ADL_REPO_BLOB
 // NOTE: selection is *tier-weighted* (A~50% / B~30% / C~20%), not a flat cycle —
 // so the reader's "next category" hint is only that, a hint. See the skill's
 // Category Tiers section for the real rule and why flat rotation was dropped.
-const CATEGORIES = [
+// Tier membership is the source and CATEGORIES is derived from it, so the two can
+// never disagree — the tier weighting is the whole point of the list's order, and
+// a hand-maintained second copy of it is how that weighting quietly stops being
+// enforceable. See the audience-mix block further down for what the tiers cost.
+const CATEGORY_TIERS = {
   // Tier A — ship it this week
-  "Coding Agents & Productivity",
-  "Building Agents & MCP",
-  "AI Engineering Practices",
-  "Evals & Reliability",
+  A: [
+    "Coding Agents & Productivity",
+    "Building Agents & MCP",
+    "AI Engineering Practices",
+    "Evals & Reliability",
+  ],
   // Tier B — understand the machine
-  "New Models & APIs",
-  "AI in Production",
-  "Hands-on Techniques",
+  B: [
+    "New Models & APIs",
+    "AI in Production",
+    "Hands-on Techniques",
+  ],
   // Tier C — frontier
-  "Applied Research",
-  "AI Hardware for Engineers",
-  "Multimodal Engineering",
-  "AI Safety & Alignment",
-];
+  C: [
+    "Applied Research",
+    "AI Hardware for Engineers",
+    "Multimodal Engineering",
+    "AI Safety & Alignment",
+  ],
+};
+
+const CATEGORIES = [...CATEGORY_TIERS.A, ...CATEGORY_TIERS.B, ...CATEGORY_TIERS.C];
+const CATEGORY_TIER = Object.fromEntries(
+  Object.entries(CATEGORY_TIERS).flatMap(([tier, cats]) => cats.map((c) => [c, tier]))
+);
 
 // Reader-facing one-liners for the generated /topics/<slug>/ pages. These are
 // the pages' meta description and on-page blurb, so they address the reader
@@ -160,6 +176,109 @@ const TAGS = [
 // dated log, not a backlog, so warning on forty old folders would only train everyone
 // to ignore the warnings that matter.
 const IMPLEMENT_SECTION_SINCE = "2026-08-25";
+
+/* ---- audience mix ---------------------------------------------------------
+   Category says what a session is about; `For` says who it is for, and `For` is
+   the one that tracks the reader. Both are measured over a trailing window,
+   because no single day's pick is the problem — the drift is. Over the first 22
+   sessions the site published 9% for "Using tools" (the widest reader tier) and
+   32% for "How models work" (the narrowest), and ran Tier C at 32% against its
+   own documented 20% cap, without any one choice looking wrong on the day.
+
+   Bands, not exact shares: ten sessions cannot land on 50/30/20 precisely, and a
+   warning that can never go quiet is a warning everyone learns to scroll past.
+   ------------------------------------------------------------------------- */
+const MIX_WINDOW = 10;
+const MIX_BANDS = {
+  // [floor, cap] sessions out of MIX_WINDOW
+  tier: { A: [4, 10], B: [2, 6], C: [0, 3] },
+  job: {
+    "Using tools": [2, 10],
+    "Building agents": [1, 6],
+    "Shipping AI": [1, 6],
+    "How models work": [0, 2],
+  },
+};
+
+// Deliberately reads topic.md directly rather than reusing compiled cards: the
+// skill runs `--mix` before it picks a topic, every day, and that must not cost
+// a build or execute a single code_example.py.
+function mixRows() {
+  const rows = fs.readdirSync(ROOT)
+    .filter((n) => SESSION_RE.test(n) && fs.statSync(path.join(ROOT, n)).isDirectory())
+    .map((n) => {
+      const raw = readIfExists(path.join(ROOT, n, "topic.md")) || "";
+      const get = (k) => (raw.match(new RegExp("^\\*\\*" + k + "\\*\\*:\\s*(.*)$", "m")) || [, ""])[1].trim();
+      return { id: n, date: get("Date") || n.slice(0, 10), category: get("Category"), job: get("For"), level: get("Level") };
+    })
+    .filter((r) => r.category || r.job);
+  rows.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  return rows;
+}
+
+function mixSummary(rows) {
+  const win = rows.slice(-MIX_WINDOW);
+  const tier = { A: 0, B: 0, C: 0 };
+  for (const r of win) { const t = CATEGORY_TIER[r.category]; if (t) tier[t]++; }
+  const job = {};
+  for (const k of Object.keys(MIX_BANDS.job)) job[k] = win.filter((r) => r.job === k).length;
+  const level = {};
+  for (const l of LEVELS) level[l] = win.filter((r) => r.level === l).length;
+  return { win, tier, job, level };
+}
+
+function mixDrift(sum) {
+  const n = sum.win.length;
+  const out = [];
+  const test = (label, got, [lo, hi], overNote, underNote) => {
+    if (got > hi) out.push(`${label} is ${got} of the last ${n} (cap ${hi}) — ${overNote}`);
+    else if (got < lo) out.push(`${label} is ${got} of the last ${n} (floor ${lo}) — ${underNote}`);
+  };
+  for (const [t, band] of Object.entries(MIX_BANDS.tier)) {
+    test(`Tier ${t}`, sum.tier[t], band,
+      "the frontier is crowding out the reader who ships on Monday",
+      "pick from this tier next");
+  }
+  for (const [j, band] of Object.entries(MIX_BANDS.job)) {
+    test(`For: ${j}`, sum.job[j], band,
+      "this is the narrowest reader tier",
+      "this is a wider reader tier than its coverage suggests");
+  }
+  return out;
+}
+
+function printMix() {
+  const rows = mixRows();
+  const sum = mixSummary(rows);
+  const n = sum.win.length;
+  const bar = (got, [lo, hi]) => (got > hi ? "OVER " : got < lo ? "under" : "ok   ");
+  console.log(`\nAudience mix — last ${n} daily session(s) of ${rows.length}\n`);
+  console.log("  Tier (what it is about)");
+  for (const [t, band] of Object.entries(MIX_BANDS.tier)) {
+    console.log(`    ${bar(sum.tier[t], band)} Tier ${t}  ${String(sum.tier[t]).padStart(2)}/${n}   band ${band[0]}-${band[1]}`);
+  }
+  console.log("\n  For (who it is for)");
+  for (const [j, band] of Object.entries(MIX_BANDS.job)) {
+    console.log(`    ${bar(sum.job[j], band)} ${j.padEnd(16)} ${String(sum.job[j]).padStart(2)}/${n}   band ${band[0]}-${band[1]}`);
+  }
+  console.log("\n  Level");
+  for (const l of LEVELS) console.log(`          ${l.padEnd(16)} ${String(sum.level[l]).padStart(2)}/${n}`);
+
+  const drift = mixDrift(sum);
+  const dueTier = Object.entries(MIX_BANDS.tier).filter(([t, b]) => sum.tier[t] < b[0]).map(([t]) => `Tier ${t}`);
+  const dueJob = Object.entries(MIX_BANDS.job).filter(([j, b]) => sum.job[j] < b[0]).map(([j]) => j);
+  const avoidTier = Object.entries(MIX_BANDS.tier).filter(([t, b]) => sum.tier[t] >= b[1]).map(([t]) => `Tier ${t}`);
+  const avoidJob = Object.entries(MIX_BANDS.job).filter(([j, b]) => sum.job[j] >= b[1]).map(([j]) => j);
+
+  console.log("\n  DUE NEXT   " + ([...dueTier, ...dueJob].join(", ") || "nothing under floor — least-recent category in Tier A"));
+  console.log("  AVOID      " + ([...avoidTier, ...avoidJob].join(", ") || "nothing at cap"));
+  console.log(drift.length ? "\n  Drift:\n" + drift.map((d) => "    - " + d).join("\n") + "\n" : "\n  Mix is inside every band.\n");
+  console.log("  Recent (oldest -> newest):");
+  for (const r of sum.win) {
+    console.log(`    ${r.id.padEnd(14)} ${(CATEGORY_TIER[r.category] || "?")}  ${(r.job || "-").padEnd(16)} ${r.category}`);
+  }
+  console.log("");
+}
 
 // A session folder: a date, optionally suffixed for a second session that day.
 const SESSION_RE = /^\d{4}-\d{2}-\d{2}(-s\d+)?$/;
@@ -998,6 +1117,9 @@ function main() {
   const check = process.argv.includes("--check");
   const noRun = process.argv.includes("--no-run") || process.env.NORUN === "1";
 
+  // Read-only: what to publish next, before anything is built or executed.
+  if (process.argv.includes("--mix")) { printMix(); return; }
+
   const ids = fs.readdirSync(ROOT)
     .filter((name) => SESSION_RE.test(name) && fs.statSync(path.join(ROOT, name)).isDirectory())
     .sort()
@@ -1119,6 +1241,11 @@ function main() {
 
     writeSitemap(cards, covered);
     writeFeed(cards);
+  }
+
+  // Corpus-level, not per-session: a single day's pick is never the defect.
+  for (const d of mixDrift(mixSummary(mixRows()))) {
+    warn(`audience mix: ${d} (node build.js --mix)`);
   }
 
   warnings.forEach((w) => console.warn("  warn: " + w));

@@ -33,11 +33,13 @@ force-pushes it to the `gh-pages` branch (GitHub Pages, kept as a mirror).
 make serve           # build + preview at http://127.0.0.1:8000
 make build            # regenerate site/data/ only
 make check             # lint every session, write nothing (use in review/CI)
+make mix              # what to publish next — trailing-10 audience mix, due/avoid
 make deploy           # build and publish to Cloudflare Pages + gh-pages (runs deploy.sh)
 make clean             # drop site/ and the run cache
 
 make serve NORUN=1    # skip executing code_example.py files (~45s faster, no output pane)
 node build.js --check  # same as `make check`
+node build.js --mix    # same as `make mix`
 node build.js --no-run # same as NORUN=1
 ```
 
