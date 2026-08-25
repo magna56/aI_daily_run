@@ -536,9 +536,46 @@
      "auto-grow" never actually shows more than a screenful — the page itself
      scrolls for a long file, same as any other tall page content, rather
      than nesting a second scrollbar inside it. */
-  .editor-textarea { font-family: var(--mono); font-size: 12.4px; background: #0d0e12; color: var(--ink); border: none; padding: 15px; resize: none; line-height: 1.62; border-radius: 0; width: 100%; min-height: 300px; overflow-y: hidden; }
-  .editor-textarea:focus { outline: 1px solid var(--accent); }
-  .editor-controls { display: flex; gap: 8px; padding: 9px 13px; border-top: 1px solid var(--line); background: rgba(255,255,255,.03); }
+  /* Syntax highlighting with no library and no contenteditable: a <pre> paints
+     the coloured tokens and the real <textarea> lies transparently on top of
+     it, so editing, selection, undo and the caret all stay native browser
+     behaviour. The two MUST agree on every metric that affects where a glyph
+     lands (font, size, line-height, padding, wrapping) or the painted text
+     drifts out from under the typed text — that is why those are declared once,
+     for both, rather than separately. Selectors are .editor-wrap-scoped because
+     `.panel pre` above sets overflow/max-height and would otherwise win. */
+  .editor-wrap { position: relative; display: block; }
+  .editor-wrap .editor-hl,
+  .editor-wrap .editor-textarea {
+    font-family: var(--mono); font-size: 12.4px; line-height: 1.62;
+    padding: 15px; margin: 0; border: 0; width: 100%;
+    white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; tab-size: 4;
+  }
+  .editor-wrap .editor-hl {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+    background: #0d0e12; color: #e7e2d8; border-radius: 0; max-height: none;
+  }
+  .editor-wrap .editor-textarea {
+    /* display:block matters: a textarea is inline-block by default, which adds
+       a baseline descender gap under it and makes the wrapper ~6px taller than
+       the textarea — leaving a dark strip the painted layer stretches into. */
+    position: relative; display: block; background: transparent; color: transparent;
+    caret-color: #e7e2d8; resize: none; min-height: 300px; overflow-y: hidden; border-radius: 0;
+  }
+  .editor-wrap .editor-textarea:focus { outline: 1px solid var(--accent); }
+  .editor-wrap .editor-textarea::selection { background: rgba(167,139,250,.40); }
+  /* One palette, not a per-theme pair: .panel is always dark in both themes
+     (see the :root[data-theme="light"] .panel override above). */
+  .editor-hl .t-kw  { color: #bb9af7; }
+  .editor-hl .t-str { color: #9ece6a; }
+  .editor-hl .t-com { color: #6f7a8d; font-style: italic; }
+  .editor-hl .t-num { color: #ff9e64; }
+  .editor-hl .t-bi  { color: #7dcfff; }
+  .editor-hl .t-fn  { color: #7aa2f7; }
+  .editor-hl .t-dec { color: #e0af68; }
+  /* Run/Reset sit ABOVE the editor: these examples run 100-400 lines, so a
+     control bar underneath meant scrolling the whole file to find Run. */
+  .editor-controls { display: flex; gap: 8px; padding: 9px 13px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.03); }
   .btn-repl { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--ink); border-radius: 6px; padding: 6px 16px; font: inherit; font-family: var(--mono); font-size: 12px; cursor: pointer; transition: all .15s; }
   .btn-repl:hover { color: var(--accent2); border-color: rgba(167,139,250,.45); }
   .btn-repl:active { transform: scale(.98); }
@@ -1887,6 +1924,34 @@
   }
 
   /* code: source in an editable REPL, with captured output as fallback */
+  // A ~40-line Python tokenizer beats pulling in highlight.js (~120KB) for the
+  // one language this site ever shows. One pass, alternation ordered so the
+  // greedy multi-character forms (comments, triple-quoted strings) match before
+  // the shapes nested inside them can — a "#" inside a string must stay string.
+  var PY_KW = /^(False|None|True|and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield|match|case)$/;
+  var PY_BI = /^(abs|all|any|bin|bool|bytes|callable|chr|dict|dir|divmod|enumerate|eval|filter|float|format|frozenset|getattr|hasattr|hex|id|input|int|isinstance|issubclass|iter|len|list|map|max|min|next|object|oct|open|ord|pow|print|range|repr|reversed|round|set|setattr|slice|sorted|staticmethod|str|sum|super|tuple|type|vars|zip|self|cls|Exception|ValueError|TypeError|KeyError|IndexError|RuntimeError|__name__|__main__)$/;
+
+  function pyHighlight(src) {
+    // Trailing newline so a <pre> renders the final line's full height.
+    src = String(src) + "\n";
+    var re = /(#[^\n]*)|("""[\s\S]*?"""|'''[\s\S]*?''')|([rbfuRBFU]{0,2}"(?:\\[\s\S]|[^"\\\n])*"|[rbfuRBFU]{0,2}'(?:\\[\s\S]|[^'\\\n])*')|(\b\d[\d_]*\.?[\d_]*(?:[eE][+-]?\d+)?\b|\b0[xXbBoO][0-9a-fA-F_]+\b)|(@[A-Za-z_]\w*)|(\b[A-Za-z_]\w*\b)/g;
+    var out = "", last = 0, m;
+    while ((m = re.exec(src)) !== null) {
+      out += esc(src.slice(last, m.index));
+      var t = m[0];
+      if (m[1]) out += '<span class="t-com">' + esc(t) + "</span>";
+      else if (m[2] || m[3]) out += '<span class="t-str">' + esc(t) + "</span>";
+      else if (m[4]) out += '<span class="t-num">' + esc(t) + "</span>";
+      else if (m[5]) out += '<span class="t-dec">' + esc(t) + "</span>";
+      else if (PY_KW.test(t)) out += '<span class="t-kw">' + esc(t) + "</span>";
+      else if (PY_BI.test(t)) out += '<span class="t-bi">' + esc(t) + "</span>";
+      else if (src.charAt(m.index + t.length) === "(") out += '<span class="t-fn">' + esc(t) + "</span>";
+      else out += esc(t);
+      last = m.index + t.length;
+    }
+    return out + esc(src.slice(last));
+  }
+
   function renderCode(el, p) {
     var run = p.code.run || {};
     var cmd = "python3 " + p.id + "/code_example.py";
@@ -1935,10 +2000,13 @@
           '<div class="panel-head">code_example.py<span class="spacer"></span>' +
             '<button class="mini" id="copyCode">copy</button></div>' +
           '<div class="code-editor">' +
-            '<textarea class="editor-textarea" id="codeEditor" spellcheck="false">' + esc(sourceToShow) + '</textarea>' +
             '<div class="editor-controls">' +
               '<button class="btn-repl" id="runCode">Run</button>' +
               '<button class="btn-repl" id="resetCode">Reset</button>' +
+            '</div>' +
+            '<div class="editor-wrap">' +
+              '<pre class="editor-hl" id="codeHl" aria-hidden="true"></pre>' +
+              '<textarea class="editor-textarea" id="codeEditor" spellcheck="false">' + esc(sourceToShow) + '</textarea>' +
             '</div>' +
           '</div>' +
         "</div>" +
@@ -1969,7 +2037,16 @@
       editorEl.style.height = "auto";
       editorEl.style.height = editorEl.scrollHeight + "px";
     }
+
+    // Repaint the layer under the transparent textarea. Cheap enough to run on
+    // every keystroke at these file sizes; no debounce needed.
+    var hlEl = $("codeHl");
+    function paint() {
+      hlEl.innerHTML = pyHighlight(editorEl.value);
+    }
+
     autoGrow();
+    paint();
 
     runBtn.addEventListener("click", function () {
       runBtn.classList.add("running");
@@ -1983,6 +2060,7 @@
       editorEl.value = p.code.source;
       clearCodeCache(p.id);
       autoGrow();
+      paint();
       liveOutputEl.querySelector(".terminal-output").innerHTML = '<span class="terminal-out-run">(output will appear here when you click Run)</span>';
     });
 
@@ -1994,6 +2072,7 @@
     editorEl.addEventListener("input", function () {
       setCodeCache(p.id, editorEl.value);
       autoGrow();
+      paint();
     });
 
     var ghBtn = $("publishGh");
