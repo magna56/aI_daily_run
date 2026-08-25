@@ -394,3 +394,48 @@ reached it for free — the real gap was that nothing *gated* the live push.
   read this as a licence to imitate.
 - **Not changed**: the no-product-glyph rule and the "readable to someone who has only used
   Cursor" test. The house form reinforces both — its ✓ example was updated to the shipped title.
+
+## 2026-08-25 — spec-wide (the seven-section order)
+
+- **Note**: "the section order seems difficult to follow — like Key Technical Details, What It Is
+  after software engineer's perspective, and Key Technical Details being at the last." Followed by
+  market research on ByteByteGo and comparable publications, then: Option B, drop the Glossary and
+  try it ByteByteGo's way for now, keep ELI5, and use topic-named headings.
+- **Verdict**: standing rule. The largest structural change the spec has taken.
+- **Measured before editing**: the old order explained the topic **four times** (ELI5, For a
+  Software Engineer, What It Is, Key Technical Details) and named the object only in the fifth
+  section. Five of eleven headings were function labels that could sit on any article. Across the
+  last eight sessions: ~2,250 prose words, which is inside ByteByteGo's ~2,100-2,300 band — so
+  length was never the problem, repetition was, and it was created by the order rather than by
+  the writing.
+- **Also measured**: `For a Software Engineer` and `How It Connects to What You Know` were the
+  same move done twice, 150 lines apart, in three of four sampled sessions (08-24 said "session
+  affinity … moved off `JSESSIONID`" in one and "if you have ever migrated a web app off
+  server-side sessions onto signed tokens" in the other). That duplication, not the bridge
+  section itself, was the thing to cut.
+- **Changed**: `contract.md` + `SKILL.md` — seven sections: ELI5 → The Problem → **How <the
+  thing> Works** → For a Software Engineer → What This Means for You → Implementing It → **When
+  <the thing> Is the Wrong Tool**. Sections 3 and 7 are named for the topic and matched by
+  pattern (`^How `, `^When `); the other five are fixed. `###` sub-headings inside section 3 are
+  named for their subject, ByteByteGo-style.
+- **Changed**: `SKILL.md` — `For a Software Engineer` moved from third to fourth, *after* the
+  mechanism. While it ran third it had to teach the topic before it could draw the analogy, which
+  is why it was the second-longest section (304 words on 2026-08-25). It is now capped at
+  ~150-200 words and told to compare, not re-explain. It stays: no comparable publication
+  translates AI topics into engineering the reader has already shipped, which makes it the most
+  distinctive section on the site.
+- **Changed**: the counter-case is promoted out of `Implementing It` into section 7 with its own
+  heading, and closes on the questions a reader should ask before adopting — the move Eugene Yan
+  and ByteByteGo both end on.
+- **Changed**: **no Glossary.** Terms are defined in the sentence that first needs them. The
+  discipline it enforced (every acronym glossed, units explained by what they buy you) is kept,
+  inline. Reversible if it reads worse in practice — the user asked to try it this way for now.
+- **Changed**: `build.js` — `SECTION_ORDER_SINCE` (2026-08-26), `FIXED_SECTIONS`, `MECHANISM_RE`,
+  `COUNTERCASE_RE`; warns on a missing fixed section, a missing/unnamed mechanism or counter-case
+  heading, any retired section still present, and wrong order. The momentum check moved from
+  `Why It Matters` to `The Problem`, and the "When not to" check inside `Implementing It` now
+  only applies to sessions before the cutover. Verified with two fixtures: correct order clean,
+  old order trips all seven warnings.
+- **Not changed**: `Explain Like I'm 5` stays, at the user's explicit call — it is the site's
+  persona and no reference publication has it. The 41 back-catalog sessions keep the old order
+  and are not warned on.

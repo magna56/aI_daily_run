@@ -39,11 +39,38 @@ session uses the identical layout under `frontier/YYYY-MM-DD/`.
 **Time to read**: ~10 minutes
 ```
 
-Required `##` sections, in this order:
+Required `##` sections, in this order — **seven, five fixed and two named for the topic**:
 
-Explain Like I'm 5 → The Problem → For a Software Engineer → What This Means for You
-→ What It Is → Why It Matters → Key Technical Details → Implementing It
-→ How It Connects to What You Know → Try It Yourself → Glossary
+| # | heading | fixed or topic-named |
+| --- | --- | --- |
+| 1 | `## Explain Like I'm 5` | fixed |
+| 2 | `## The Problem` | fixed |
+| 3 | `## How <the thing> Works` | **topic-named**, must start `How ` |
+| 4 | `## For a Software Engineer` | fixed |
+| 5 | `## What This Means for You` | fixed |
+| 6 | `## Implementing It` | fixed |
+| 7 | `## When <the thing> Is the Wrong Tool` | **topic-named**, must start `When ` |
+
+Sections 3 and 7 carry the topic in the heading the way a reference article does — `## How the
+Hook Matcher Decides`, `## When a Hook Is the Wrong Tool` — so the table of contents describes
+*this* article rather than the template. `--check` matches them by pattern. Inside section 3, use
+`###` sub-headings named for their subject (`### Byte Pair Encoding`), not for their function.
+
+**Retired**, and warned on for sessions from 2026-08-26: `What It Is` and `Key Technical Details`
+(merged into section 3, which now runs shallow to deep in one pass instead of explaining the
+topic twice); `Why It Matters` (its significance argument belongs in `The Problem`, and the
+momentum-reporting check moved with it); `How It Connects to What You Know` (its analogy was the
+same move as `For a Software Engineer`, done twice — what survives is a one-line pointer into the
+`learn/` track, in the body, not a heading); `Try It Yourself` (a pointer to a tab the reader can
+already see); `Glossary`.
+
+**No Glossary section. Define every term at the moment it is first used**, in the sentence that
+needs it, the way the reference publications do. A term that cannot be defined in a clause
+without derailing the sentence is a term the article should not be using yet. This replaces a
+305-word appendix that competed with the code for attention.
+
+The old eleven-section order stands in the back catalog and is not warned on. It is not the
+shape to copy: it explained the topic four times and named the object in the fifth section.
 
 `What This Means for You` is three labelled parts: **When this matters**, **How it affects you**,
 **What to do about it**. Required on Tier C too.
@@ -56,10 +83,10 @@ all checked by `--check`:
    the program that contains them: any single block over **30 lines**, or a block that is a
    verbatim slab of `code_example.py`, warns. The article states the decisions; the code file is
    the runnable whole. Neither restates the other.
-2. Three labelled parts: **The change**, **How you know it worked**, **When not to**. The last
-   two are what separate an engineering document from a tutorial and are the two most often
-   skipped. A reader who cannot tell whether the change took has been given a suggestion; a
-   technique with no stated downside reads as marketing.
+2. Two labelled parts: **The change** and **How you know it worked**. A reader who cannot tell
+   whether the change took has been given a suggestion, not an implementation. (The third part,
+   the counter-case, is now section 7 — a heading of its own, because it was the part readers
+   most needed and the part most easily buried at the end of a long section.)
 3. Code for **each role the change touches**, not only the role the source announcement
    addresses.
 4. **It is the longest section in the document, measured on prose with fenced code excluded.**

@@ -337,42 +337,45 @@ Write `~/ai_learning/YYYY-MM-DD/topic.md`:
 [3-5 sentences. ONE everyday analogy, zero jargon, no acronyms at all.]
 
 ## The Problem
-[2-4 sentences. What was broken, wasteful, or unsolved before this — the actual pain that
-made someone go build it. See the rules below.]
+[3-6 sentences. What breaks today, concretely, and what it costs — the significance argument
+lives here now. Open on the specific failure, never on a definition. See the rules below.]
+
+## How [the thing] Works
+[TOPIC-NAMED, must start with "How". The mechanism, shallow to deep in ONE pass — what it is,
+then how it actually works, then the detail an implementer needs. Use ### sub-headings named
+for their subject (### Byte Pair Encoding), not for their function. Define every term in the
+sentence that first needs it; there is no Glossary.]
 
 ## For a Software Engineer
-[3-5 short paragraphs or bullets. The bridge section — see the rules below.]
+[2-4 short paragraphs. The bridge: ONE analogy to something they have already shipped, plus the
+Monday action. It sits AFTER the mechanism so it can compare rather than re-explain — see the
+rules below.]
 
 ## What This Means for You
-[The anchor section. When this is useful, how it affects your work, and what to actually
-do about it — see the rules below. REQUIRED on every session, including Tier C.]
-
-## What It Is
-[2-3 paragraph technical explanation. Assume a strong software engineer, not an ML researcher.]
-
-## Why It Matters
-[Significance, what it enables, comparison to prior work]
-
-## Key Technical Details
-[Open with a short **Background first** paragraph, then the bullets — see the rules below.]
+[When this is useful, how it affects your work, and what to actually do about it — see the
+rules below. REQUIRED on every session, including Tier C.]
 
 ## Implementing It
-[REQUIRED, and the longest section in the document. Three labelled parts: **The change** (the
-code, in fenced blocks, for every role the change touches), **How you know it worked** (the
-verification signal — a number, a log line, an assertion), **When not to** (the counter-case and
-what it costs). See the rules below.]
+[REQUIRED, and the section with the most prose in the document. Two labelled parts: **The
+change** (the lines that change, in fenced blocks, for every role the change touches) and
+**How you know it worked** (the verification signal — a number, a log line, an assertion).
+See the rules below.]
 
-## How It Connects to What You Know
-[Connect to something they already ship — caches, CI, code review, HTTP — then to earlier
-sessions. If this daily piece assumes a chapter (tokens, the agent loop, RAG, the harness),
-link the matching `learn/<slug>` page instead of re-teaching it.]
+## When [the thing] Is the Wrong Tool
+[TOPIC-NAMED, must start with "When". The honest counter-case: when the old way is still right,
+what this costs in complexity, latency, money or operational surface, and what you checked if
+the answer is genuinely "nothing". Close on the two or three questions a reader should ask
+before adopting it.]
 
-## Try It Yourself
-[Pointer to code_example.py and what it demonstrates]
-
-## Glossary
-[Every acronym and domain term actually used above — see the rules below.]
 ```
+
+**Three of the old sections are gone, and one line replaces them.** If this daily piece assumes
+a chapter (tokens, the agent loop, RAG, the harness), put a single sentence in `The Problem` or
+`For a Software Engineer` linking the matching `learn/<slug>` page — *"New to this? Start at AI
+basics → [Context and the harness](#learn/context-and-harness)."* That is what survived of `How
+It Connects to What You Know`; its analogy half was always `For a Software Engineer`'s job, done
+twice. `Try It Yourself` pointed at a tab the reader can already see. `Glossary` is replaced by
+defining terms where they are used.
 
 **The acceptance test — apply it to the whole document, not just one section.**
 
@@ -446,11 +449,12 @@ same thing again.
 
 **No space filler.** Every section must carry something no other section has. These are the
 patterns that produce padding, and each one is a cut, not a rewrite:
-- The same point restated in `The Problem`, `Why It Matters` and `What This Means for You`. Pick
-  the one that owns it.
-- `Why It Matters` explaining *that* it matters rather than what it costs or enables.
-- A `Glossary` that grows to a fifth of the article. Cover every term, one sentence each; spend a
-  second sentence only on a term the article actually turns on.
+- The same point restated in `The Problem`, the mechanism section and `What This Means for You`.
+  Pick the one that owns it. The seven-section order exists to make this hard: the old eleven
+  explained the topic four times, so restating was the path of least resistance.
+- `The Problem` explaining *that* it matters rather than what it costs or enables.
+- A definition given twice — once inline where the term is used and again a screen later. Inline
+  is the one that survives.
 - Background the reader does not need to make the change — history, org politics, who shipped it
   first, how many stars the repo has.
 - Any sentence you could delete without changing what the reader does. Delete it.
@@ -578,7 +582,60 @@ topic from feeling like showing off.
 - This is the pain the paper/release exists to fix — not a restatement of the ELI5 analogy.
   If you can't state the problem in plain terms, you don't understand the topic well enough
   to write the rest of the session yet — go back to Step 3.
-- 2-4 sentences. This section motivates; `## What It Is` explains.
+- **Open on the specific failure, not on a definition.** *"The main problem with standard RAG
+  isn't the retrieval or the generation. It's that nothing sits in the middle deciding whether
+  the retrieval was actually good enough."* That sentence names the gap before naming the
+  technique, so everything after it has somewhere to land. Never *"X is an approach in which…"*.
+- **Significance lives here now**, in engineering terms and never industry ones. Compare to
+  prior work by what it *costs or enables* — bytes, latency, money, a class of bug that stops
+  happening — not by how it was received.
+- **No momentum reporting.** How fast the ecosystem adopted it, how large the release is next to
+  past releases, and who publicly praised it are facts about a market, not about a system. A
+  named person's quote earns its place only when it carries a technical claim the reader can go
+  check; never as an endorsement.
+- **Never cite another vendor's changelog as proof the topic matters.** That someone else shipped
+  a comparable feature says the category is popular, which the reader already assumed by clicking.
+  It says nothing about the mechanism, and it is the exact sentence that makes a session read like
+  a launch post.
+  - ✗ `Hooks are becoming the standard way teams put policy around agents. Cursor shipped custom
+    modes in August; 2.1.243 alone added modelPicker and managed-settings visibility. The
+    governance surface is growing fast.`
+  - ✓ `Fail-open is the correct default for a workflow hook — one that failed closed on an
+    unparseable command would wedge the agent constantly. The mistake is the reader's: the syntax
+    is borrowed from the permission system, the file is the same file, and the mental model comes
+    along for free.`
+  `build.js --check` warns when this section contains a version string, a rival product name, or
+  adoption language, so this one is caught rather than trusted.
+- Criticism belongs here at full strength. If there is a real objection ("has this just
+  rediscovered REST?"), state the strongest version of it and answer it with a mechanism.
+- 3-6 sentences. This section motivates; section 3 explains.
+
+**`## How <the thing> Works`** — the mechanism, and the one section whose heading names the
+topic instead of its own function. `## How the Hook Matcher Decides`, `## How Tokenization
+Splits Text`. This is `What It Is` and `Key Technical Details` merged into one pass, because as
+two sections they explained the same thing twice at two depths.
+
+- **One ladder, climbed once: what it is → how it works → the detail an implementer needs.** The
+  old shape re-entered the topic four separate times; this one enters it once and keeps going.
+  Depth is not reduced — only the re-introductions are.
+- **Use `###` sub-headings named for their subject**, the way a reference article does: `###
+  Byte Pair Encoding`, `### The Fail-Open Path`. Never `### Details` or `### Background`. A
+  reader scanning the sub-headings should learn what this mechanism is made of.
+- **Open on the concrete instance, not the abstraction.** Show `"Hello world!"` breaking into
+  tokens, then say what a token is. The example first, the definition second.
+- **Define every term in the sentence that first needs it.** There is no Glossary any more, so a
+  proper noun the reader has not met (NaViT, DeepStack, M-RoPE) gets a four-word gloss on the
+  spot — "NaViT's patch-n-pack (packing many images into one sequence)". A term that cannot be
+  glossed in a clause without derailing the sentence is a term this article should not be using.
+- **Lead each point with what it means, then give the constants.** "One visual token is a 28×28
+  pixel block — that's `patch_size=14` with `spatial_merge_size=2`" reads; "`patch_size=14`,
+  `spatial_merge_size=2`; 14×2=28" does not.
+- **Order foundational → specialist**, never in the order you happened to research it.
+- **Scaffold through the failure before the fix.** Walk the ambiguous query, the evidence split
+  across three documents, the confidently wrong answer — then show what the mechanism changes. A
+  mechanism explained against a failure the reader recognises is remembered; the same mechanism
+  explained abstractly is not.
+- Depth is not the problem and never gets reduced. The entry to it was the problem.
 
 **`## For a Software Engineer`** — the load-bearing section. Explain the topic using **generic
 engineering principles the reader already owns**, not AI ones.
@@ -589,7 +646,13 @@ engineering principles the reader already owns**, not AI ones.
   to measure, an assumption to stop making. Practical application is the whole point.
 - Give at least one number from the session that a non-specialist can feel (a cost multiple, a
   percentage wasted, a hard ceiling) and say why it is surprising.
-- Never require a later section to be understood first. This must stand alone.
+- **It now sits after the mechanism, so compare — do not re-explain.** This was the section's
+  main failure while it ran third: it had to teach the topic before it could draw the analogy,
+  which made it the second-longest section in the document. Placed after `How <the thing>
+  Works`, it can assume the mechanism and be short. Aim for ~150-200 words.
+- **One analogy, not three.** Pick the closest thing the reader has already shipped and commit
+  to it. This is the site's most distinctive section — no comparable publication translates AI
+  topics into engineering the reader has already done — so it is worth doing sharply.
 
 **`## What This Means for You`** — the anchor section, and the one that decides whether a deep
 topic lands or bounces. The reader's real question is never "is this clever?", it is *"does this
@@ -619,47 +682,6 @@ Rules:
 - **Never invent applicability.** Overstating relevance is worse than admitting there is little;
   this section is the site's credibility, not its marketing.
 - Write it in second person, plainly. This is the least academic section in the document.
-
-**`## Why It Matters`** — significance in engineering terms, never in industry terms.
-- Compare to prior work by what it *costs or enables* — bytes, latency, money, a class of bug
-  that stops happening — not by how it was received.
-- **No momentum reporting.** How fast the ecosystem adopted it, how large the release is next to
-  past releases, and who publicly praised it are facts about a market, not about a system. A
-  named person's quote earns its place only when it carries a technical claim the reader can go
-  check; never as an endorsement.
-- **Never cite another vendor's changelog as proof the topic matters.** That someone else shipped
-  a comparable feature says the category is popular, which the reader already assumed by clicking.
-  It says nothing about the mechanism, and it is the exact sentence that makes a session read like
-  a launch post.
-  - ✗ `Hooks are becoming the standard way teams put policy around agents. Cursor shipped custom
-    modes in August; 2.1.243 alone added modelPicker and managed-settings visibility. The
-    governance surface is growing fast.`
-  - ✓ `Fail-open is the correct default for a workflow hook — one that failed closed on an
-    unparseable command would wedge the agent constantly. The mistake is the reader's: the syntax
-    is borrowed from the permission system, the file is the same file, and the mental model comes
-    along for free.`
-  `build.js --check` warns when this section contains a version string, a rival product name, or
-  adoption language, so this one is now caught rather than trusted.
-- Criticism belongs here at full strength. If there is a real objection ("has this just
-  rediscovered REST?"), state the strongest version of it and answer it with a mechanism.
-
-**`## Key Technical Details`** — keep the depth, but stop dropping the reader into it cold. This
-section is where the write-up historically loses people: it opens on config constants and
-specialist names the reader has never met.
-- Open with a **Background first** paragraph — 2-4 plain sentences naming the handful of
-  primitives the bullets are about to assume, and what each one *is*. Do not restate the topic;
-  give exactly the vocabulary the bullets need. Example: before any bullet mentions
-  `patch_size` or `spatial_merge_size`, say in plain English that a vision encoder cuts an image
-  into small squares, reads each one, and may merge neighbours to cut the count.
-- **Order the bullets foundational → specialist**, never in the order you happened to research
-  them. The first bullet must be understandable straight out of the background paragraph.
-- **Lead each bullet with what it means, then give the constants.** "One visual token is a 28×28
-  pixel block — that's `patch_size=14` with `spatial_merge_size=2`" reads; "`patch_size=14`,
-  `spatial_merge_size=2`; 14×2=28" does not.
-- A proper noun the reader has not met (NaViT, DeepStack, M-RoPE) needs a four-word gloss on the
-  spot — "NaViT's patch-n-pack (packing many images into one sequence)" — even though it also
-  appears in the glossary. Do not make them scroll to follow a sentence.
-- Depth is not the problem and must not be reduced. The entry to it is the problem.
 
 **`## Implementing It`** — the section that makes this site worth reading instead of the
 changelog it came from. Every section above explains the change; this one shows the code that
@@ -703,8 +725,9 @@ lives with it. Required on every session.
   implement the *mechanism* from the paper in a dozen lines instead — that is what "implementing
   Y from scratch" means here.
 
-**Three labelled parts, in this order.** The first is the work; the other two are what separate an
-engineering document from a tutorial, and they are the two most often skipped:
+**Two labelled parts, in this order.** The counter-case used to be the third and is now section
+7, a heading of its own — it was the part readers most needed and the part most easily buried at
+the end of a long section:
 
 - **The change** — the code itself, in fenced blocks, for every role the change touches. This is
   the bulk of the section. Real API, field and config names throughout; name the file and the
@@ -715,30 +738,31 @@ engineering document from a tutorial, and they are the two most often skipped:
   calls `tools/list` in one session; it should be close to 1, not close to your tool-call count"*
   is a verification. "Make sure caching is working" is not. **An engineer who cannot tell whether
   the change took has not been given an implementation** — they have been given a suggestion.
-- **When not to** — the honest counter-case, and what the change costs. When is the old way still
-  right; what does this add in complexity, latency, money or operational surface; which
-  constraint makes it a bad idea. A technique with no stated downside reads as marketing, and the
-  audience is professionally suspicious of it. If it genuinely has no downside, say what you
-  checked to be sure.
 
 Length follows from the structural rule above: this section has the most **prose** in the
 document. If it does not, tighten the explanatory sections rather than padding this one — padding
 here fails the same anti-filler test as padding anywhere else, and padding it with pasted code
 fails on top of that, because code is not counted and the article is not the implementation.
 
-**`## Glossary`** — closes the document as reference, in the order terms first appear. It is
-reference, not teaching, and it competes with the code for the reader's attention: **one sentence
-per term, and a second only for a term the article turns on.** Measured on a real session it had
-grown to a fifth of the whole article — as long as every technical section combined — which is
-padding whatever the individual entries say.
-- Cover **every** acronym and domain term used anywhere above — no exceptions, including ones
-  that feel obvious to you (VLM, token, prefill, KV cache, RLAIF, patch, DPI).
-- Format: `- **Term** (expansion) — one or two plain sentences.`
-- For any unit or quantity the session turns on, explain **what it buys you**, not just what it
-  stands for. "DPI" is not "dots per inch"; it is "how much detail survives — 93 dpi means 6pt
-  text is ~8 pixels tall, which is why small print gets misread."
-- Define terms in terms of *other glossary entries or plain English only*, never in terms of
-  jargon defined nowhere.
+**`## When <the thing> Is the Wrong Tool`** — the counter-case, closing the document, and the
+second heading named for the topic: `## When a Hook Is the Wrong Tool`, `## When Not to Fine-Tune`.
+- **The honest counter-case and what the change costs.** When is the old way still right; what
+  does this add in complexity, latency, money or operational surface; which constraint makes it
+  a bad idea. A technique with no stated downside reads as marketing, and the audience is
+  professionally suspicious of it. If it genuinely has no downside, say what you checked.
+- **Close on the two or three questions a reader should ask before adopting it.** This is the
+  move the reference publications end on, and it is the right last thing in the reader's head:
+  not "wasn't that interesting" but "here is how I decide".
+- It is a section, not an appendix. It earns a heading because it is the part readers most need
+  and the part that was most easily buried at the end of `Implementing It`.
+
+**No Glossary.** Terms are defined where they are used — see the mechanism-section rules above.
+A 305-word appendix competing with the code for attention was the thing this replaces; the
+discipline it enforced (every acronym and domain term gets explained, including the ones that
+feel obvious — token, prefill, KV cache, patch, DPI) is unchanged, it just happens inline. For
+any unit the session turns on, still say **what it buys you**, not what it stands for: DPI is
+not "dots per inch", it is "how much detail survives — 93 dpi means 6pt text is ~8 pixels tall,
+which is why small print gets misread."
 
 ### Step 6: Write code_example.py
 
@@ -963,7 +987,7 @@ single most daunting thing on the page.
   (`min_pixels`, `patch_size`), no formulas, no arrow-chains of pipeline steps.
 - **At most ONE number**, picked for how surprising it is rather than how precise.
 - **Do not restate the write-up.** The full thesis, every constant, and all the supporting numbers
-  already live a few hundred pixels below in `## Why It Matters` and `## Key Technical Details`.
+  already live a few hundred pixels below in `## The Problem` and the mechanism section.
   Duplicating them here buys nothing and costs the reader the on-ramp.
 - Test: could someone who has never opened the session read this and want to? If it instead reads
   like the conclusion of a paper they haven't read, cut it down.
@@ -982,9 +1006,10 @@ unknown Category / Level / For / tag, no Hook, unrenderable diagram, **no
 `## Implementing It` section**, **no fenced code block in `topic.md`**. Do not present the
 summary until today's id is clean.
 
-The linter also now catches what used to be honour-system: `code_example.py` over 150 lines, a
-visualizer missing its CSP / session-id marker / `ResizeObserver` height / Reset button, and
-`## Why It Matters` slipping into momentum reporting.
+The linter also now catches what used to be honour-system: the seven-section order (missing,
+mis-ordered, or retired sections, and a mechanism/counter-case heading that does not name the
+topic), `code_example.py` over 150 lines, a visualizer missing its CSP / session-id marker /
+`ResizeObserver` height / Reset button, and `## The Problem` slipping into momentum reporting.
 
 Two content rules no linter can check, so check them by eye before you stop:
 

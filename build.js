@@ -185,6 +185,24 @@ const IMPLEMENT_SECTION_SINCE = "2026-08-25";
 // back catalog is left alone.
 const ARTIFACT_CONTRACT_SINCE = "2026-08-26";
 
+// The seven-section order. The old eleven-section shape explained the topic four
+// times (ELI5, For a Software Engineer, What It Is, Key Technical Details) and
+// only named the object in the fifth section, which is why the order read as
+// arbitrary. Two of the sections are topic-named rather than fixed -- the
+// mechanism ("How X Works") and the counter-case ("When X Is the Wrong Tool") --
+// so they are matched by pattern, not by string. Date-gated: 41 existing
+// sessions use the old order and are a dated log, not a backlog.
+const SECTION_ORDER_SINCE = "2026-08-26";
+const FIXED_SECTIONS = [
+  "Explain Like I'm 5",
+  "The Problem",
+  "For a Software Engineer",
+  "What This Means for You",
+  "Implementing It",
+];
+const MECHANISM_RE = /^How\s+.+/;      // "How the Hook Matcher Decides"
+const COUNTERCASE_RE = /^When\s+.+/;   // "When a Hook Is the Wrong Tool"
+
 /* ---- audience mix ---------------------------------------------------------
    Category says what a session is about; `For` says who it is for, and `For` is
    the one that tracks the reader. Both are measured over a trailing window,
@@ -636,7 +654,9 @@ function compile(id, journal, runner, opts) {
         warn(`${id}: "Implementing It" has no "How you know it worked" part — an engineer who `
           + `cannot tell whether the change took has been given a suggestion, not an implementation.`);
       }
-      if (!/when not to/i.test(impl)) {
+      // Before SECTION_ORDER_SINCE the counter-case lived inside this section;
+      // it is now a section of its own, checked below.
+      if (date < SECTION_ORDER_SINCE && !/when not to/i.test(impl)) {
         warn(`${id}: "Implementing It" has no "When not to" part — a technique with no stated `
           + `downside reads as marketing.`);
       }
@@ -690,7 +710,46 @@ function compile(id, journal, runner, opts) {
        significance stops being what the mechanism costs or enables and becomes how
        fast the market is moving. Version strings and rival product names are the
        tell, and they are cheap to spot, so spot them here rather than by eye. */
-    const why = sections.get("Why It Matters");
+    /* The seven-section order: five fixed names, two matched by pattern so the
+       heading can name the topic the way a reference article does, and no
+       Glossary -- definitions are made at the moment of use instead. */
+    if (date >= SECTION_ORDER_SINCE) {
+      const names = [...sections.keys()];
+      for (const want of FIXED_SECTIONS) {
+        if (!sections.has(want)) warn(`${id}: topic.md has no "## ${want}" section — see contract.md.`);
+      }
+      const mech = names.find((n) => MECHANISM_RE.test(n));
+      const counter = names.find((n) => COUNTERCASE_RE.test(n));
+      if (!mech) {
+        warn(`${id}: topic.md has no mechanism section — it must be named for the topic and `
+          + `start with "How", e.g. "## How the Hook Matcher Decides".`);
+      }
+      if (!counter) {
+        warn(`${id}: topic.md has no counter-case section — name it for the topic and start it `
+          + `with "When", e.g. "## When a Hook Is the Wrong Tool". A technique with no stated `
+          + `downside reads as marketing.`);
+      }
+      for (const gone of ["What It Is", "Key Technical Details", "Why It Matters",
+                          "How It Connects to What You Know", "Try It Yourself", "Glossary"]) {
+        if (sections.has(gone)) {
+          warn(`${id}: "## ${gone}" was retired with the seven-section order — see contract.md `
+            + `for where its content goes now.`);
+        }
+      }
+      // Order matters as much as membership: the object has to be established
+      // before the article explains what it means for the reader.
+      const spine = ["Explain Like I'm 5", "The Problem", mech, "For a Software Engineer",
+                     "What This Means for You", "Implementing It", counter].filter(Boolean);
+      const seen = names.filter((n) => spine.includes(n));
+      if (seen.join("|") !== spine.join("|")) {
+        warn(`${id}: section order is ${seen.join(" → ")}; contract.md wants `
+          + `${spine.join(" → ")}.`);
+      }
+    }
+
+    // Significance used to live in "Why It Matters"; under the seven-section order
+    // it lives in "The Problem". Check whichever one this session actually has.
+    const why = sections.get("Why It Matters") ?? sections.get("The Problem");
     if (why !== undefined && date >= ARTIFACT_CONTRACT_SINCE) {
       const momentum = why.match(/\b\d+\.\d+\.\d+\b|\b(Cursor|Copilot|Windsurf|Devin|Codex|Gemini CLI|Zed)\b|\b(adoption|momentum|fastest[- ]growing|becoming the standard|everyone is|more and more teams)\b/i);
       if (momentum) {
