@@ -534,7 +534,13 @@
   .prose ul, .prose ol { margin: 0 0 17px; padding-left: 22px; }
   .prose li { margin: 8px 0; }
   .prose code { font-family: var(--mono); font-size: 12.8px; background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; }
-  .prose pre { background: #0d0e12; border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow: auto; }
+  /* This block keeps its dark background in BOTH themes, so it must also pin its own
+     text colour. Without this it inherits the computed colour off .prose, which the
+     light theme overrides to #3a362e — near-black text on a near-black block. The
+     .panel / .fallback token override further up does not reach here: `code` inherits
+     an already-resolved colour, not the var. #e7e2d8 is the dark theme --ink, so this
+     changes nothing in dark mode. */
+  .prose pre { background: #0d0e12; color: #e7e2d8; border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow: auto; }
   .prose pre code { background: none; padding: 0; font-size: 12.5px; }
   .prose blockquote { margin: 0 0 14px; padding-left: 14px; border-left: 2px solid var(--line); color: var(--muted); }
   .prose table { border-collapse: collapse; margin: 0 0 18px; font-size: 13.5px; width: 100%; }
