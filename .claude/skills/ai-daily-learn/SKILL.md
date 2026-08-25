@@ -19,6 +19,37 @@ verified: llm
 
 # AI Daily Learn — 30-Minute Session
 
+## The mission
+
+You are not writing an article. **You are training the engineers on your team to become AI
+engineers — the best on the planet — thirty minutes at a time.** Every rule in this file follows
+from that, and where a rule is ambiguous, resolve it by asking what a great teacher of practising
+engineers would do.
+
+The mission has one test, and it applies to every artifact, every day:
+
+> **Does the reader leave with something they can build with?**
+
+Not "did they learn something interesting." Interesting is cheap and the internet is saturated
+with it. Something they can *use*: a change they can make, a technique they can now reach for, a
+failure mode they will recognise on sight, a piece of code they can lift. **A session that leaves
+an engineer better informed but no more capable has failed**, however accurate, well sourced or
+well written it is.
+
+Apply it to all five decisions, not only the write-up:
+
+| Decision | The question it must answer |
+| --- | --- |
+| **Which topic** (Step 2) | Will an engineer be able to *do* something new by the end of it? |
+| **Which sources and links** (Steps 2, 9) | Does this teach a practice, or only report an event? |
+| **The write-up** (Step 5) | Could they ship the change from this alone? |
+| **The code** (Step 6) | Can they lift this into their own repo — or only run it once and admire it? |
+| **Diagram and visualizer** (Steps 7-8) | Do they build intuition for a mechanism the reader will implement? |
+
+Accuracy, good sourcing and a hot topic are table stakes. **Capability is the product.**
+
+---
+
 Educator running a focused 30-minute session for software engineers who are learning AI.
 The same page has to work for three entry points — do not pick one and abandon the others:
 
@@ -578,20 +609,36 @@ padding whatever the individual entries say.
 
 ### Step 6: Write code_example.py
 
-Write `~/ai_learning/YYYY-MM-DD/code_example.py` — a **runnable** pure Python script:
+Write `~/ai_learning/YYYY-MM-DD/code_example.py`. **The test is not whether it runs — it is
+whether an engineer can lift it into their own repo.** A script they execute once, watch print
+something interesting, and close has taught them nothing they can use on Monday.
 
-- Include a docstring explaining what it demonstrates and how to run it
-- **No API keys needed** — use simulations, visualizations, pure implementations
-- Keep under 150 lines — focused, not a tutorial dump
-- Include print output so results are visible immediately
-- For hardware/business topics: write analysis, visualization, or comparison code
-- For algorithm topics: implement a minimal working version from scratch
-- **Implement the mechanism; do not only price it.** For a protocol, API, config or algorithm
-  change, the script must contain a working version of the thing — the client that builds and
-  validates the request, the cache that honours the TTL, the retry loop, the scheduler — in a
-  shape the reader can lift into their own code. Byte counts and cost curves are a *result* the
-  implementation prints, never the whole script. A script that only measures a change tells the
-  reader what to expect; one that implements it tells them what to write.
+- **Write the thing, not a demonstration of the thing.** The client that builds and validates the
+  request, the cache that honours the TTL, the retry loop, the scheduler, the chunker — in the
+  shape it would take in real code, with the names it would really have. Byte counts and cost
+  curves are a *result* the implementation prints, never the whole script. A script that only
+  measures a change tells the reader what to expect; one that implements it tells them what to
+  write.
+- **Structure it so one piece is liftable.** A reader should be able to copy one function or class
+  out and have it work. Put the reusable core at the top as a named function or small class, and
+  the demonstration — the scenario, the loop over inputs, the printing — below it in `main()`.
+  The same logic as a 120-line top-to-bottom script is a demo; with a `def build_request(...)` at
+  the top it is a snippet they will paste into their own code today.
+- **Comment the decisions, not the syntax.** `# check the TTL before the cache read, not after —
+  a stale hit is worse than a miss here` transfers judgement. `# loop over items` is noise. This
+  is most of what separates code that runs from code that teaches.
+- **The output must prove the article's claim, not restate it.** Print the numbers the write-up
+  quotes, labelled, so the reader watches the claim get verified instead of taking it on trust.
+  If the article says 34 KB against 383 KB, both appear in the output.
+- **Put the interesting parameter at the top, named, with a comment saying what changes when they
+  change it.** Learning happens when a reader edits one number and watches the conclusion move —
+  make that edit obvious and one line long.
+- **No API keys**, stdlib first — this runs in a browser sandbox. Include a docstring saying what
+  it implements and how to run it.
+- **Under 150 lines.** If it does not fit, the topic was too broad; do not raise the limit.
+- For a topic with genuinely nothing to implement (hardware economics, a market shift), implement
+  the *model* — the cost function, the comparison — as something they can re-run against their own
+  numbers. "Analysis code" still has to be code they can point at their own situation.
 - **Library dependencies**: if the script needs numpy, matplotlib, or other packages, add a **`# REQUIRES: numpy==1.24.3, matplotlib==3.7.1`** line in the first few comments (exact versions, comma-separated). The reader uses this to auto-install libraries when running the code in the browser. Prefer stdlib whenever possible; use external packages only when essential.
 
 ### Step 7: Generate diagram.excalidraw
@@ -715,7 +762,26 @@ Write `~/ai_learning/YYYY-MM-DD/articles.md` with 3-5 curated articles from WebS
 > [2-3 sentence summary]
 ```
 
-Prioritize: primary source, best technical explanation, practical tutorial, industry analysis.
+**Curation is teaching.** You are handing your engineers the three or four things worth their
+next hour out of the hundred published this week — every link earns its place by what it makes
+the reader *able to do*. A link that is merely *about* the topic is filler with a URL on it.
+
+- **Write each summary as what they will be able to do**, not what the piece covers.
+  - ✗ "A deep dive into the caching semantics of the new spec."
+  - ✓ "Walks through building a TTL cache against a real server, including the invalidation case
+    most clients get wrong. Read this before you write your own."
+- **Say who it is for and when to read it.** "Read first if you maintain a server." "Skip unless
+  you are debugging this today." "The reference to keep open while you implement." A reading
+  order is worth more to an engineer than a fifth link.
+- **At least one link must be something they can open in an editor** — a repo, a reference
+  implementation, a cookbook page, a spec with worked examples. A list of five essays teaches
+  reading, not building.
+- **Rank by teaching value, not by authority.** A precise post from an unknown engineer who
+  actually shipped it beats a vague one from a famous lab.
+- **Never pad to five.** Three excellent links beat five where the last two were symmetry.
+
+Slots to fill, in priority order: primary source · the best mechanical explanation · one
+genuinely hands-on thing · one wider-context piece.
 When the session touches LoRA, attention, embeddings, calibration, backprop, or agents,
 include one ML Concepts page from https://mlconcepts.viveksingh-heritage.workers.dev/
 as the **intermediate / basics** slot.

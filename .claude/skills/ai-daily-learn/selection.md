@@ -61,6 +61,7 @@ Write down three candidates (title, URL, category, one-line claim). Score each 0
 | --- | --- |
 | **Monday action** | Reader 1 can change a setting, measure a number, or stop a bad habit after the first third |
 | **Mechanism** | Reader 2 learns *why*, not just a product announcement |
+| **Leaves them capable** | Name the thing an engineer can *do* after reading that they could not do before. If the honest answer is "understand X better", it fails — being better informed is not being more capable |
 | **Implementable** | You can already name the code that changes — the payload, the handler, the config key — for *every* role the change touches, not only the one the announcement is addressed to |
 | **Fits 30 min** | One claim, not a survey |
 | **Primary source** | A changelog, doc, eng blog, or paper you can fetch — not a recap of a recap |

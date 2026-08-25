@@ -221,3 +221,30 @@ reached it for free — the real gap was that nothing *gated* the live push.
 - **Changed**: `build.js` — added `splitSections()` (fence-aware) and three new checks: the two
   labelled parts, and whether `Implementing It` is the longest section. Verified both ways: an
   explainer-shaped article trips all three; a correctly-shaped one is clean.
+
+## 2026-08-24 — the teaching mission, applied to every artifact
+
+- **Note**: "the focus on leaving engineers with a practical idea — this philosophy should be
+  used in selecting content or links, writing articles, writing code. Assume you are teaching
+  your engineers to become AI engineers, the best on the planet."
+- **Verdict**: standing rule, and a framing one. The previous two passes fixed the write-up; the
+  same philosophy had not reached source selection, `code_example.py` or `articles.md`, which is
+  where the user pointed.
+- **Changed**: `SKILL.md` — a **Mission** section now opens the file and everything hangs from
+  it. One test — *does the reader leave with something they can build with?* — mapped explicitly
+  onto all five decisions (topic, sources, write-up, code, diagram/visualizer), with the line
+  that resolves ambiguity: a session that leaves an engineer better informed but no more capable
+  has failed. Accuracy and sourcing are table stakes; capability is the product.
+- **Changed**: `SKILL.md` Step 6 — rewritten around liftability rather than runnability. Put the
+  reusable core at the top as a named function so one piece can be copied out; comment the
+  decisions rather than the syntax, because that is what transfers judgement; print the numbers
+  the article quotes so the claim is verified rather than asserted; put the interesting parameter
+  at the top so a reader can change one number and watch the conclusion move.
+- **Changed**: `SKILL.md` Step 9 — curation reframed as teaching. Summaries say what the reader
+  will be able to *do*, not what the piece covers, with a ✗/✓ pair; each link says who it is for
+  and when to read it; at least one link must be something openable in an editor (repo, reference
+  implementation, spec with examples); rank by teaching value over authority; never pad to five.
+- **Changed**: `visualize.md` — the same test at the top: build intuition for a mechanism the
+  reader is about to implement, not decoration that restates the write-up.
+- **Changed**: `selection.md` — a sixth shortlist gate, **Leaves them capable**: name what an
+  engineer can do afterwards that they could not before. "Understand X better" fails it.
