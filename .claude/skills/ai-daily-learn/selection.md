@@ -100,7 +100,14 @@ category is Tier C.
 
 - https://news.ycombinator.com/ — framing, and what practitioners are actually arguing about
 - https://simonwillison.net/ — the single best filter for "does this matter to an engineer"
-- https://www.latent.space/ and https://www.deeplearning.ai/the-batch/ — trend context
+- https://www.latent.space/ — AI engineering practice, interviews, what shipped and why
+- https://www.deeplearning.ai/the-batch/ — Andrew Ng's weekly. Its real value is the
+  research-to-practice bridge: it catches developments the harness-focused feeds miss and frames
+  them for people who build rather than train. Strongest as the **industry-analysis slot in
+  `articles.md`** and as a way to notice a topic; weakest as the primary source, because it
+  summarises. When it points at something good, go fetch what it points at.
+- https://www.deeplearning.ai/short-courses/ and `/courses/` — on-ramp only, same rule as ML
+  Concepts: `articles.md` further reading when a session assumes a concept, never the news lead.
 - https://mlconcepts.viveksingh-heritage.workers.dev/ — ML Concepts: interactive primers (LoRA,
   self-attention, embeddings, calibration, backprop, agents in prod). **On-ramp only, never the
   news lead.** Use it when Level is `Start here`, or as `articles.md` further reading. Do not
@@ -173,15 +180,28 @@ this whole list.
 - **Primary** — https://developers.googleblog.com/ — the practical Google feed
 - **Primary** — https://ai.meta.com/blog/ — Llama, PyTorch, real production numbers
 - Secondary — https://huggingface.co/blog, https://artificialanalysis.ai/ (measured comparison
-  rather than vendor claims), https://cookbook.openai.com/
-- `openai.com/blog` often 403s to WebFetch — use the platform changelog, the cookbook, or HN
+  rather than vendor claims), https://cookbook.openai.com/ and
+  https://github.com/openai/openai-cookbook
+- Secondary, other labs — https://mistral.ai/news, https://qwenlm.github.io/blog/,
+  https://api-docs.deepseek.com/news/, https://cohere.com/blog, https://www.together.ai/blog,
+  https://allenai.org/blog. **Build on the technical report or model card, never the launch
+  post.** An open-weights release with a real report is a session; the announcement of it is the
+  press release this site exists not to be.
+
+**Fetchability, checked:** every `openai.com` surface — `/news/`, `/index/`, `/research/` — 403s
+to WebFetch, not just the blog. Route around it via the platform changelog, the cookbook (site or
+GitHub repo), or HN. `x.ai/news` 403s the same way.
 
 ### AI in Production  ·  `For: Shipping AI`  ·  target 1-2 per 10
 
 - **Primary** — https://blog.vllm.ai/ — serving internals with numbers
 - **Primary** — https://modal.com/blog and https://www.baseten.co/blog/ — inference economics
 - **Primary** — https://lmsys.org/blog/ — SGLang, throughput, scheduling
-- Secondary — https://blog.cloudflare.com/tag/agents/, https://developer.nvidia.com/blog/
+- **Primary** — https://engineering.fb.com/ (and `/category/ai-research/`) — Meta's *engineering*
+  blog, distinct from `ai.meta.com/blog`: serving infra, storage, scale, with real numbers. One
+  of the few places a production write-up says what actually broke.
+- Secondary — https://blog.cloudflare.com/tag/agents/, https://developer.nvidia.com/blog/,
+  https://www.databricks.com/blog/category/engineering
 
 ### Hands-on Techniques  ·  `For: Shipping AI` / `Building agents`  ·  target 1-2 per 10
 
@@ -201,6 +221,8 @@ for this", it loses to any Tier A candidate. Check the paper budget before openi
 
 - https://www.anthropic.com/research, https://huggingface.co/papers (the daily filter — use it
   instead of raw arXiv listings)
+- https://deepmind.google/discover/blog/ and https://ai.meta.com/research/ — frontier work that
+  usually ships with enough detail to reimplement a piece of it, which is what earns a Tier C slot
 - https://arxiv.org/list/cs.AI/recent and https://arxiv.org/list/cs.LG/recent
 - https://magazine.sebastianraschka.com/ and https://lilianweng.github.io/ — papers already
   translated into engineering terms, which is usually the better source than the paper itself
