@@ -36,7 +36,9 @@ not ready.
 ## Hard contract (`build.js --check` enforces these)
 
 - Complete standalone HTML: `<!doctype html>`, `<html>`, a non-empty `<title>`, viewport meta
-- Root marker: `data-visualizer` on `<main>` or the wrap (value optional)
+- Root marker: `data-visualizer="<session-id>"` on `<main>` or the wrap — the value is the
+  folder name (`2026-08-25`, `frontier-2026-08-25`), so a file that has drifted out of its
+  session is traceable. A bare `data-visualizer` now warns.
 - Restrictive CSP, no exceptions:
 
   `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'`
@@ -64,7 +66,9 @@ new ResizeObserver(reportHeight).observe(document.documentElement);
   does not flash light inside the reader's shell
 - System UI + ui-monospace only — no Google Fonts
 - Clear mechanism, live numerical readout, one-sentence state explanation
-- Meaningful labelled controls (keyboard accessible) and a **Reset** button
+- Meaningful labelled controls (keyboard accessible) and a **Reset** button that returns every
+  input to the article's own numbers — a reader who drags a slider into nonsense must have a way
+  back without reloading the page
 - Works at phone width; honor `prefers-reduced-motion`; cap timers and clean them up
 - Deterministic / seeded data if you simulate
 
@@ -79,3 +83,9 @@ node build.js --check
 
 Today's id must not warn `no visualize.html`, `no data-visualizer`, `does not report its
 height`, `references external resources`, or `invalid JavaScript`.
+
+**Four of the rules above are now build warnings, not honour-system items:** the CSP meta, the
+session id on `data-visualizer`, `documentElement.scrollHeight` + `ResizeObserver`, and the Reset
+control. They are the parts of the contract that are invisible in a screenshot, which is exactly
+why they were the parts that shipped missing. A visualizer that looks finished and warns is not
+finished.

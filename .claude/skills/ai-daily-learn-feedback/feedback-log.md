@@ -283,3 +283,48 @@ reached it for free — the real gap was that nothing *gated* the live push.
   gate as not applicable, names the track in the commit subject, and states that a Frontier run
   publishing nothing is a **successful** run.
 - **Not changed**: skipped days render silently — no gap row in the index.
+
+## 2026-08-25 — 2026-08-25 (`Bash(rm *)` hooks session)
+
+- **Note**: "Why It Matters is momentum reporting — 'hooks are becoming the standard… Cursor
+  shipped… 2.1.243 alone added modelPicker… the governance surface is growing fast.' That is
+  market, not mechanism."
+- **Verdict**: compliance gap — `## Why It Matters` already banned momentum reporting, and it
+  shipped anyway, because nothing but eyesight was checking.
+- **Changed**: `SKILL.md` `## Why It Matters` rules — added "Never cite another vendor's changelog
+  as proof the topic matters", with the ✗/✓ pair taken verbatim from this session's own two
+  paragraphs. `build.js` — `Why It Matters` now warns on a version string, a rival product name,
+  or adoption language (date-gated from 2026-08-26).
+
+- **Note**: "visualize.html is not done without CSP + Reset + session `data-visualizer`" — this
+  file had a bare marker, no CSP, no Reset, `body.scrollHeight` only.
+- **Verdict**: compliance gap for CSP / Reset / `documentElement` height (all three already in
+  `visualize.md`); standing rule for the marker carrying the session id, which was previously
+  "value optional".
+- **Changed**: `visualize.md` — marker must be `data-visualizer="<session-id>"`; Reset must return
+  every input to the article's own numbers; a closing note that four of the contract items are now
+  build warnings. `build.js` — warns on missing CSP meta, wrong/empty marker value, missing
+  `documentElement.scrollHeight` + `ResizeObserver`, and missing Reset control.
+
+- **Note**: "code_example.py is 171 lines (limit 150). The combo demo at the bottom is the cut."
+- **Verdict**: compliance gap — the cap was written down and unenforced.
+- **Changed**: `build.js` — warns over 150 lines. `SKILL.md` Step 6 — says the linter enforces it
+  and names the combined "and now all of it together" finale as the usual cut.
+
+- **Note**: "`Bash(rm *)` is a Claude Code glyph. A Cursor-only scroller does not know that
+  language. The Hook sentence is the actual title for that reader."
+- **Verdict**: standing rule. The title section said "write it for someone who has only used
+  Cursor" but never said what disqualifies a title under that test.
+- **Changed**: `SKILL.md` title rules — "No glyph only one product's users can read", with the
+  ✗/✓ pair and the swap test (if the `Hook` line is the better title for that reader, use it).
+  Also added to the Step 11 by-eye checklist, replacing the momentum item that is now linted.
+
+- **Not changed**: the softer misses — `Level: Building` on a `Using tools` job, the 311-word
+  glossary, five articles where three would do, and the `guard.sh` regex needing a sentence
+  saying it is still not a parser. All four are real, but the spec already caps the glossary
+  ("one sentence each"), already sets 3-5 articles, and already defines the Level ladder; these
+  are judgment calls on the day, not missing instructions. Adding a sentence for each would grow
+  the spec without changing what a future session does.
+- **Not changed**: the session folder itself, and the new checks are gated from 2026-08-26 so the
+  published record does not warn forever. Offered to fix the title, the Why It Matters tail, the
+  visualizer contract and the 21 extra code lines in place.

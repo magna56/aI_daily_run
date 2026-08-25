@@ -426,6 +426,15 @@ glossary, it failed.
 - **Questions are welcome** when the question is one the reader has actually asked:
   "Why Does My Agent Cost $30 Some Days and $3 Others?" A question they have never wondered
   is just a worse statement.
+- **No glyph only one product's users can read.** A title may quote code, but only code whose
+  meaning survives a reader who has never opened that product. `Bash(rm *)`, `min_pixels`,
+  `--max-num-seqs` and `PreToolUse` are in-house vocabulary: to the Cursor-only engineer scrolling
+  past, they are noise where the surprise should be. Say what the thing *does* and let the glyph
+  appear in paragraph one.
+  - ✗ `Bash(rm *) Even Catches echo $(rm -rf /). It's Still Not a Gate.`
+    → ✓ `The Rule You Wrote to Stop Your Agent Deleting Things Isn't a Lock`
+  A good test: if the `Hook` line would work better as the title for someone who has only used
+  Cursor, the title lost and the hook won — use the hook.
 - **Friendly, plain, curious.** Contractions are fine. Speak like a smart colleague who found
   something interesting, not like an abstract.
 - **Never oversell.** A hook the article doesn't pay off is the fastest way to lose this
@@ -545,6 +554,19 @@ Rules:
   past releases, and who publicly praised it are facts about a market, not about a system. A
   named person's quote earns its place only when it carries a technical claim the reader can go
   check; never as an endorsement.
+- **Never cite another vendor's changelog as proof the topic matters.** That someone else shipped
+  a comparable feature says the category is popular, which the reader already assumed by clicking.
+  It says nothing about the mechanism, and it is the exact sentence that makes a session read like
+  a launch post.
+  - ✗ `Hooks are becoming the standard way teams put policy around agents. Cursor shipped custom
+    modes in August; 2.1.243 alone added modelPicker and managed-settings visibility. The
+    governance surface is growing fast.`
+  - ✓ `Fail-open is the correct default for a workflow hook — one that failed closed on an
+    unparseable command would wedge the agent constantly. The mistake is the reader's: the syntax
+    is borrowed from the permission system, the file is the same file, and the mental model comes
+    along for free.`
+  `build.js --check` warns when this section contains a version string, a rival product name, or
+  adoption language, so this one is now caught rather than trusted.
 - Criticism belongs here at full strength. If there is a real objection ("has this just
   rediscovered REST?"), state the strongest version of it and answer it with a mechanism.
 
@@ -663,7 +685,9 @@ something interesting, and close has taught them nothing they can use on Monday.
   make that edit obvious and one line long.
 - **No API keys**, stdlib first — this runs in a browser sandbox. Include a docstring saying what
   it implements and how to run it.
-- **Under 150 lines.** If it does not fit, the topic was too broad; do not raise the limit.
+- **Under 150 lines**, and `build.js --check` warns above it. If it does not fit, the topic was
+  too broad; cut the demo furthest from the one mechanism, do not raise the limit. The combined
+  "and now all of it together" finale at the bottom is almost always the cut.
 - For a topic with genuinely nothing to implement (hardware economics, a market shift), implement
   the *model* — the cost function, the comparison — as something they can re-run against their own
   numbers. "Analysis code" still has to be code they can point at their own situation.
@@ -869,14 +893,17 @@ unknown Category / Level / For / tag, no Hook, unrenderable diagram, **no
 `## Implementing It` section**, **no fenced code block in `topic.md`**. Do not present the
 summary until today's id is clean.
 
+The linter also now catches what used to be honour-system: `code_example.py` over 150 lines, a
+visualizer missing its CSP / session-id marker / `ResizeObserver` height / Reset button, and
+`## Why It Matters` slipping into momentum reporting.
+
 Two content rules no linter can check, so check them by eye before you stop:
 
 - `## Implementing It` gives code for **every role the change touches** — client *and* server,
   producer *and* consumer — not only the role the source announcement was written for. A section
   that is all server and one sentence of "clients should check X" has failed this.
-- `## Why It Matters` carries no momentum reporting: no "largest release since", no "adoption was
-  unusually fast", no advocate quoted approving of it. Those are the two ways a session reads as
-  a press release rather than as something an engineer can use.
+- The title reads to someone who has only used Cursor. No product-specific glyph doing the work
+  of the surprise; if the `Hook` line is the better title for that reader, swap them.
 
 ### Step 12: Present the Summary
 

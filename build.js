@@ -178,6 +178,13 @@ const TAGS = [
 // to ignore the warnings that matter.
 const IMPLEMENT_SECTION_SINCE = "2026-08-25";
 
+// The artifact contract — the visualizer's CSP/Reset/height handshake, the 150-line
+// cap on code_example.py, and "Why It Matters" carrying no momentum reporting — was
+// written down long before anything enforced it, and a session shipped breaking all
+// three. Date-gated for the same reason as above: new sessions are held to it, the
+// back catalog is left alone.
+const ARTIFACT_CONTRACT_SINCE = "2026-08-26";
+
 /* ---- audience mix ---------------------------------------------------------
    Category says what a session is about; `For` says who it is for, and `For` is
    the one that tracks the reader. Both are measured over a trailing window,
@@ -614,6 +621,18 @@ function compile(id, journal, runner, opts) {
           + `(${words(impl)}) — tighten the explanatory sections, do not pad the implementation.`);
       }
     }
+    /* "Why It Matters" is where a session quietly turns into a press release: the
+       significance stops being what the mechanism costs or enables and becomes how
+       fast the market is moving. Version strings and rival product names are the
+       tell, and they are cheap to spot, so spot them here rather than by eye. */
+    const why = sections.get("Why It Matters");
+    if (why !== undefined && date >= ARTIFACT_CONTRACT_SINCE) {
+      const momentum = why.match(/\b\d+\.\d+\.\d+\b|\b(Cursor|Copilot|Windsurf|Devin|Codex|Gemini CLI|Zed)\b|\b(adoption|momentum|fastest[- ]growing|becoming the standard|everyone is|more and more teams)\b/i);
+      if (momentum) {
+        warn(`${id}: "Why It Matters" reads as momentum reporting near "${momentum[0]}" — `
+          + `significance is what the mechanism costs or enables, never who else shipped one.`);
+      }
+    }
   }
   const assetDir = path.join(ASSET_DIR, id);
   const writing = !opts.check;
@@ -651,7 +670,12 @@ function compile(id, journal, runner, opts) {
       warn(`${id}: code_example.py exited ${run.exitCode}${run.timedOut ? " (timeout)" : ""}.`);
     }
     if (run && run.durationMs != null) delete run.durationMs; // keep payloads stable
-    code = { source, lines: source.split("\n").length, run };
+    const codeLines = source.split("\n").length;
+    if (kind === "daily" && date >= ARTIFACT_CONTRACT_SINCE && codeLines > 150) {
+      warn(`${id}: code_example.py is ${codeLines} lines (cap 150) — cut the demo that is `
+        + `furthest from the one mechanism, do not raise the limit.`);
+    }
+    code = { source, lines: codeLines, run };
   } else {
     warn(`${id}: no code_example.py.`);
   }
@@ -677,11 +701,35 @@ function compile(id, journal, runner, opts) {
       if (!/name=["']viewport["']/i.test(html)) {
         warn(`${id}: visualize.html has no viewport meta tag.`);
       }
-      if (!/data-visualizer/i.test(html)) {
+      const marker = html.match(/data-visualizer(?:\s*=\s*["']([^"']*)["'])?/i);
+      if (!marker) {
         warn(`${id}: visualize.html has no data-visualizer root marker.`);
       }
       if (!/adl-visualize-height/.test(html)) {
         warn(`${id}: visualize.html does not report its height to the reader.`);
+      }
+      /* The three parts of the visualizer contract that are invisible in a
+         screenshot, so they are the three that get skipped. Everything here is
+         written down in .claude/skills/ai-daily-learn/visualize.md; the build is
+         where the writing-down starts costing something. */
+      if (date >= ARTIFACT_CONTRACT_SINCE) {
+        if (marker && (marker[1] || "") !== id) {
+          warn(`${id}: visualize.html root marker is data-visualizer="${marker[1] || ""}" — `
+            + `it must carry this session's id, so a stray artifact is traceable to its session.`);
+        }
+        if (!/http-equiv\s*=\s*["']Content-Security-Policy["']/i.test(html)
+            || !/default-src\s+'none'/i.test(html)) {
+          warn(`${id}: visualize.html has no Content-Security-Policy meta with default-src 'none' `
+            + `— see visualize.md for the exact policy.`);
+        }
+        if (!/document\.documentElement\.scrollHeight/.test(html) || !/ResizeObserver/.test(html)) {
+          warn(`${id}: visualize.html must report documentElement.scrollHeight and re-report on `
+            + `every layout change via ResizeObserver — body.scrollHeight alone clips the pane.`);
+        }
+        if (!/>\s*Reset\s*</i.test(html)) {
+          warn(`${id}: visualize.html has no Reset control — a reader who drags a slider into `
+            + `nonsense has no way back to the article's numbers.`);
+        }
       }
       if (/<script[^>]+\bsrc\s*=|<link[^>]+\bhref\s*=|\b(fetch|XMLHttpRequest|WebSocket)\s*\(/i.test(html)) {
         warn(`${id}: visualize.html references external resources or network APIs.`);
