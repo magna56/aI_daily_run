@@ -1576,6 +1576,40 @@
     return id + (pane && pane !== "overview" ? "/" + pane : "");
   }
 
+  // The real, crawlable path for a routed view, if build.js generated one —
+  // /<slug>/, /topics/<slug>/, /frontier/. Everything else (tag, level, the
+  // learn index, an unknown id) has no static file behind it, so it falls
+  // back to "/": there is nothing truer to show in the address bar for those,
+  // and the hash — untouched by this — still carries the real state.
+  function canonicalPathFor(target) {
+    if (target) {
+      if (target.frontierIndex) return "/frontier/";
+      if (target.topic) {
+        var cat = categoryFromSlug(target.topic);
+        if (cat) return "/topics/" + slugifyCat(cat) + "/";
+      } else if (target.id) {
+        var s = byId(target.id);
+        if (s && s.slug) return "/" + s.slug + "/";
+      }
+    }
+    return "/";
+  }
+
+  // Every location.hash = ... write below still drives all routing state, as
+  // it always has — shared #2026-08-25 / #learn/... links keep working
+  // unchanged, and so does reloading or copying the URL while on a non-
+  // overview tab (the hash still carries the pane; only the pathname is
+  // rewritten). This only layers a cosmetic replaceState on top so the
+  // address bar (and therefore copy-paste, share, and analytics) shows the
+  // real path the card's own <a href> already points at, instead of a bare
+  // "/#<hash>" that only existed because a click intercepted that href. No
+  // new history entries: back/forward still traverse exactly the entries
+  // hash routing already created, each just relabelled with its real path.
+  function syncPath(target) {
+    var want = SITE_ROOT + canonicalPathFor(target) + location.hash;
+    if (location.pathname + location.hash !== want) history.replaceState(null, "", want);
+  }
+
   function levelClass(level) {
     if (level === "Start here") return "level-start";
     if (level === "Building") return "level-building";
@@ -2339,6 +2373,7 @@
 
   function route() {
     var target = parseHash();
+    syncPath(target);
     var idxEl = $("viewIndex"), rdEl = $("viewReader");
 
     // #topic/<slug> and #tag/<slug> are filtered GRID views — they preset the
