@@ -87,7 +87,7 @@ else
         global.window = {};
         require("./site/data/index.js");
         const daily = (window.SESSIONS || [])
-          .filter((s) => s.kind !== "learn")
+          .filter((s) => s.kind === "daily")
           .sort((a, b) => String(b.id).localeCompare(String(a.id)))[0];
         if (!daily) process.exit(0);
         process.stdout.write(JSON.stringify({
