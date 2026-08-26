@@ -7,7 +7,9 @@
 **For**: Building agents
 **Hook**: The product is not the model. It is a loop that calls tools, checks permission, and parks big work in a child so the main chat stays small.
 **Kind**: Learn
-**Time to read**: ~10 minutes
+**Time to read**: ~16 minutes
+
+> **You'll be able to:** draw a coding agent's physical architecture from memory, name the exact order a tool call is checked in before it runs, and explain why `Edit` requiring a prior `Read` is a safety property enforced by bookkeeping rather than by asking the model to be careful.
 
 ## Explain Like I'm 5
 
@@ -66,22 +68,119 @@ Once you see the harness, changelogs stop looking random: background review, sub
 - **Children need a job spec.** A sub-agent with a vague prompt invents scope (lesson 3) in a room you are not watching.
 - **MCP is optional.** Built-in read/edit/bash is enough to learn the shape.
 
+## The Physical Architecture
+
+Split the machine in half, and most of what feels mysterious stops being mysterious:
+
+```
+YOUR MACHINE                              THE PROVIDER'S DATA CENTER
+────────────────────                      ──────────────────────────
+Coding agent CLI          ──API call──►   GPU cluster
+  conversation history                    weights live here
+  permission state                        inference runs here
+  file access                ◄──stream──  response comes back
+  MCP server processes
+  your shell
+```
+
+Your machine holds every piece of state and performs every side effect — the files, the shell, the permission decisions. The data center holds the weights and does the thinking. Nothing about your filesystem exists on the other side except the bytes you chose to send it. This is why a "smarter model" swap changes the *thinking*, and changes nothing about the loop, the tools, or the permissions running on your own machine.
+
+## The Loop, Precisely
+
+```python
+while True:
+    response = model.infer(system_prompt + conversation_history)
+
+    if response is text only:
+        display(text)
+        break                       # wait for the next user input
+
+    if response has tool_calls:
+        for call in response.tool_calls:
+            result = permission_check(call)
+            result = execute(call) if allowed else "denied"
+            conversation_history.append(call)
+            conversation_history.append(result)
+        continue                    # loop back with the new context
+```
+
+`stop_reason` is what drives it:
+
+| `stop_reason` | Meaning | Harness action |
+|---|---|---|
+| `end_turn` | Model is done | Display text, wait for the user |
+| `tool_use` | Model wants tools | Execute them, loop back |
+| `max_tokens` | Hit the output limit | Continue in the next call |
+
+## The Permission Pipeline, in Order
+
+Every tool call runs this exact sequence before anything happens, and the order is the whole story:
+
+```
+Tool call arrives
+    → Pre-tool hooks fire     (your code; can block outright, before anything else)
+    → Allowlist check         (settings patterns; a match allows)
+    → Permission mode check   (ask by default; plan mode blocks anything that writes)
+    → Interactive prompt      (Allow / Deny / Always allow)
+```
+
+**Hooks fire first**, before the allowlist — which is why a hook is the closest thing to real enforcement here, and everything after it can be satisfied by a sufficiently permissive config. [The daily lab on hooks](#2026-08-25) is the deep version of exactly this claim: what a hook can and cannot actually guarantee. And **"Always allow" writes to a local settings file**, which is the accumulation lesson 7 measured directly costing tokens on every message from then on — the convenience has an ongoing price.
+
+**Parallel tool calls are safe for an ordinary reason:** independent calls in one model response execute concurrently, and this is safe because a call in a batch cannot reference a sibling's result — the model had not seen any of them when it emitted the batch. Every call can only depend on *prior* turns. Same reason concurrency is safe anywhere: no data dependency between the parallel pieces.
+
+## The State the Model Does Not Have
+
+| State | Purpose |
+|---|---|
+| `cwd` | Current working directory |
+| `conversation_history` | The full message array — the model's only memory |
+| `files_read` | Which files were accessed this session |
+| `permission_grants` | "Always allow" decisions already made |
+| `active_agents` | Running subagents |
+| `token_count` | Triggers compaction |
+
+**`files_read` is the quietly clever one.** Requiring a prior `Read` before an `Edit` on the same file makes a blind edit structurally impossible — the harness enforces it by bookkeeping, not by asking the model to please look first. That is the pattern worth copying if you build your own: turn a safety property you want into a check the harness makes mechanically, rather than an instruction you hope the model follows.
+
+## Quick Reference
+
+| Term | Plain English |
+|---|---|
+| Harness | Loop + tools + permissions + isolation + context policy. |
+| Parent session | The chat you actually type into. |
+| Subagent | A child session that returns a result, its reads never entering the parent. |
+| `stop_reason` | The field that tells the harness whether to loop again or stop. |
+| Permission pipeline | Hooks, then allowlist, then mode, then interactive prompt — in that order. |
+| `files_read` | Harness bookkeeping that makes a blind edit structurally impossible. |
+| Autocompaction | Summarizing older turns when the window nears its limit. Lossy by design. |
+
+## Do It Today
+
+**Step 1 — watch the same reads cost differently depending on where they happen, 2 minutes.**
+
+```bash
+python3 learn/the-coding-agent-harness/code_example.py
+```
+
+**You know it worked** when three inline 6,000-token reads leave the parent at **2,560 tokens but peak at 9,630** before autocompaction kicks in and thrashes it back down, while parking the same reads in a subagent leaves the parent at a steady **4,590** with the bulk — **26,700 tokens** — living and dying in the child instead. Same three reads. Very different bill, purely from where the harness routed them.
+
+**Step 2 — draw your own tool's harness on one page.** Loop, tools, who can spawn children, what sits on ask versus allowlist versus bypass. Most debugging sessions about "the model did something weird" are actually questions about one box on that page.
+
+**Step 3 — change one thing, not the model.** Put a long read in a subagent instead of inline, or move something off an allowlist back onto ask, or shorten a briefing file. Model swaps get reached for first and explain the least.
+
+## Gotchas
+
+- **A "smarter" model with bypass-on and a bloated briefing will still smash the repo and the bill.** Most of what you feel session to session is harness policy, not model capability.
+- **Hooks fire before the allowlist, and that is the whole reason they matter.** A rule in prose (a briefing file saying "please don't push") loses to an ask gate every time; a hook can at least run before either.
+- **A subagent with a vague prompt invents scope in a room you are not watching.** Give a child the same spec discipline lesson 3 asks for a direct prompt.
+- **Autocompaction is lossy by design, not a bug.** Files modified and decisions made survive; exact intermediate results and verbatim file contents often do not.
+- **Isolation is not free.** Spawning a subagent costs its own setup; on a short session that cost can exceed what it saves.
+
 ## How It Connects to What You Know
 
-A job queue, a worker pool, and a permissions service. The model is not the orchestrator. The harness is.
+A job queue, a worker pool, and a permissions service. The model is not the orchestrator — the harness is, and the permission pipeline above is the same shape as a request going through auth middleware before it ever reaches a handler: multiple gates, checked in a fixed order, and the first one that says no wins.
 
-Previous: [How the Forward Pass Runs](#learn/how-the-forward-pass-runs). That is the last lesson. The daily lab on the homepage is the ongoing case studies.
+This lesson sits on top of 4, 5, 7 and 8 in this track — the loop, the tools, the context economics, the agent patterns. The daily lab on the homepage is where all of it keeps showing up as news; this page is the map underneath it.
 
-Labs that assume this map: [2026-08-22](#2026-08-22) (budget), [2026-07-05](#2026-07-05) (schema).
+Previous: [How the Forward Pass Runs](#learn/how-the-forward-pass-runs). That is the last lesson in this track.
 
-## Try It Yourself
-
-`code_example.py` runs a parent loop that either reads a big file inline or parks the read in a child and keeps only a summary — and prints how the parent's prefix grows in each case.
-
-## Glossary
-
-- **Harness** — loop + tools + permissions + isolation + context policy.
-- **Parent session** — the chat you type in.
-- **Sub-agent** — a child session that returns a result and does not keep its reads in the parent.
-- **Permission mode** — ask, allowlist, or bypass for side effects.
-- **Isolation** — keeping a child's context out of the parent prefix.
+Labs that assume this map: [2026-08-22](#2026-08-22) (budget), [2026-07-05](#2026-07-05) (schema trap), [2026-08-25](#2026-08-25) (hooks).
