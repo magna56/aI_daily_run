@@ -7,7 +7,9 @@
 **For**: Building agents
 **Hook**: A skill is a markdown file the agent loads on demand. It is not a smaller model you train.
 **Kind**: Learn
-**Time to read**: ~10 minutes
+**Time to read**: ~13 minutes
+
+> **You'll be able to:** write a `SKILL.md` whose description actually triggers, tell a skill apart from a hook and a subagent by what each one costs, and know when to reach for which.
 
 ## Explain Like I'm 5
 
@@ -35,43 +37,87 @@ The number worth feeling: a typical skill description is ~80 tokens. The body is
 
 **What to do about it**: write a folder with a `SKILL.md`. Put the trigger in `description`. Keep the body out of the always-on file. Hook for enforcement. Sub-agent when the work should never land in the parent transcript.
 
-## What It Is
+## The Folder, and What Loads When
 
-A skill is a directory. The required file is `SKILL.md`: YAML frontmatter, then markdown, optionally scripts in the same folder. In Claude Code the directory name becomes a `/slash` command. Personal skills live in `~/.claude/skills/`; project skills in `.claude/skills/`. There is no training job and no endpoint. Installing a skill is putting a folder on disk.
+A skill is a directory, and the required file is `SKILL.md` — YAML frontmatter, then markdown, optionally scripts in the same folder:
 
-The harness reads *only* the frontmatter at start and builds a catalog for the system prompt. When a user phrase matches, or they type `/name`, it loads the body. That two-stage load is the feature.
+```
+.claude/skills/check-health/
+├── SKILL.md      ← required: frontmatter + instructions
+├── scripts/      ← optional: code the agent can run
+└── references/   ← optional: docs loaded on demand
+```
 
-The same folder format is showing up as a shared convention (agentskills.io and cousins). Cursor can point at a rules/skills directory too. Portable instructions, not a vendor model.
+```yaml
+---
+name: check-health
+description: Verify the API is running. Use when the user says "check health" or "is it running".
+---
 
-## Why It Matters
+1. Verify the server is running on localhost:8080
+2. Test /api/health with a simple request
+3. Report the status of each endpoint
+```
 
-Once "skill" means "lazy-loaded markdown," you stop scheduling a fine-tune for a commit-message format. You also stop treating `CLAUDE.md` as a junk drawer. Standing project facts stay in the briefing. Repeatable procedures become skills. Hard stops become hooks. Big detours become sub-agents (lesson 11).
+In Claude Code the directory name becomes a `/slash` command. Personal skills live in `~/.claude/skills/`; project skills in `.claude/skills/`. There is no training job and no endpoint — installing a skill is putting a folder on disk.
 
-## Key Technical Details
+**The two-stage load is the feature.** The harness reads *only* the frontmatter at session start and keeps the catalog — name plus description — in the system prompt. The body loads when a user phrase matches the description, or they type `/name`. That is why the description is the API, not documentation: "use when the user asks for a commit message" is a trigger; "helps with git" is fog that never fires.
 
-**Background first.** Frontmatter is the index. The markdown body is the implementation. The harness, not the model, decides when the body enters the context window.
+| Field | Purpose |
+|---|---|
+| `name` | The slash-command name, kebab-case |
+| `description` | What it does *and* the trigger phrases — this is what gets matched |
+| `allowed-tools` | Pre-approve specific tools for this skill only |
+| `model` | Override the model, e.g. `haiku` for pure formatting |
+| `disable-model-invocation: true` | Only the user can trigger it — for deployments, migrations |
+| `context: fork` | Run in an isolated subagent instead of the parent transcript |
 
-- **Description is the API.** "Use when the user asks for a commit message" is a trigger. "Helps with git" is fog.
-- **One job per skill.** A 4,000-line mega-skill is an always-on file with extra steps.
-- **Hooks are code.** If you need "never `rm -rf /`," do not put it only in a skill. Put it in a hook the model cannot skip.
-- **Skills are not memory.** They do not store last week's chat. They store a procedure.
+## Skills vs Hooks vs Subagents
+
+Three primitives get called "automation" and cost completely different things:
+
+- **A skill is lazy-loaded markdown.** It occupies prompt tokens once it fires, and it runs *inside* the model's own turn — the model chooses to follow it, which means it can also choose to ignore or misread it.
+- **A hook is code that runs on an event**, outside the model entirely: `PreToolUse`, `PostToolUse`, `Stop`. It costs no prompt tokens and the model cannot talk its way past it — but it can also only allow, deny, or run a side effect, never teach a procedure. [The daily lab on hooks](#2026-08-25) covers exactly how a hook decides to fire, and why it is still not a hard gate.
+- **A subagent is a forked process** — its own transcript, its own tools, its own token budget. The parent pays only for the summary it returns, not for everything the child read. `Explore` is read-only search; `Plan` designs without touching code; `general-purpose` has full access. Route fetching to a cheap subagent and analysis to the expensive model — never pull raw search results directly into your most expensive context.
+
+Confusing these wastes context or fires at the wrong time: a skill stuffed into the always-on file is a permanent tax; a hook cannot teach a multi-step procedure; a subagent used for something that belongs in the parent transcript throws away the context the parent actually needed.
+
+## Quick Reference
+
+| Term | Plain English |
+|---|---|
+| Skill | A folder of instructions the harness loads on demand. |
+| SKILL.md | The required file: YAML frontmatter, then the procedure. |
+| Frontmatter | The YAML header; becomes the always-loaded catalog line. |
+| Hook | Code that runs on an event, outside the model, cannot be talked past. |
+| Subagent | A child session with its own transcript, tools and budget. |
+| `context: fork` | Frontmatter field that runs a skill as a subagent. |
+| Catalog | The set of skill names + descriptions kept in every session's prompt. |
+
+## Do It Today
+
+**Step 1 — see the token gap, 2 minutes.**
+
+```bash
+python3 learn/skills/code_example.py
+```
+
+It builds a small catalog of skill descriptions, matches one against a user phrase, and prints the token cost of "index only" versus "paste every skill body into context every turn." **You know it worked** when the catalog-only cost stays roughly flat as you add skills, while the paste-everything cost grows with every one you add — that gap is the entire argument for lazy loading.
+
+**Step 2 — write one real `SKILL.md`.** Pick a workflow you have re-typed at least three times — a deploy checklist, a review rubric, a standup format — and turn it into a skill with a description that names the trigger phrase explicitly, not just the topic.
+
+**Step 3 — decide, out loud, whether it should be a skill.** If the answer to "would I be upset if this were skipped" is yes, it belongs in a hook, not a skill — a skill can always be ignored by the model reading it.
+
+## Gotchas
+
+- **A vague description never fires.** "Helps with git" matches nothing reliably; "use when the user asks for a commit message" does.
+- **One job per skill.** A 4,000-line mega-skill is an always-on file with extra steps, and it costs the same whether the body is used once or never.
+- **Skills are not memory.** They do not store last week's conversation. They store a repeatable procedure, checked back into the skill folder, not the transcript.
+- **New skill directories need a restart.** Live-editing an existing `SKILL.md` is picked up on the next invocation; adding a brand-new skill directory is not.
+- **A hard stop belongs in a hook, not a skill's prose.** "Never `rm -rf /`" written in a skill is a request the model can still misread. Written as a hook, it cannot be reached at all.
 
 ## How It Connects to What You Know
 
-pytest plugins: the core publishes verbs, packages register nouns. A skill is the instruction-pack version of that. MCP (lesson 8) is the same idea across a process boundary.
+pytest plugins: the core publishes verbs, packages register nouns. A skill is the instruction-pack version of that — lazy registration, loaded only when its trigger matches. MCP, covered in [How the Agent Loop Works](#learn/the-agent-loop), is the same idea across a process boundary instead of a prompt boundary.
 
 Previous: [How Coding Agents Work](#learn/coding-agents-101). Next: [How Retrieval Works](#learn/retrieval).
-
-The daily lab on [2026-07-13](#2026-07-13) is the in-process plugin case study (`llm` + pluggy).
-
-## Try It Yourself
-
-`code_example.py` builds a tiny catalog of skill descriptions, picks one from a user phrase, and prints the token cost of "index only" vs "paste every body every turn."
-
-## Glossary
-
-- **Skill** — a folder of instructions the harness loads on demand.
-- **SKILL.md** — the markdown file: frontmatter + body.
-- **Frontmatter** — YAML at the top; becomes the catalog line.
-- **Hook** — code that runs on an event, outside the model.
-- **Sub-agent** — a child session with its own transcript.
