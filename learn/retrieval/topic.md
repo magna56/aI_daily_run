@@ -7,7 +7,9 @@
 **For**: Shipping AI
 **Hook**: Retrieval is cut the docs, find the nearest pieces, and paste them into the prompt.
 **Kind**: Learn
-**Time to read**: ~10 minutes
+**Time to read**: ~12 minutes
+
+> **You'll be able to:** explain retrieval as three plain steps instead of a product, know when you actually need it versus when you should just paste the file, and read a chunk-size sweep instead of guessing at one.
 
 ## Explain Like I'm 5
 
@@ -56,23 +58,62 @@ Most RAG failures are retrieval failures labeled as model failures. Chunk size s
 - **Stuffing is just a string.** Separators, titles, and "use only these sources" are prompt engineering (lesson 3) on top of an index.
 - **If retrieve is empty, say so.** A fallback that "just asks the model" is how you ship confident fiction.
 
+## When You Actually Need It
+
+Retrieval solves exactly one problem: too many documents to fit in context. Below that point it is pure overhead — an index, an embedding step, a failure mode (empty results) that pasting never has.
+
+```
+Fits in context — skip retrieval:
+  1 file          → just paste it in
+  10 files        → paste them all in
+  100 files       → often still fits
+
+Does not fit — retrieval earns its cost:
+  100,000 files   → you need to find the relevant 5
+  a whole corpus  → retrieval is not optional anymore
+```
+
+"RAG" names the *pattern* — retrieve, then generate with what you found — not one specific implementation. A link graph, a keyword index, and a vector database are all valid ways to do the retrieving; the model never touches any of them directly. Retrieval is infrastructure you build around the model, to solve a context-fit problem, not a capability the model has on its own.
+
+## Quick Reference
+
+| Term | Plain English |
+|---|---|
+| RAG | Retrieval-augmented generation: retrieve text, then generate with it in the prompt. |
+| Chunk | One slice of a document, stored and retrieved as a unit. |
+| Embedding | A vector for a chunk or a question; nearness approximates meaning. |
+| Cosine similarity | The usual stand-in for "how near two embeddings are." |
+| `top_k` | How many chunks you paste into the prompt. |
+| Context recall | Whether the retrieved text actually contained the answer. Computable with labels, no judge model needed. |
+| Stuff | Concatenate the retrieved chunks into the prompt, with source tags. |
+| Hybrid search | Keywords plus vectors in the same retrieval step. |
+
+## Do It Today
+
+**Step 1 — watch a chunk size lose the answer, 2 minutes.**
+
+```bash
+python3 learn/retrieval/code_example.py
+```
+
+It chunks a tiny handbook at several sizes, retrieves `top_k`, and prints a hit/miss table plus the exact stuffed prompt. **You know it worked** when `chunk_size=8` misses at every `top_k` because the fact is split across slices, `chunk_size=20, top_k=2` hits with **36 words** and no padding, and `chunk_size=40, top_k=2` also hits but at **63 words** — the same fact, wrapped in more text for no gain.
+
+**Step 2 — read the stuffed prompt at the bottom of the output.** That block, source tags and all, is the entire mechanism. There is no step where the model "searches" — it reads a string exactly like this one, assembled before it ever sees the question.
+
+**Step 3 — write 20 questions whose answers live in your own docs**, and sweep chunk size, overlap, and `top_k` against context recall before you reach for a reranker or a bigger `top_k`. The [2026-08-23 daily lab](#2026-08-23) is the full version of this sweep: a tuned `150`/overlap/`top_k=3` matched a naive `250`/`top_k=8` at **165 words instead of 1,367** — 88% less text for the same recall.
+
+## Gotchas
+
+- **`k` is not knowledge.** `k=1` is brittle; `k=8` on fat chunks is padding, not safety margin.
+- **A vector database does not understand your docs.** It is a nearest-neighbor index. The understanding, such as it is, happens when the model reads the stuffed prompt.
+- **Chunk by structure when you can.** Headings and sections beat a blind fixed-token window — a window that splits a sentence in half loses the fact that made the paragraph true.
+- **Empty retrieval needs to say so.** A fallback that "just asks the model anyway" is how confident fiction ships instead of "I don't know."
+- **"We should add RAG" often means "we should just paste the file."** Check the fits-in-context table above before building an index for ten documents.
+
 ## How It Connects to What You Know
 
-This is search, then a template. Lucene + a mail merge. The vector index is another posting list.
+This is search, then a template. Lucene plus a mail merge. The vector index is another posting list, and "stuff the prompt" is string concatenation with source tags on it.
 
 Previous: [How Skills Work](#learn/skills). Next: [How the Chat Is Re-Read Every Turn](#learn/context-and-harness).
 
 Lab: [Nobody re-tests their RAG chunk size](#2026-08-23).
-
-## Try It Yourself
-
-`code_example.py` chunks a tiny handbook, embeds with a toy vector, retrieves `top_k`, and prints how much text you would stuff — so you can see padding without a vendor.
-
-## Glossary
-
-- **RAG** — retrieval-augmented generation: retrieve text, then generate with it in the prompt.
-- **Chunk** — one slice of a document you store and retrieve.
-- **Embedding** — a vector for a chunk or a question.
-- **top_k** — how many chunks you paste.
-- **Context recall** — whether the retrieved text contained the answer.
-- **Stuff** — concatenate retrieved chunks into the prompt.
