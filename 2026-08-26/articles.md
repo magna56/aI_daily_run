@@ -1,4 +1,4 @@
-# Further Reading: How an AI Code Review Becomes Something CI Can Gate On
+# Further Reading: How to Turn AI Code Review Comments Into a CI Gate
 
 ## Articles
 

@@ -470,3 +470,28 @@ reached it for free — the real gap was that nothing *gated* the live push.
   where the action is: the Code pane's Publish button still says it creates a public repo.
 - **Result**: `2026-08-25` is clean under the full new contract, and `SECTION_ORDER_SINCE` moved
   to 2026-08-25 so it is the enforced first article in the new shape rather than an exception.
+
+## 2026-08-26 — 2026-08-26 (the CI-gate article's own title)
+
+- **Note**: "I'm not very happy with the title... play a role of an engineer reading this title
+  and discuss with me what should the title [be]." Then, after picking one of three proposed
+  alternatives: "update the skill on how to set titles i.e by becoming an engineer reader and
+  thinking what does the title mean, is it useful enough for me to click on it and read... title
+  is our start point it needs to be better."
+- **Verdict**: standing rule. The site already had title *rules* (explanatory form, no
+  product-glyph, ban academic formatting); it had no title *check* — nothing that made the
+  generator actually read a draft title the way a cold reader would before accepting it.
+- **Changed**: `2026-08-25/topic.md`'s own title, live: `How an AI Code Review Becomes Something
+  CI Can Gate On` → `How to Turn AI Code Review Comments Into a CI Gate` — swapped once in
+  `topic.md`'s H1, `articles.md`'s `# Further Reading:` header, and the `journal.md` entry
+  heading, all three checked for consistency before pushing.
+- **Changed**: `SKILL.md` — a new required pass under the title rules: read the draft title as
+  the cold engineer, not as its own author, and ask "what does this tell me I'd be able to do,
+  and is that specific enough to click." Names the actual failure pattern from this title as the
+  thing to catch: a **placeholder word standing in for the real one** — vague nouns ("something,"
+  "a way") and weak/passive verbs ("becomes," "involves") where the article's own concrete noun
+  or verb belongs instead. Uses this exact before/after as the worked example, since it is the
+  case that prompted the rule.
+- **Not changed**: the four title shapes (`How X Works`, `A vs B`, `Name: gloss`, `A Guide to X`)
+  from the 2026-08-25 house-style change. This is a check applied *before* accepting whichever
+  shape was chosen, not a fifth shape.

@@ -125,7 +125,7 @@
 - **Code**: `2026-08-25/code_example.py` — implements both matching layers as documented: the character-set mode switch that silently turns a matcher into an unanchored regex, and the Bash walk (assignment stripping, chain splitting, recursive descent into `$()` and backticks). Runs a corpus of matchers and commands and flags every result that contradicts the naive reading — 4 of 8 on the shipped set, all documented behaviour. `find . -delete` deletes files and matches nothing.
 - **Articles**: 5 sources (Claude Code hooks reference + settings/permissions docs + CHANGELOG 2.1.243 + Anthropic Engineering + Cursor 19 Aug release as the cross-tool check)
 
-## 2026-08-26 — How an AI Code Review Becomes Something CI Can Gate On
+## 2026-08-26 — How to Turn AI Code Review Comments Into a CI Gate
 - **Category**: AI Engineering Practices
 - **Key insight**: The same AI code review can come back two different ways — a paragraph you read, or a checklist your CI can act on — and which one you get depends only on who asked. A verification step decides which findings survive at all: one candidate claim, unsupported by the actual code, gets filtered out entirely rather than just marked weak. That's the real trust boundary teams are missing.
 - **Code**: `2026-08-26/code_example.py` — implements the same three-candidate review as prose and as the typed `ReportFindings` shape, with a `verify()` pass that checks each claim against real source text: 2 of 3 survive (one `CONFIRMED`, one `PLAUSIBLE`), the SQL-injection claim is filtered because the file has no query at all, and `should_block_merge()` returns `True` on the confirmed race condition. Re-runs after a fix, marking the finding `outcome=fixed`.

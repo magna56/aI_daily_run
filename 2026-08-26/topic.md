@@ -1,4 +1,4 @@
-# How an AI Code Review Becomes Something CI Can Actually Gate On
+# How to Turn AI Code Review Comments Into a CI Gate
 
 **Category**: AI Engineering Practices
 **Tags**: coding-agents, reliability, observability, production

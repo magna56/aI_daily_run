@@ -464,6 +464,29 @@ only sees a link — on the card grid, in Slack, on Hacker News. Write it for a 
 engineer scrolling past, including someone who has only used Cursor and has never read a paper.
 If the title needs a glossary, it failed.
 
+**Before you accept a title, read it as that engineer — not as its author.** You already know
+what the article is about, so every title you draft sounds clear to you; the only useful test is
+whether it lands on someone who does not have that context yet. Stop and ask, out loud if it
+helps: *what does this title actually tell me I would be able to do? Is that specific enough that
+I would click it over the four other tabs open right now?* If the honest answer is "not really,"
+the title is not done, no matter how many of the rules below it technically follows.
+
+The tell that a title needs this pass is a **placeholder word standing in for the real one** —
+usually because the real noun or verb felt too plain to be a "title word," when plain is exactly
+what makes it land:
+- Vague nouns: *"something," "a thing," "a way," "an approach"* — always name the concrete noun
+  the article actually delivers instead. `How an AI Code Review Becomes Something CI Can Gate On`
+  → `How to Turn AI Code Review Comments Into a CI Gate` reads better for one reason: "a CI Gate"
+  replaced "Something," and a CI gate is the literal thing `Implementing It` teaches the reader
+  to build.
+- Weak or passive verbs: *"becomes," "involves," "relates to," "is about"* — find the verb an
+  engineer would actually use in a standup. "Turn X into Y" beats "X becomes Y" because turning
+  something into something is an action the reader pictures doing, and becoming is a thing that
+  merely happens.
+- A title that is accurate but generic enough to fit five other articles — if you could paste it
+  onto a completely different session's `topic.md` and it would still basically work, it is
+  describing the category, not this piece.
+
 **Default to the explanatory form.** The house style is ByteByteGo's: name the thing and say
 plainly what the reader is about to understand about it. It reads as a reference someone would
 come back to rather than a post that was timely once, it survives being read six months later,
