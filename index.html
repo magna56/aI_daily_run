@@ -1858,7 +1858,10 @@
           ? '<span><span class="k">Source</span><a href="' + esc(p.source.url) + '" target="_blank" rel="noopener">' + esc(p.source.label) + "</a></span>"
           : "") +
       "</div>" +
-      share +
+      // Only on Overview, same reasoning as .keep and .insight below: the
+      // other tabs are for doing, and repeating Share on every tab (it used
+      // to render on Visualize/Diagram/Code/Articles too) is dead weight.
+      (pane === "overview" ? share : "") +
       (p.code && pane === "overview"
         ? '<div class="keep"><div><span class="k">Publish to GitHub</span>Run it here, then save it to your own GitHub — code plus its output.</div><a href="#' + sessionHash(p.id, "code") + '">Open Code tab →</a></div>'
         : "") +
