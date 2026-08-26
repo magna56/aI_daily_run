@@ -439,3 +439,34 @@ reached it for free — the real gap was that nothing *gated* the live push.
 - **Not changed**: `Explain Like I'm 5` stays, at the user's explicit call — it is the site's
   persona and no reference publication has it. The 41 back-catalog sessions keep the old order
   and are not warned on.
+
+## 2026-08-25 — 2026-08-25 (first article rewritten into the seven-section order)
+
+- **Note**: "update it and publish" — rewrite the current session into the new shape.
+- **Two rule corrections found by doing it**, both logged because they change a rule written
+  hours earlier:
+  1. **The counter-case is now counted with `Implementing It`.** Carving `When not to` out into
+     its own section mechanically took ~140 words off the implementation, so the longest-section
+     rule started firing on an article that had not padded anything. The rule's purpose is that
+     the explainers must not outweigh the implementation, and the counter-case *is*
+     implementation guidance — when not to apply the change. `build.js` now sums section 6 and
+     section 7 and compares that against the largest single explanatory section.
+  2. **A bare version number is no longer a momentum tell.** The heuristic flagged "Version
+     2.1.243 shipped a fix for the noisy direction", which is a mechanism claim, not market
+     news. Rival product names and adoption language stay; `\d+\.\d+\.\d+` is dropped. The
+     warning also stopped hardcoding "Why It Matters" now that the section can be "The Problem".
+  3. The old `Implementing It` must contain "When not to" check now passes if the session has a
+     counter-case *section* instead — either shape satisfies it, which keeps the Frontier track
+     and the back catalog valid without a date branch.
+- **Changed**: `2026-08-25/topic.md` — 11 sections to 7. `What It Is` + `Key Technical Details`
+  merged into `## How the Two Filters Read Your Rule` and compressed 594 → 513 words with three
+  topic-named `###` sub-headings; `Why It Matters` folded into `The Problem`; `For a Software
+  Engineer` moved after the mechanism and cut 304 → 226 words, now comparing rather than
+  re-explaining; the counter-case promoted to `## When a Hook Is the Wrong Tool` and closed on
+  three questions; `How It Connects` reduced to one pointer line; `Try It Yourself` and the
+  Glossary dropped, with every glossary term redefined inline at first use.
+- **Changed**: `index.html` — the reader's Publish teaser cut from 103 to 68 characters and no
+  longer leads with "public repo", which the user said could put people off. The disclosure stays
+  where the action is: the Code pane's Publish button still says it creates a public repo.
+- **Result**: `2026-08-25` is clean under the full new contract, and `SECTION_ORDER_SINCE` moved
+  to 2026-08-25 so it is the enforced first article in the new shape rather than an exception.

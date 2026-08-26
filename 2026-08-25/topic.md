@@ -14,19 +14,52 @@ Imagine you hire a very fast assistant and pin a note above their desk: "check w
 
 ## The Problem
 
-A coding-agent hook does not run the moment the model asks for a tool. Two filters decide whether the handler even starts: one on the **tool name** (`matcher`), then one on the **tool input** (`if`). Most people's first hook is a safety rule — stop `rm`, stop `git push --force`, stop writes to production config. The rule looks like `"if": "Bash(rm *)"`, it reads like a firewall rule, and it sits in the same settings file as permissions. So the two-step fire decision gets treated as a boundary. Then two things happen that nobody expects: those filters match commands you never wrote, and they miss commands you did. Version 2.1.243 shipped a fix for exactly the first case — hook `if` conditions "firing on unrelated Bash commands when containing `$()`" — which is a good bug report and a better hint about what the decision actually is.
+A coding-agent hook does not run the moment the model asks for a tool. Two filters decide whether the handler even starts: one on the **tool name** (`matcher`), then one on the **tool input** (`if`). Most people's first hook is a safety rule — stop `rm`, stop `git push --force`, stop writes to production config. The rule looks like `"if": "Bash(rm *)"`, it reads like a firewall rule, and it sits in the same settings file as permissions. So the two-step fire decision gets treated as a boundary.
+
+It is not one, and the gap between "this looks like a firewall rule" and "this is best-effort text matching" is where a whole class of false confidence lives. That is not a flaw in the design — the documentation is unusually direct about it, and fail-open is the *correct* default for a workflow hook, because one that failed closed on an unparseable command would wedge your agent constantly. The mistake is the reader's, and it is an easy one: the syntax borrows from the permission system, the file is the same file, and the mental model comes along for free.
+
+What it costs is asymmetric, which is what makes it worth thirty minutes rather than a footnote. A rule that fires too often costs you a prompt you did not need — annoying, and you notice it within a day. A rule that silently does not fire costs you the thing the rule existed to prevent, and **nothing is logged as skipped**, so the cost is paid before you find out the rule was decorative. Version 2.1.243 shipped a fix for the noisy direction — hook `if` conditions "firing on unrelated Bash commands when containing `$()`" — which is a good bug report and a better hint about what the decision actually is.
+
+## How the Two Filters Read Your Rule
+
+Start with the case that surprises people. `"if": "Bash(rm *)"` catches `rm -rf build`, as you would expect. It also catches `echo $(rm -rf /)`, which never runs `rm` at the top level. And it misses `find . -delete`, which deletes your files. All three are documented, and all three follow from what these filters are.
+
+A hook is a handler — shell command, HTTP endpoint, MCP tool, prompt, or subagent — attached to a lifecycle event. `PreToolUse` is the one that matters here: it fires before a tool runs, reads JSON on stdin (`tool_name`, `tool_input`, `cwd`, `permission_mode`), and is the only common event that can both block a call and rewrite its input.
+
+Whether it fires is three filters in sequence, and only the last is a program you control: **`matcher`** on the tool name, **`if`** on the tool input, then your handler. The first two are pattern matching over text.
+
+### The Matcher's Invisible Mode Switch
+
+If the string contains only `[A-Za-z0-9_-, |,]` it is an exact match, or a `|`/`,`-separated list of them. **One character outside that set promotes the whole string to an unanchored regex** — a pattern with no `^` or `$`, matching anywhere inside the tool name. `Edit|Write` is a two-item list; `^Notebook` is a regex; nothing in the syntax says which you wrote. `mcp__github` matches `internal__mcp__github__admin`. The fix is anchors: `^mcp__brave-search$`.
+
+The set has also moved between versions — hyphen joined it in 2.1.195, so `code-reviewer` is now exact where it once needed anchors.
+
+### What the `if` Condition Actually Parses
+
+`if` uses **permission-rule syntax** — the `Tool(argument-pattern)` spelling that `permissions` settings also use, which is why the two get conflated. For Bash it does real structural work: leading assignments are stripped (`FOO=bar git push` matches `Bash(git *)`), chains are split (`npm test && git push` matches), and **command substitutions** (`$(...)` and backticks, which paste one command's output into another) are descended into — which is why `echo $(rm -rf /)` matches and `echo $(date)` does not.
+
+What it never does is reason about effects. `find . -delete` is not spelled `rm`, so no `rm` rule sees it.
+
+### Where Every Layer Fails Open
+
+**Fail-open** means that when a check cannot decide, the action is allowed. Three layers here do it, and one does not:
+
+- The `if` condition is documented as *best-effort*: when it cannot parse complex Bash, **the hook runs anyway**. Your handler must therefore re-check its own input.
+- A **timeout is not a block**. Default 600s; on timeout the hook is cancelled, no decision is rendered, the action proceeds.
+- 2.1.243 narrowed the `$()` descent, which had been firing `Bash(cat *)` on unrelated commands containing a substitution. The descent is intentional; its scoping was wrong.
+- `permissions.deny` **refuses**, and a denied call cannot be interactively approved. That is the observable difference between a lock and a note.
+
+Blocking has two spellings: **exit code 2** blocks outright with stderr as the reason, and a JSON `permissionDecision` of `deny` blocks *with a reason the model sees* — the form used in the handler below.
 
 ## For a Software Engineer
 
-**This is a request pipeline with two cheap classifiers in front of your script.** Tool name first, command text second, handler last. Anyone who has written a regex to validate email addresses, or grepped a log for `ERROR` and caught `ERROR_SUPPRESSED`, has met this exact shape: a pattern language that is good enough to feel authoritative and not structured enough to be a parser. The matcher does not build a syntax tree of your shell command and reason about it. It does light structural work over text.
+**You have shipped this bug.** A pattern language good enough to feel authoritative and not structured enough to be a parser is the same thing as the regex that validates email addresses, or the `grep ERROR` that also catches `ERROR_SUPPRESSED`. The `if` condition is a lexer wearing a parser's clothes, and the giveaway is the one in this article: it descends into `$()` correctly and misses `find . -delete` entirely, because it matches *text shapes*, not *effects*.
 
-**The light structural work is better than you'd guess.** `Bash(git *)` matches `FOO=bar git push`, because leading environment assignments are stripped first. It matches `npm test && git push`, because each subcommand of a chain is checked separately. And `Bash(rm *)` matches `echo $(rm -rf /)`, because commands inside `$()` and backticks are checked too. That is real analysis, and it catches the three tricks people actually try.
-
-**The documentation tells you the limit in one sentence, and it is the most important sentence in the page:** the `if` condition is *best-effort* — when it cannot parse complex Bash, **the hook runs anyway**, and you should "use the permission system for hard policy enforcement." Fail-open, by design, stated out loud.
-
-**And there is a second surprise one layer up.** The `matcher` field decides between two completely different matching modes based on which *characters* you happened to type. Only `[A-Za-z0-9_-, |,]` in the string? Exact match. One character outside that set? Unanchored JavaScript regex. `Edit|Write` is an exact two-item list. `^Notebook` is a regex. Nothing in the syntax tells you which one you wrote.
+The second surprise is the one you would catch in code review anywhere else. A field whose behaviour flips between two modes based on which characters happen to be in the string is the same class of bug as a config value that is a string until it looks like a number — and it is unannounced in both cases.
 
 **Monday morning:** open your `settings.json`, find every `matcher` and every `if`, and decide for each one whether you meant *workflow* or *policy*. The ones that meant policy belong in `permissions.deny`, not in a hook.
+
+New to agent tooling? Start at AI basics → [How the Coding-Agent Harness Works](#learn/the-coding-agent-harness). Elsewhere on this site, [blast-radius gates](#2026-07-17) argues for deterministic checks an agent cannot talk past, and [the tool schema](#2026-07-05) covers the other half of this surface — what the agent is allowed to *see* versus what it is allowed to *do*.
 
 ## What This Means for You
 
@@ -39,37 +72,6 @@ A coding-agent hook does not run the moment the model asks for a tool. Two filte
 2. **Anchor every regex matcher.** If your matcher contains any character outside `[A-Za-z0-9_-, |,]`, it is an unanchored regex and it matches substrings. `^mcp__github__.*$` is a rule; `mcp__github` is a suggestion.
 3. **Test your matchers against a command corpus** before you trust them — the code below does this, and finding one surprise in your own rules takes about a minute.
 4. **Upgrade to 2.1.243 or later** if you use `if` conditions at all, then re-check them: the `$()` over-firing fix changes which commands your existing rules match.
-
-## What It Is
-
-A Claude Code hook is a handler — a shell command, an HTTP endpoint, an MCP tool, a prompt, or a subagent — attached to a lifecycle event. The events that matter here fire per tool call: `PreToolUse`, `PostToolUse`, `PermissionRequest`, `PermissionDenied`. The handler receives a JSON object on stdin carrying `tool_name`, `tool_input`, `session_id`, `cwd` and `permission_mode`, and answers with an exit code, JSON on stdout, or both.
-
-Whether that handler **fires** is decided by **three** filters in sequence. This is the decision path in the title — and each step has different semantics:
-
-1. **`matcher`** — filters on the *tool name* (or, for non-tool events, the event reason). Exact-match or unanchored regex depending on the characters used.
-2. **`if`** — filters on the *tool input*, written in permission-rule syntax like `Bash(git *)` or `Edit(*.ts)`. Only evaluated on tool events. Best-effort.
-3. **The handler's own logic** — the script actually reading `tool_input.command` and deciding.
-
-Only the third of those is a program you control. The first two are pattern matching over strings, and both have surprises baked in.
-
-## Why It Matters
-
-The gap between "this looks like a firewall rule" and "this is best-effort text matching" is where a whole class of false confidence lives. It is not a flaw in the design — the documentation is unusually direct about it, and fail-open is the *correct* default for a workflow hook, because a hook that fail-closed on an unparseable command would wedge your agent constantly. The mistake is the reader's, and it is an easy one: the syntax borrows from the permission system, the file is the same file, and the mental model comes along for free.
-
-What it costs when you get this wrong is asymmetric, and that is what makes it worth thirty minutes rather than a footnote. A rule that fires too often costs you a prompt you did not need. A rule that silently does not fire costs you the thing the rule existed to prevent — and nothing is logged as skipped, so the cost is paid before you find out the rule was decorative. Each layer here has a defined answer to "what happens when I cannot decide": the `if` condition runs the hook anyway, a timed-out hook lets the action proceed, and `permissions.deny` refuses. Knowing which of those three you are standing on is the whole of it.
-
-## Key Technical Details
-
-**Background first.** A hook config nests three levels: an event name, a list of matcher groups, and inside each group a list of handlers. The `matcher` sits on the group; the `if` sits on the individual handler. "Permission-rule syntax" means the `Tool(argument-pattern)` form that the `permissions` settings also use — the same spelling in both places, which is exactly why the two get conflated.
-
-- **The matcher's mode switch is invisible.** If the string contains only `[A-Za-z0-9_-, |,]` it is an exact match, or a `|`/`,`-separated list of exact matches. Any other character promotes the whole string to an unanchored `RegExp.test()`. So `Edit|Write` is a two-item list, not an alternation regex — same result here, different mechanism, and the difference bites the moment you add a `.` or `*`.
-- **Unanchored means substring.** A regex matcher without `^` and `$` matches anywhere in the tool name. The docs call this out and give the fix: `^mcp__brave-search$`.
-- **The classification has changed across versions.** Hyphen is in the exact-match set as of 2.1.195, so `code-reviewer` is now an exact match; before that it was a regex and needed `^code-reviewer$`. A rule that was correct in one version can silently change mode in another.
-- **`if` does real shell structure work.** Leading assignments are stripped (`FOO=bar git push` matches `Bash(git *)`). Chains are split and each subcommand checked (`npm test && git push` matches). Command substitutions are descended into, both `$()` and backticks — which is why `echo $(rm -rf /)` matches `Bash(rm *)` and `echo $(date)` does not.
-- **`if` fails open.** "Can't parse complex Bash → hook runs anyway." The handler is invoked when the matcher is unsure. For a *blocking* hook that is a safe default; for a hook that only acts on some commands it means your script must re-check the input itself.
-- **2.1.243 fixed the `$()` descent over-firing.** Conditions like `Bash(cat *)` were firing on unrelated commands that merely contained a `$()`. The descent is intentional; its scoping was wrong.
-- **Exit code 2 blocks; JSON is richer.** On `PreToolUse`, exit 2 blocks the call outright. Returning `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "..."}}` blocks it *with a reason the model sees*, and `permissionDecision` also accepts `allow` and `escalate`. `PreToolUse` uniquely also honours `updatedInput`, letting a hook rewrite a command rather than reject it.
-- **A timeout is not a block.** Default 600s for command hooks; on timeout the hook is cancelled, no decision is rendered, and the action proceeds. Another fail-open path.
 
 ## Implementing It
 
@@ -163,31 +165,10 @@ The `deny` list is the lock. The hook is the note — keep it for the logging, t
 2. **Watch a hook actually fire.** Add `"statusMessage": "guard checked"` to the handler and run a command you expect it to catch and one you expect it to ignore. If the message appears on both, your `if` is broader than you think; if it appears on neither, your `matcher` never matched and the `if` was never consulted.
 3. **Prove the deny rule bites.** Ask the agent to run a command your `permissions.deny` list covers. You should see a denial that you *cannot* approve interactively — that is the observable difference between deny and a hook. If you can click through it, it was never policy.
 
-**When not to.** Do not move everything into `permissions.deny`. A deny rule is absolute and unappealable, and an over-broad one makes the agent useless in ways that are annoying to debug — `Bash(rm *)` in `deny` also kills `rm` inside a build script the agent legitimately needs to run. The split that works: **deny for things that would be bad if they happened once** (force-push to main, writing `.env`, touching production config), **hooks for things you want to know about or shape** (formatting after edits, logging every `Bash`, adding context on session start).
+## When a Hook Is the Wrong Tool
+
+Do not move everything into `permissions.deny`. A deny rule is absolute and unappealable, and an over-broad one makes the agent useless in ways that are annoying to debug — `Bash(rm *)` in `deny` also kills `rm` inside a build script the agent legitimately needs to run. The split that works: **deny for things that would be bad if they happened once** (force-push to main, writing `.env`, touching production config), **hooks for things you want to know about or shape** (formatting after edits, logging every `Bash`, adding context on session start).
 
 And do not write a hook to enforce something a file permission or a CI check already enforces. The strongest guarantee available is the one the agent cannot talk its way past, and a read-only mount beats every pattern in this article.
 
-## How It Connects to What You Know
-
-You have seen every piece of this before outside AI. The matcher's silent mode switch is the same class of bug as a config value that is a string until it looks like a number. The unanchored-regex default is `grep` without `-x`, and it has been catching people out for fifty years. The fail-open `if` is a WAF in detection-only mode. And "use the permission system for hard policy enforcement" is the same advice as "validate on the server" — the convenient layer near the user is a UX affordance, and the boring layer underneath is the control.
-
-Inside this site: the [blast-radius gates](#2026-07-17) session argued for deterministic checks an agent cannot talk past, and this is the mechanical detail of where those checks must live to actually be deterministic. The [tool schema](#2026-07-05) session covers the other half of the same surface — what the agent is allowed to *see* versus what it is allowed to *do*.
-
-## Try It Yourself
-
-`code_example.py` implements both matching layers as documented — the character-set mode switch for `matcher`, and the Bash structural walk for `if` (assignment stripping, `&&`/`;`/`|` chain splitting, and descent into `$()` and backticks). It then runs a corpus of real matchers against a corpus of real commands and prints a table of every match, flagging the ones whose result contradicts naive intuition. Change `MATCHERS` at the top to your own rules from `settings.json` and re-run it. Pure stdlib.
-
-## Glossary
-
-- **Hook** — a handler (shell command, HTTP endpoint, MCP tool, prompt, or subagent) run at a lifecycle point such as before a tool call, which can allow, deny, or modify it.
-- **`PreToolUse`** — the hook event that fires before a tool runs; the only common one that can both block a call and rewrite its input.
-- **`matcher`** — the first filter, on the tool's *name*. Exact-match or unanchored regex depending on which characters the string contains.
-- **`if`** — the second filter, on the tool's *input*, written in permission-rule syntax. Tool events only, and explicitly best-effort.
-- **Permission-rule syntax** — the `Tool(argument-pattern)` spelling, e.g. `Bash(git *)` or `Edit(*.ts)`. Used by both `if` conditions and `permissions` rules, which is the root of the confusion this article is about.
-- **`permissions.deny`** — the settings list that actually enforces. A denied call cannot be interactively approved, which is the observable difference from a hook.
-- **Unanchored regex** — a pattern without `^` and `$`, so it matches anywhere inside the string: `mcp__github` matches `internal__mcp__github__admin`.
-- **Command substitution** — `$(...)` or backticks, which run a command and paste its output into another; the `if` matcher deliberately looks inside these.
-- **Fail-open** — when a check cannot reach a verdict, the action is allowed. The `if` condition and hook timeouts both fail open, which is right for workflow and wrong for policy.
-- **Exit code 2** — the hook exit code that blocks the action outright, using stderr as the reason; any other non-zero code is non-blocking.
-- **`permissionDecision`** — the JSON field a hook returns to decide a call (`allow`, `deny`, `escalate`); richer than exit codes because the reason reaches the model.
-- **`updatedInput`** — a `PreToolUse`-only JSON field that rewrites the tool's input instead of rejecting it, e.g. replacing a command with a safer one.
+Three questions before you write one. **Would you be upset if this were bypassed?** Then it is policy, and it belongs in `permissions.deny` where it is enforced, not in a hook where it is best-effort. **Can you state the failure you would see if it silently stopped firing?** If not, you will not notice when it does. **Is there a layer underneath that already enforces this** — a file permission, a read-only mount, a CI check? The strongest guarantee available is the one the agent cannot talk its way past, and that layer beats every pattern in this article.

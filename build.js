@@ -192,7 +192,7 @@ const ARTIFACT_CONTRACT_SINCE = "2026-08-26";
 // mechanism ("How X Works") and the counter-case ("When X Is the Wrong Tool") --
 // so they are matched by pattern, not by string. Date-gated: 41 existing
 // sessions use the old order and are a dated log, not a backlog.
-const SECTION_ORDER_SINCE = "2026-08-26";
+const SECTION_ORDER_SINCE = "2026-08-25";
 const FIXED_SECTIONS = [
   "Explain Like I'm 5",
   "The Problem",
@@ -654,9 +654,10 @@ function compile(id, journal, runner, opts) {
         warn(`${id}: "Implementing It" has no "How you know it worked" part — an engineer who `
           + `cannot tell whether the change took has been given a suggestion, not an implementation.`);
       }
-      // Before SECTION_ORDER_SINCE the counter-case lived inside this section;
-      // it is now a section of its own, checked below.
-      if (date < SECTION_ORDER_SINCE && !/when not to/i.test(impl)) {
+      // The counter-case must exist; before SECTION_ORDER_SINCE it lived inside this
+      // section, after it has a heading of its own. Either satisfies the requirement.
+      const hasCounterSection = [...sections.keys()].some((n) => COUNTERCASE_RE.test(n));
+      if (!hasCounterSection && !/when not to/i.test(impl)) {
         warn(`${id}: "Implementing It" has no "When not to" part — a technique with no stated `
           + `downside reads as marketing.`);
       }
@@ -664,14 +665,21 @@ function compile(id, journal, runner, opts) {
       // unless it is actually the biggest thing in the document. Measured across the
       // first 22 sessions the split was 97% prose / 3% implementation.
       const words = (t) => (proseOnly(t).trim().match(/\S+/g) || []).length;
+      /* The counter-case is implementation guidance -- when NOT to apply the change --
+         and it only became its own section on 2026-08-26. Carving it out of
+         "Implementing It" must not make the implementation weigh less than the
+         explainers it is measured against, so the two are counted together. */
+      const counterName = [...sections.keys()].find((n) => COUNTERCASE_RE.test(n));
+      const implWords = words(impl) + (counterName ? words(sections.get(counterName)) : 0);
       let longest = "", longestN = 0;
       for (const [name, body] of sections) {
+        if (name === "Implementing It" || name === counterName) continue;
         const n = words(body);
         if (n > longestN) { longestN = n; longest = name; }
       }
-      if (longest && longest !== "Implementing It") {
-        warn(`${id}: "${longest}" (${longestN} words of prose) is longer than "Implementing It" `
-          + `(${words(impl)}) — tighten the explanatory sections, do not pad the implementation. `
+      if (longest && longestN > implWords) {
+        warn(`${id}: "${longest}" (${longestN} words of prose) outweighs the implementation `
+          + `(${implWords}) — tighten the explanatory sections, do not pad the implementation. `
           + `Fenced code is excluded from both counts; a pasted program does not carry this rule.`);
       }
       /* The article is the guidance; code_example.py is the runnable artifact.
@@ -749,11 +757,15 @@ function compile(id, journal, runner, opts) {
 
     // Significance used to live in "Why It Matters"; under the seven-section order
     // it lives in "The Problem". Check whichever one this session actually has.
-    const why = sections.get("Why It Matters") ?? sections.get("The Problem");
+    const whyName = sections.has("Why It Matters") ? "Why It Matters" : "The Problem";
+    const why = sections.get(whyName);
     if (why !== undefined && date >= ARTIFACT_CONTRACT_SINCE) {
-      const momentum = why.match(/\b\d+\.\d+\.\d+\b|\b(Cursor|Copilot|Windsurf|Devin|Codex|Gemini CLI|Zed)\b|\b(adoption|momentum|fastest[- ]growing|becoming the standard|everyone is|more and more teams)\b/i);
+      /* A bare version number is mechanism ("2.1.243 fixed the $() descent"), not
+         momentum, so it is not a tell on its own. The unambiguous tells are a rival
+         product name and adoption language. */
+      const momentum = why.match(/\b(Cursor|Copilot|Windsurf|Devin|Codex|Gemini CLI|Zed)\b|\b(adoption|momentum|fastest[- ]growing|becoming the standard|everyone is|more and more teams)\b/i);
       if (momentum) {
-        warn(`${id}: "Why It Matters" reads as momentum reporting near "${momentum[0]}" — `
+        warn(`${id}: "${whyName}" reads as momentum reporting near "${momentum[0]}" — `
           + `significance is what the mechanism costs or enables, never who else shipped one.`);
       }
     }
