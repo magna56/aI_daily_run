@@ -88,13 +88,15 @@ on the legacy path"), and then say what it decides.
 
 ## Session Parameters
 
-- **Model**: this session should run on Opus — the most capable model available, not whatever
-  happens to be active. The unattended daily job pins this itself (`run_daily.sh` passes
-  `--model opus`), so this only matters for a manually-invoked run: if you can tell the active
-  model is something else (e.g. the user has been on Sonnet or Haiku earlier in the
-  conversation), say so before generating and suggest `/model opus` — a skill invocation cannot
-  force a live model switch mid-session, so this has to be a flag-and-ask, not a silent
-  workaround.
+- **Model**: this session runs on Opus — the most capable model available, not whatever happens
+  to be active. It is pinned in three places so no path can miss it: the unattended daily job
+  passes `--model opus` (`run_daily.sh`), and both publishing skills carry `model: opus` in their
+  frontmatter, which covers the nested run of this skill in their Step A.
+  **The only uncovered path is a direct, manual `/ai-daily-learn` on a smaller model.** If you can
+  tell that is the case, say so and stop — ask the user to run `/model opus` and re-invoke, rather
+  than generating the session and noting the model in the summary afterwards. That is what
+  happened on 2026-08-27: the session was generated on Sonnet, flagged only at the end, and the
+  user rejected the article. A flag the reader sees after the work is done costs a whole session.
 - **Time budget**: 30 minutes of reading/coding material
 - **Output directory**: `~/ai_learning/YYYY-MM-DD/` (today's date)
 - **Do not write today's session into `learn/`.** That tree is the evergreen
@@ -410,6 +412,11 @@ four things:
 3. **Vary the paragraph rhythm.** Four or five sentences to develop an idea, then a one-sentence
    paragraph to land it. *"This works fine for simple questions with obvious answers."* Our
    sessions drift toward uniform dense blocks, which is what makes them tiring rather than long.
+   **This is now enforced, because it was ignored for weeks as advice.** In the on-ramp sections
+   (`Explain Like I'm 5`, `The Problem`, the mechanism section) `--check` warns on any paragraph
+   over **110 words** or any sentence over **45 words**, and on a `The Problem` written as a single
+   block. The caps are deliberately loose — they do not make prose good, they only catch the wall
+   of text nobody finishes. A reader gives up *inside* a paragraph, never between two.
 4. **Let the diagram carry a step of the argument.** Theirs are load-bearing: the pipeline, then
    the same pipeline as a control loop. Ours (`diagram.excalidraw`, `visualize.html`) should be
    the thing that makes a step click, never a picture of the sentence above it.
@@ -446,6 +453,13 @@ in `Implementing It` at 30 lines**, and if a block is a verbatim slab of `code_e
 of the two is redundant. Both are `--check` warnings. The reader should finish the article
 knowing exactly what to type, and open the Code tab to get the finished thing, not to get the
 same thing again.
+
+**Total budget: 1,300 words of prose**, fenced code excluded — a `--check` warning. Aim for
+~1,200 and treat the cap as the ceiling, not the target. Every other length rule in this file
+governs *proportion*; this is the only one that governs *size*, and without it sessions drifted to
+~1,700 words while every individual rule reported green. When you are over, **cut, do not
+redistribute** — moving words from the mechanism section into `What This Means for You` fixes
+nothing. The explanatory sections carry the excess; `Implementing It` is the payload and survives.
 
 **No space filler.** Every section must carry something no other section has. These are the
 patterns that produce padding, and each one is a cut, not a rewrite:
@@ -535,6 +549,22 @@ Tokenizer-Agnostic LLM-Based Lossless Image Compression` announces.
     → ✓ `How a Coding-Agent Hook Decides to Fire (And Why It Still Isn't a Gate)`
   A good test: if the `Hook` line would work better as the title for someone who has only used
   Cursor, the title lost and the hook won — use the hook.
+- **One clause, one subject.** This is the most common structural defect and it reads as
+  "confusing" without the reader being able to say why. A title with two clauses joined by a
+  purpose conjunction — *"How to X **so that** Y can't Z"* — usually gives each half a **different
+  subject**, and the reader has to build the bridge between them unaided. That unbuilt bridge is
+  the disconnected feeling. The reference publications almost never do this: *"Why is Kafka so
+  fast?"*, *"How does ChatGPT work?"*, *"How to Choose a Message Queue?"* are all one clause with
+  one subject.
+  - ✗ `How to Test an AI Agent So a Broken Layer Can't Hide` — subject of the first half is *you*,
+    of the second half is *a broken layer*; "layer" is the source paper's word, undefined to a
+    reader scrolling past; and "hide" is given no object, when the thing it hides *from* (the
+    passing score) is the entire idea.
+    → ✓ `How to Catch the Broken Step Your Agent's Tests Miss`
+  Two tests before accepting a title: **do both halves share a subject or an object?** and **does
+  the second half introduce a noun the reader has not met?** If a purpose clause feels necessary,
+  the real subject of the article usually has not been named yet — name it, and the title collapses
+  to one clause by itself.
 - **Friendly, plain, curious.** Contractions are fine. Speak like a smart colleague who found
   something interesting, not like an abstract.
 - **Never oversell.** A hook the article doesn't pay off is the fastest way to lose this
@@ -632,6 +662,10 @@ topic from feeling like showing off.
 - Criticism belongs here at full strength. If there is a real objection ("has this just
   rediscovered REST?"), state the strongest version of it and answer it with a mechanism.
 - 3-6 sentences. This section motivates; section 3 explains.
+- **Never one block.** This is the section where a reader decides whether to stay, and a 180-word
+  monolith at position two loses them before the article has made its case. Develop the failure,
+  then land it in a short paragraph of its own — two or three sentences, then one. `--check` warns
+  on a single-block `The Problem` and on any paragraph over 110 words.
 
 **`## How <the thing> Works`** — the mechanism, and the one section whose heading names the
 topic instead of its own function. `## How the Hook Matcher Decides`, `## How Tokenization
@@ -646,6 +680,26 @@ two sections they explained the same thing twice at two depths.
   reader scanning the sub-headings should learn what this mechanism is made of.
 - **Open on the concrete instance, not the abstraction.** Show `"Hello world!"` breaking into
   tokens, then say what a token is. The example first, the definition second.
+- **Every detail must earn its place against the reader, not against the source.** The test, and
+  it is the sharpest one in this file: *does this detail change a decision the reader makes,
+  enable an action they can take, or alter an outcome they care about?* If not, cut it — however
+  accurate it is, however prominent it was in the source. This is the rule that separates depth
+  from a spec dump, and a spec dump is the single most common way a session that opens well goes
+  boring by the middle.
+- **Never transcribe the source system's taxonomy.** A paper or release describes *its own*
+  architecture exhaustively; the article borrows only the parts it actually uses. Enumerating
+  eight components of a system the reader will never touch is maximally specific and minimally
+  useful — it reads as diligence and lands as tedium.
+  - ✗ "The paper decomposes the agent into eight named layers: **ontology** (turning words into a
+    canonical product ID), **intent** (a signal vector), **routing** (which handler is invoked),
+    **decomposition** (splitting into sub-goals), **escalation** (when to involve a human),
+    **safety** (price and allergen checks), **memory** (prior session context), and a cross-cutting
+    **envelope/defense** band."
+  - ✓ "The paper splits its agent into eight layers; three matter here. **Escalation** decides when
+    an order needs a human — and it is the one that broke. **Ontology** resolves a product ID, and
+    everything downstream depends on it. The other six are in the paper."
+  The ✓ version is shorter, names the same source, and every noun in it does work later in the
+  article. If a term never appears again after you define it, it should never have been defined.
 - **Define every term in the sentence that first needs it.** There is no Glossary any more, so a
   proper noun the reader has not met (NaViT, DeepStack, M-RoPE) gets a four-word gloss on the
   spot — "NaViT's patch-n-pack (packing many images into one sequence)". A term that cannot be

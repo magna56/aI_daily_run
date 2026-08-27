@@ -64,6 +64,27 @@ same move as `For a Software Engineer`, done twice — what survives is a one-li
 `learn/` track, in the body, not a heading); `Try It Yourself` (a pointer to a tab the reader can
 already see); `Glossary`.
 
+**Total prose budget: 1,300 words**, fenced code excluded, warned by `--check`. Every *other*
+length rule here governs proportion — `Implementing It` is the longest section, ELI5 is 3-5
+sentences — and none governed how big the document gets, so sessions drifted to ~1,700 words with
+every individual rule green. `**Time to read**` was a number the author typed, checked by nothing.
+When over budget, **cut, do not redistribute**: the explanatory sections carry the excess, and
+`Implementing It` is the payload that survives the trim.
+
+**Reading rhythm is part of the contract, not a style preference.** In the on-ramp sections
+(`Explain Like I'm 5`, `The Problem`, the mechanism section), `--check` warns on any paragraph over
+**110 words**, any sentence over **45 words**, and a `The Problem` written as a single block. These
+were advisory for weeks and were ignored every day, because every other length rule is measured per
+*section* while a reader actually quits inside a *paragraph*. The caps are loose on purpose: they
+do not make prose good, they only catch the wall of text nobody finishes.
+
+The companion rule, which no linter can check: **every detail must change a decision the reader
+makes, enable an action they can take, or alter an outcome they care about.** Detail that only
+describes the source system — its full component taxonomy, its internal names, its architecture the
+reader will never touch — is cut no matter how central it was to the paper. Borrow the two or three
+pieces the article actually uses and link the rest. A term defined once and never used again should
+never have been defined.
+
 **No Glossary section. Define every term at the moment it is first used**, in the sentence that
 needs it, the way the reference publications do. A term that cannot be defined in a clause
 without derailing the sentence is a term the article should not be using yet. This replaces a

@@ -495,3 +495,115 @@ reached it for free — the real gap was that nothing *gated* the live push.
 - **Not changed**: the four title shapes (`How X Works`, `A vs B`, `Name: gloss`, `A Guide to X`)
   from the 2026-08-25 house-style change. This is a check applied *before* accepting whichever
   shape was chosen, not a fifth shape.
+
+## 2026-08-27 — 2026-08-27
+- **Note**: "The Problem shortne the section ans the what it is section the text is too long and
+  the overall articles felt so wrong that even I the owner of the site lodt interest even after
+  multiple trailes... the topic it start intresting but the details felt too specfic and boring".
+  Read on the GitHub Pages mirror; reported as happening across multiple sessions, not just this
+  one.
+- **Verdict**: compliance gap (the density half) + standing rule (the borrowed-detail half).
+  SKILL.md already said *"our sessions drift toward uniform dense blocks, which is what makes them
+  tiring rather than long"* — as advice, unmeasured, and every session ignored it. Diagnosis was
+  confirmed by measurement rather than impression: `The Problem` was **183 words in one paragraph**
+  and the mechanism section contained an **89-word single sentence** enumerating the source paper's
+  eight-layer taxonomy. Both passed every existing check, because every length rule in the spec is
+  measured per *section* while a reader gives up inside a *paragraph*.
+- **Changed**: `build.js` — new date-gated `READING_RHYTHM_SINCE = 2026-08-28` lint over the three
+  on-ramp sections (`Explain Like I'm 5`, `The Problem`, the mechanism section): warns on any
+  paragraph over 110 words, any sentence over 45 words, and a single-block `The Problem`. The
+  sentence warning quotes the offending clause back, because in practice it is always a list of the
+  source system's own terms. Verified to fire on all three of 2026-08-27's defects and on no
+  back-catalog session.
+- **Changed**: `SKILL.md` (mechanism-section rules) — the one genuinely new rule, from Lindsay
+  Brunner's technical-storytelling piece: **every detail must change a decision the reader makes,
+  enable an action they can take, or alter an outcome they care about**, plus an explicit ban on
+  transcribing the source system's taxonomy, with this article's eight-layer paragraph as the ✗ and
+  a three-layer version as the ✓. This is the rule that owns "the details felt too specific and
+  boring" — the density lint only catches the symptom.
+- **Changed**: `SKILL.md` — the "vary the paragraph rhythm" bullet now names the enforced caps
+  instead of asking nicely; `The Problem`'s rules gain "never one block."
+- **Changed**: `contract.md` — reading rhythm promoted into the hard contract next to the section
+  order, with the uncheckable companion rule (detail must earn its place against the reader, not
+  the source) stated alongside it.
+- **Not changed**: the seven-section order, the `Implementing It` longest-section rule, and the
+  per-section word guidance. The complaint was density and detail-selection *within* sections, not
+  the shape of the document — and the same measurement showed `Implementing It` and the
+  counter-case were already well-paced. Weakening the depth rules to make articles shorter would
+  trade the site's payload for readability; the fix is that depth must be the reader's, not the
+  source's.
+
+## 2026-08-27 — (spec-wide, no target session)
+- **Note**: "also the new article the skill /ai-daily-learn-publish and /ai-daily-learn-github
+  SHOULD ALWAYS use opus". Said directly after rejecting a session that had been generated on
+  Sonnet 5.
+- **Verdict**: standing rule, and a compliance gap in how the existing rule was written.
+  `ai-daily-learn`'s Session Parameters already asked for Opus, but phrased it as flag-and-ask —
+  which was satisfied on 2026-08-27 by generating the entire session on Sonnet and mentioning the
+  model in the closing summary. A warning delivered after the work is finished costs a whole
+  session.
+- **Changed**: `ai-daily-learn-publish/SKILL.md` and `ai-daily-learn-github/SKILL.md` — added
+  `model: opus` to the YAML frontmatter. This is a real Claude Code skill field (confirmed against
+  code.claude.com/docs/en/skills: "Model to use when this skill is active... applies for the rest
+  of the current turn"), so it now enforces the model rather than asking for it. The turn-scoped
+  override also covers the nested `ai-daily-learn` run in Step A of both skills.
+- **Changed**: `ai-daily-learn/SKILL.md` Session Parameters — rewritten to say the model is pinned
+  in three places (`run_daily.sh --model opus`, plus both skills' frontmatter), and that the one
+  remaining uncovered path is a manual `/ai-daily-learn`. On that path the instruction is now to
+  **stop and ask for `/model opus` before generating**, not to generate and flag afterwards.
+- **Not changed**: no `model:` field added to `ai-daily-learn` itself. The user named the two
+  publishing skills, and the local-only skill has a legitimate quick-draft use where forcing Opus
+  is the user's call, not the spec's. Worth revisiting if a manual local run ever ships badly.
+
+## 2026-08-27 — 2026-08-27 (follow-up: total length)
+- **Note**: "hold on did you shorten just the oiblem section or the overall article?" — a correct
+  challenge. The first pass shortened `The Problem` by 47 words and left the mechanism section
+  9 words *longer*; the article dropped 2.2% overall while being reported as fixed.
+- **Verdict**: standing rule, and a genuine gap the first pass missed. The rhythm caps added
+  earlier that day enforce *density* and say nothing about *size*. Reviewing the spec for this
+  showed there was **no overall length rule at all**: every rule governs proportion
+  (`Implementing It` longest, ELI5 3-5 sentences, `The Problem` 3-6) and none governs the total,
+  which is how sessions reached ~1,700 words with every check green. `**Time to read**` was a
+  number the author typed, validated by nothing.
+- **Changed**: `build.js` — `MAX_TOPIC_WORDS = 1300` over all sections, fenced code excluded,
+  under the same `READING_RHYTHM_SINCE` date gate. Warning text says "cut, do not redistribute",
+  because moving words between sections is the obvious way to satisfy a total.
+- **Changed**: `contract.md` and `SKILL.md` — the budget stated in both, with the target at ~1,200
+  and the cap as ceiling, plus the rule that the explanatory sections absorb the cut and
+  `Implementing It` is protected.
+- **Changed**: `2026-08-27/topic.md` cut 1,717 → 1,300 words (−24%), user-chosen target. Every
+  section reduced except `Implementing It` (308, untouched by design): ELI5 −28, The Problem −47,
+  mechanism −119, For a Software Engineer −47, What This Means −66, counter-case −84. Passes all
+  new caps and the existing longest-section rule (`Implementing It` + counter-case = 452 vs
+  mechanism 407).
+- **Not changed**: the `Implementing It` longest-section rule, deliberately — the budget is
+  enforced *around* the payload, never by trimming it. A shorter article that cut the code
+  guidance would fix the symptom the user named and destroy the reason the site exists.
+
+## 2026-08-27 — 2026-08-27 (follow-up: title flow)
+- **Note**: "the title's ebglish somhow I fins it confusing the format is good... 'So a borket
+  layer cant hide' confused me and doest feel the flow like the first part and seond part feel
+  little disconnected".
+- **Verdict**: standing rule. The existing title rules covered *shape* (four allowed forms), *
+  vocabulary* (no product-specific glyph) and a *cold-reader check* — but nothing about a title's
+  internal grammar, so a title could pass every rule and still not hold together.
+- **Diagnosis**: `How to Test an AI Agent So a Broken Layer Can't Hide` joins two clauses with a
+  purpose conjunction and gives each a **different subject** — the first half's is the reader, the
+  second half's is "a broken layer." Two compounding faults: "layer" is the source paper's
+  vocabulary, undefined at title-read time (which the existing Cursor-only-engineer rule should
+  have caught and did not), and "hide" is given no object, though the thing it hides *from* — the
+  passing aggregate score — is the article's whole idea.
+- **Market check**: ByteByteGo's titles are near-uniformly one clause with one subject ("Why is
+  Kafka so fast?", "How does ChatGPT work?", "How to Choose a Message Queue?", "A Crash Course in
+  Kubernetes"). None uses a two-clause purpose construction. The instinct was confirmed by the
+  reference publication rather than asserted.
+- **Changed**: `SKILL.md` title rules — new "One clause, one subject" rule with this exact title as
+  the ✗ and the chosen replacement as the ✓, plus two acceptance tests: do both halves share a
+  subject or object, and does the second half introduce an unmet noun. Notes that a needed purpose
+  clause usually means the article's real subject has not been named yet.
+- **Changed**: title updated to `How to Catch the Broken Step Your Agent's Tests Miss` (user's pick
+  from four researched options) in all three places it appears — `topic.md` H1, `articles.md`
+  "Further Reading" header, `journal.md` entry heading. `Time to read` corrected ~11 → ~8 min to
+  match the shortened article.
+- **Not changed**: the four title shapes. This is a grammar check applied to whichever shape was
+  chosen, not a fifth shape — same relationship as the 2026-08-25 cold-reader check.

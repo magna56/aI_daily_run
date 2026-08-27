@@ -11,6 +11,10 @@ description: >
   ai-daily-learn when they want it saved locally only, not even committed. Accepts optional topic
   argument: /ai-daily-learn-github "vision transformers".
 argument-hint: "[optional-topic]"
+# Same rule as ai-daily-learn-publish: this commits straight to main, so the session becomes
+# the published source of truth even though the site is not deployed. Always the most capable
+# model. The override lasts for this turn only, which covers the nested ai-daily-learn run.
+model: opus
 verified: llm
 ---
 

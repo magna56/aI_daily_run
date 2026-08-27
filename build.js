@@ -185,6 +185,26 @@ const IMPLEMENT_SECTION_SINCE = "2026-08-25";
 // back catalog is left alone.
 const ARTIFACT_CONTRACT_SINCE = "2026-08-26";
 
+// Reading rhythm. "Vary the paragraph rhythm" sat in SKILL.md as advice for weeks
+// and every session ignored it, because nothing measured it: the length rules are
+// all per-SECTION, while the unit that actually tires a reader is the paragraph and
+// the sentence. 2026-08-27 passed every existing check with a 183-word single-block
+// "The Problem" and an 89-word single-sentence taxonomy dump in the mechanism
+// section -- the two places the site's owner reported losing interest. These caps
+// are deliberately generous: they do not enforce good prose, they only catch the
+// wall of text that no reader finishes.
+const READING_RHYTHM_SINCE = "2026-08-28";
+const MAX_PARAGRAPH_WORDS = 110;
+const MAX_SENTENCE_WORDS = 45;
+
+// Total prose budget. Every other length rule in this file governs PROPORTION --
+// "Implementing It" must be the longest section, ELI5 is 3-5 sentences -- and none
+// governs how big the whole thing gets, which is why sessions drifted to ~1,700
+// words with every individual rule reporting green. `Time to read` was a number the
+// author typed, checked by nothing. Fenced code is excluded: the cap is on how much
+// there is to READ, and a long code block is scanned, not read.
+const MAX_TOPIC_WORDS = 1300;
+
 // The seven-section order. The old eleven-section shape explained the topic four
 // times (ELI5, For a Software Engineer, What It Is, Key Technical Details) and
 // only named the object in the fifth section, which is why the order read as
@@ -637,6 +657,58 @@ function compile(id, journal, runner, opts) {
   if (!job) warn(`${id}: no For in topic.md (${JOBS.join(" / ")}).`);
   else if (!JOBS.includes(job)) warn(`${id}: For "${job}" is not one of ${JOBS.join(", ")}.`);
   if (!hook) warn(`${id}: no Hook in topic.md — the card will fall back to the journal insight.`);
+
+  /* Reading rhythm: the paragraph and the sentence, not the section, are what a
+     reader gives up inside. Checked on the three sections a reader meets before
+     they have committed -- a wall in the on-ramp costs the whole article. */
+  if (date >= READING_RHYTHM_SINCE) {
+    const onRamp = [...splitSections(topic.body)].filter(([n]) =>
+      n === "Explain Like I'm 5" || n === "The Problem" || MECHANISM_RE.test(n));
+    for (const [name, body] of onRamp) {
+      const paras = proseOnly(body).split(/\n\s*\n/)
+        .map((p) => p.trim())
+        // tables, bullets and sub-headings are scanned, not read start-to-finish
+        .filter((p) => p && !/^[|#>-]/.test(p));
+      for (const p of paras) {
+        const n = (p.match(/\S+/g) || []).length;
+        if (n > MAX_PARAGRAPH_WORDS) {
+          warn(`${id}: "${name}" has a ${n}-word paragraph (cap ${MAX_PARAGRAPH_WORDS}) — `
+            + `break it, and land the point in a short line. A reader quits inside a block, `
+            + `not between them.`);
+          break;
+        }
+      }
+      for (const p of paras) {
+        const long = p.split(/(?<=[.!?])\s+/)
+          .map((s) => ({ s, n: (s.match(/\S+/g) || []).length }))
+          .find((x) => x.n > MAX_SENTENCE_WORDS);
+        if (long) {
+          warn(`${id}: "${name}" has a ${long.n}-word sentence (cap ${MAX_SENTENCE_WORDS}) — `
+            + `usually a list of the source system's own terms. Name only the ones this `
+            + `article uses: "${long.s.slice(0, 60).trim()}…"`);
+          break;
+        }
+      }
+    }
+    /* The whole-document budget. Enforced last so the per-section warnings above
+       point at where to cut before this one says how much. */
+    const totalWords = [...splitSections(topic.body).values()]
+      .reduce((n, b) => n + (proseOnly(b).trim().match(/\S+/g) || []).length, 0);
+    if (totalWords > MAX_TOPIC_WORDS) {
+      warn(`${id}: topic.md is ${totalWords} words of prose (cap ${MAX_TOPIC_WORDS}) — cut, do `
+        + `not redistribute. The explanatory sections carry the excess; "Implementing It" is the `
+        + `payload and is measured separately. Fenced code is excluded from this count.`);
+    }
+
+    const problem = splitSections(topic.body).get("The Problem");
+    if (problem !== undefined) {
+      const paras = proseOnly(problem).split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+      if (paras.length < 2) {
+        warn(`${id}: "The Problem" is a single block — it is the section a reader decides to `
+          + `stay on. Develop the failure, then land it in a short paragraph of its own.`);
+      }
+    }
+  }
 
   if (kind === "daily" && date >= IMPLEMENT_SECTION_SINCE) {
     const sections = splitSections(topic.body);

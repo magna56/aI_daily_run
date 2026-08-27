@@ -11,6 +11,12 @@ description: >
   user wants the session live. Use plain /ai-daily-learn instead when they want it saved locally
   only. Accepts optional topic argument: /ai-daily-learn-publish "vision transformers".
 argument-hint: "[optional-topic]"
+# This skill's output is published live — to theaicommit.com, the gh-pages mirror and the
+# newsletter — before anyone reads it, so it always runs on the most capable model. Not a
+# preference: a Sonnet-generated session shipped on 2026-08-27 that the site's own owner
+# could not finish reading. The override lasts for this turn only, which covers the nested
+# ai-daily-learn run in Step A.
+model: opus
 verified: llm
 ---
 
