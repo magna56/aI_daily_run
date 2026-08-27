@@ -254,6 +254,36 @@
     background: var(--card);
     display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
   }
+  /* The lead story. Deliberately not a .card: it is one thing, not a cell in a
+     grid, and it is the first content a phone reader sees. */
+  .hero-card {
+    display: block; text-decoration: none; margin: 0 0 22px;
+    padding: 20px 22px; border: 1px solid var(--line); border-radius: 14px;
+    background: var(--card); transition: background .15s, border-color .15s;
+  }
+  .hero-card:hover { background: var(--card-hi); border-color: var(--accent); }
+  .hero-card .k {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 7px;
+  }
+  .hero-card .t {
+    margin: 0; font-size: 21px; font-weight: 700; color: var(--ink); line-height: 1.24;
+    letter-spacing: -.01em;
+  }
+  .hero-card .d { margin: 9px 0 0; font-size: 14.5px; color: var(--muted); line-height: 1.55; }
+  .hero-card .meta { margin: 13px 0 0; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+  .hero-card .go {
+    margin: 13px 0 0; display: block; font-family: var(--mono); font-size: 12.5px; color: var(--accent);
+  }
+  @media (max-width: 560px) {
+    .hero-card { padding: 17px 16px; margin-bottom: 18px; }
+    .hero-card .t { font-size: 19px; }
+  }
+  /* The lead story is the daily lab's own view. Every other route replaces the
+     grid, so a stale hero would sit above content it has nothing to do with. */
+  body.on-learn .hero-card,
+  body.on-frontier .hero-card { display: none; }
+
   /* Frontier: the newest piece itself, so the strip doubles as proof the track is
      alive. A generic "check out our new section" card would say nothing, and this
      one degrades honestly on a skipped day by simply showing an older date. */
@@ -309,6 +339,15 @@
   body.on-learn .count,
   body.on-learn .course-invite,
   body.on-learn .mlc-invite { display: none; }
+  /* Progressive disclosure. The orientation copy answers "what is this site?" —
+     worth a first-time visitor's screen space, worth none of a returning one's.
+     The site already knows which it is: `is-returning` is set from the same
+     read-state that renders the streak counter. Kept to the two paragraphs that
+     are purely explanatory; the h1 and nav stay put so the page still looks
+     like itself. */
+  body.is-returning .subtitle,
+  body.is-returning .trust { display: none; }
+
   body.on-frontier .tagline,
   body.on-frontier .subtitle,
   body.on-frontier .trust,
@@ -815,22 +854,12 @@
         </div>
         <p class="nl-status" hidden></p>
       </form>
-      <div class="course-invite" id="courseInvite">
-        <div>
-          <p class="k">New to this?</p>
-          <p>AI basics — 11 short lessons, in order. Separate from the daily lab below.</p>
-        </div>
-        <a href="#learn">Start the basics →</a>
-      </div>
-      <div class="mlc-invite" id="mlcInvite">
-        <div>
-          <p class="k">Intermediate basics</p>
-          <p>Six primers on this site — freeze a matrix, watch attention, poke a calibration curve. Separate from the daily lab.</p>
-        </div>
-        <a href="#learn/intermediate">Open the primers →</a>
-      </div>
-      <a class="frontier-strip" id="frontierStrip" href="#frontier" hidden></a>
-      <div class="stats" id="stats"></div>
+      <!-- Today's session, as the lead story rather than the first cell of a
+           grid. It is both what a returning reader came for and the best
+           possible demo for a first-time one — a real article beats a paragraph
+           describing what the articles are like. Rendered by renderHero(), and
+           only on the unfiltered daily-lab view. -->
+      <a class="hero-card" id="heroCard" hidden></a>
       <hr class="sep" />
 
       <div class="controls">
@@ -855,6 +884,28 @@
       <div class="pills" id="pills"></div>
       <div class="count" id="count"></div>
       <div class="grid" id="grid"></div>
+
+      <!-- Orientation, below the grid on purpose. These four blocks all answer
+           "what is this site?" — a question a returning reader has already
+           answered and paid 472px for on every visit. All three destinations
+           stay one tap away in the top nav, so nothing here is the only route
+           to anything. -->
+      <div class="course-invite" id="courseInvite">
+        <div>
+          <p class="k">New to this?</p>
+          <p>AI basics — 11 short lessons, in order. Separate from the daily lab above.</p>
+        </div>
+        <a href="#learn">Start the basics →</a>
+      </div>
+      <div class="mlc-invite" id="mlcInvite">
+        <div>
+          <p class="k">Intermediate basics</p>
+          <p>Six primers on this site — freeze a matrix, watch attention, poke a calibration curve. Separate from the daily lab.</p>
+        </div>
+        <a href="#learn/intermediate">Open the primers →</a>
+      </div>
+      <a class="frontier-strip" id="frontierStrip" href="#frontier" hidden></a>
+      <div class="stats" id="stats"></div>
 
       <footer>
         Keys: <code>/</code> search · <code>↑↓</code> or <code>j/k</code> move · <code>Enter</code> open<br />
@@ -1678,6 +1729,10 @@
 
   function renderGrid() {
     var grid = $("grid");
+    // Here rather than in syncChrome: the search box and the filter selects call
+    // renderGrid() directly without routing, and the hero must disappear the
+    // moment the reader starts looking for something specific.
+    renderHero();
     // The Frontier index is a dated list, not cards — it reuses the grid slot so
     // routing, scroll and the shell stay identical.
     if (state.frontier) { grid.className = "frontier-wrap"; grid.innerHTML = renderFrontierIndex(); return; }
@@ -2327,9 +2382,58 @@
     return null;
   }
 
+  /* The lead story: newest daily session, above the grid. Hidden as soon as any
+     filter or search is active — once the reader is looking for something
+     specific, "today's" is no longer the answer and repeating it as a card in
+     the results below would just be a duplicate. */
+  function renderHero() {
+    var el = $("heroCard");
+    if (!el) return;
+    var filtering = !!(state.q || state.cat || state.tag || state.read || state.level);
+    var lab = labSessions();
+    if (state.learn || state.frontier || filtering || !lab.length) { el.hidden = true; return; }
+    var s = lab.slice().sort(function (a, b) {
+      return String(b.date || "").localeCompare(String(a.date || ""));
+    })[0];
+    if (!s) { el.hidden = true; return; }
+    el.href = SITE_ROOT + "/" + s.slug + "/";
+    el.setAttribute("data-id", s.id);
+    el.setAttribute("data-kind", s.kind || "daily");
+    var read = readSet().has(s.id);
+    /* The grid attaches this per card inside renderGrid; the hero lives outside
+       the grid, so it wires its own. Without it the anchor still works — it is a
+       real href to a real page — it just costs a full page load instead of the
+       instant hash route every other card gets. */
+    if (!el.dataset.wired) {
+      el.dataset.wired = "1";
+      el.addEventListener("click", function (ev) {
+        if (ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
+        ev.preventDefault();
+        location.hash = el.getAttribute("data-id");
+      });
+    }
+    el.innerHTML =
+      '<p class="k">' + (read ? "Latest · read" : "Today's session") + "</p>" +
+      '<p class="t">' + esc(plain(s.title)) + "</p>" +
+      '<p class="d">' + esc(plain(cardBlurb(s))) + "</p>" +
+      '<div class="meta tags">' +
+        (s.level ? '<span class="tag level ' + levelClass(s.level) + '">' + esc(s.level) + "</span>" : "") +
+        (s.category ? '<span class="tag cat ' + famClass(s.category) + '">' + esc(s.category) + "</span>" : "") +
+        '<span class="tag day">' + esc(s.date) + "</span>" +
+        (s.code && s.codeLines ? '<span class="tag day">runnable in ' + s.codeLines + " lines</span>" : "") +
+      "</div>" +
+      '<span class="go">Read it → ~' + s.minutes + " min</span>";
+    el.hidden = false;
+  }
+
   function syncChrome() {
     document.body.classList.toggle("on-learn", !!state.learn);
     document.body.classList.toggle("on-frontier", !!state.frontier);
+    /* Anything read at all means the orientation copy has done its job. Wrapped
+       because readSet() touches localStorage, which throws in private mode. */
+    try {
+      document.body.classList.toggle("is-returning", readSet().size > 0);
+    } catch (e) { /* treat as a first visit */ }
     var lab = $("navLab"), course = $("navCourse"), front = $("navFrontier");
     if (lab) lab.classList.toggle("on", !state.learn && !state.frontier);
     if (course) course.classList.toggle("on", !!state.learn);
