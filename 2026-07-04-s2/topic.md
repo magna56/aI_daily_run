@@ -1,7 +1,7 @@
 # How 4-Bit Floating Point Speeds Up LLM Inference
 
 **Category**: AI Hardware for Engineers
-**Date**: 2026-07-04 (session 2)
+**Date**: 2026-07-04
 **Level**: Deeper
 **For**: How models work
 **Hook**: Four-bit numbers stay accurate when each block picks its own scale — that is the whole trick.

@@ -255,7 +255,7 @@ function mixRows() {
     .map((n) => {
       const raw = readIfExists(path.join(ROOT, n, "topic.md")) || "";
       const get = (k) => (raw.match(new RegExp("^\\*\\*" + k + "\\*\\*:\\s*(.*)$", "m")) || [, ""])[1].trim();
-      return { id: n, date: get("Date") || n.slice(0, 10), category: get("Category"), job: get("For"), level: get("Level") };
+      return { id: n, date: isoDate(get("Date")) || n.slice(0, 10), category: get("Category"), job: get("For"), level: get("Level") };
     })
     .filter((r) => r.category || r.job);
   rows.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
@@ -646,7 +646,7 @@ function compile(id, journal, runner, opts) {
     if (!TAGS.includes(t)) warn(`${id}: tag "${t}" is not in the TAGS vocabulary in build.js.`);
   }
 
-  const date = topic.meta.Date
+  const date = isoDate(topic.meta.Date)
     || (SESSION_RE.test(id) ? id.slice(0, 10) : "")
     || (kind === "frontier" ? id.slice(FRONTIER_PREFIX.length, FRONTIER_PREFIX.length + 10) : "");
   const level = topic.meta.Level || "";
@@ -1103,6 +1103,13 @@ function mdToHtml(body) {
 
 // Turns a title into a URL-safe slug for the canonical per-post path
 // (site/<id>-<slug>/index.html). Truncated at a hyphen boundary, never mid-word.
+// Sitemap lastmod, RSS, and JSON-LD datePublished must be a calendar day.
+// topic.md sometimes appends "(session 2)" on a -s2 day; take YYYY-MM-DD only.
+function isoDate(s) {
+  const m = String(s || "").match(/(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : "";
+}
+
 function slugify(title, maxLen = 60) {
   let s = stripMd(String(title))
     .toLowerCase()
@@ -1456,7 +1463,7 @@ function writeSitemap(cards, categories) {
   const body = urls.map((u) =>
     `  <url>\n` +
     `    <loc>${escAttr(u.loc)}</loc>\n` +
-    (u.lastmod ? `    <lastmod>${u.lastmod}</lastmod>\n` : "") +
+    (isoDate(u.lastmod) ? `    <lastmod>${isoDate(u.lastmod)}</lastmod>\n` : "") +
     `    <changefreq>${u.changefreq}</changefreq>\n` +
     `    <priority>${u.priority}</priority>\n` +
     `  </url>`
@@ -1470,7 +1477,7 @@ function writeSitemap(cards, categories) {
 function rfc822(date) {
   // Session dates are calendar days, not timestamps. Noon UTC keeps the day
   // stable across timezones instead of rolling a US evening back to yesterday.
-  const d = new Date(String(date) + "T12:00:00.000Z");
+  const d = new Date((isoDate(date) || String(date)) + "T12:00:00.000Z");
   return Number.isNaN(d.getTime()) ? new Date().toUTCString() : d.toUTCString();
 }
 
