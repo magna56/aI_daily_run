@@ -27,6 +27,12 @@ case "$SESSION" in
   *)          IS_FRONTIER=0 ;;
 esac
 
+# build.js compiles frontier/<date> to the id "frontier-<date>" so a lab and a
+# Frontier piece can share a date. The lint prints that id, not the directory
+# name, so a gate grepping the directory silently matched nothing and passed
+# every Frontier session no matter what it contained.
+LINT_ID=$(printf '%s' "$SESSION" | sed 's|^frontier/|frontier-|')
+
 say()  { printf '[publish] %s\n' "$*"; }
 die()  { printf '[publish] ERROR: %s\n' "$*" >&2; exit 1; }
 
@@ -84,7 +90,7 @@ content_gate() {
   # "outweighs the implementation" warning, which is advisory and must stay that way.
   local blocking
   blocking=$(node build.js --check 2>&1 \
-    | grep -F "$SESSION:" \
+    | grep -F "$LINT_ID:" \
     | grep -E 'Implementing It|fenced code block|visualize\.html|no topic\.md|-word paragraph \(cap|-word sentence \(cap|is a single block|words of prose \(cap' || true)
 
   if [ -n "$blocking" ]; then
