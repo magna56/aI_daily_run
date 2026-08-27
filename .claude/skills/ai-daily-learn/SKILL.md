@@ -1088,13 +1088,29 @@ mis-ordered, or retired sections, and a mechanism/counter-case heading that does
 topic), `code_example.py` over 150 lines, a visualizer missing its CSP / session-id marker /
 `ResizeObserver` height / Reset button, and `## The Problem` slipping into momentum reporting.
 
-Two content rules no linter can check, so check them by eye before you stop:
+**Readability is now measured too**, because it was ignored for weeks as advice. `--check` warns
+on any paragraph over **110 words** or sentence over **45 words** in the on-ramp sections
+(`Explain Like I'm 5`, `The Problem`, the mechanism section), on a `The Problem` written as a
+single block, and on the whole document exceeding **1,300 words of prose** (fenced code excluded).
+
+When the word-budget warning fires, **cut — do not redistribute.** Moving words from the mechanism
+section into `What This Means for You` satisfies nothing; the explanatory sections carry the
+excess and `Implementing It` is the payload that survives. And update `**Time to read**` to match
+what you actually shipped: it is a number you type, so it is only true if you keep it true.
+
+Three content rules no linter can check, so check them by eye before you stop:
 
 - `## Implementing It` gives code for **every role the change touches** — client *and* server,
   producer *and* consumer — not only the role the source announcement was written for. A section
   that is all server and one sentence of "clients should check X" has failed this.
 - The title reads to someone who has only used Cursor. No product-specific glyph doing the work
-  of the surprise; if the `Hook` line is the better title for that reader, swap them.
+  of the surprise; if the `Hook` line is the better title for that reader, swap them. **And it is
+  one clause with one subject** — if it has two halves joined by "so that", check they share a
+  subject and that the second half introduces no noun the reader has not met.
+- **Every detail serves the reader, not the source.** Scan the mechanism section for anything that
+  only describes the source system — its full component taxonomy, its internal names, architecture
+  the reader will never touch. If a term is defined once and never used again, cut it. This is the
+  rule that keeps a session that opens well from going boring by the middle.
 
 ### Step 12: Present the Summary
 

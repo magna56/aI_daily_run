@@ -134,7 +134,8 @@ node build.js --check
 ```
 
 Fix every warning that names today's id (missing file, bad Category/Level/For/Hook/tag,
-visualize contract, unrenderable diagram, crashing JS). Then tell the user:
+visualize contract, unrenderable diagram, crashing JS, **paragraph/sentence caps, single-block
+`The Problem`, the 1,300-word budget**). Then tell the user:
 
 ```
 cd ~/ai_learning && make serve

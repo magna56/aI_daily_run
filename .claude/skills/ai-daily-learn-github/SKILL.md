@@ -89,6 +89,11 @@ never fix it by loosening the spec. The blocking ones:
 - `no fenced code block` — the section exists but defers to `code_example.py`, which most readers
   never open and nobody reading on a phone will run.
 - anything about `visualize.html` — a session without a working visualizer has no Visualize tab.
+- **the readability warnings** — a paragraph over 110 words, a sentence over 45, a single-block
+  `The Problem`, or the document over **1,300 words of prose**. Landing an unreadable session on
+  `main` is worse than it sounds: it becomes the example every future session is written against.
+  Fix by **cutting, never by redistributing** between sections, and correct `**Time to read**` to
+  match what you shipped.
 
 Then the **audience gate** — did this session take a slot that was already at cap?
 

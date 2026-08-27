@@ -67,7 +67,7 @@ content_gate() {
   local blocking
   blocking=$(node build.js --check 2>&1 \
     | grep -F "$SESSION:" \
-    | grep -E 'Implementing It|fenced code block|visualize\.html|no topic\.md' || true)
+    | grep -E 'Implementing It|fenced code block|visualize\.html|no topic\.md|-word paragraph \(cap|-word sentence \(cap|is a single block|words of prose \(cap' || true)
 
   if [ -n "$blocking" ]; then
     printf '[publish-github] ERROR: content gate — %s does not meet contract.md:\n' "$SESSION" >&2
