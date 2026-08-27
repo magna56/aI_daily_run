@@ -131,7 +131,7 @@
 - **Code**: `2026-08-26/code_example.py` — implements the same three-candidate review as prose and as the typed `ReportFindings` shape, with a `verify()` pass that checks each claim against real source text: 2 of 3 survive (one `CONFIRMED`, one `PLAUSIBLE`), the SQL-injection claim is filtered because the file has no query at all, and `should_block_merge()` returns `True` on the confirmed race condition. Re-runs after a fix, marking the finding `outcome=fixed`.
 - **Articles**: 4 sources (Claude Code's Code Review docs as primary source, Simon Willison's provoking one-line note, Anthropic's SDLC-security blog for wider context, GitHub Actions docs for the hands-on wiring)
 
-## 2026-08-27 — How to Test an AI Agent So a Broken Layer Can't Hide
+## 2026-08-27 — How to Catch the Broken Step Your Agent's Tests Miss
 - **Category**: Evals & Reliability
 - **Key insight**: An AI agent's overall pass rate barely moved when researchers broke one internal step entirely — because most test conversations never touched that step. Testing each step on its own, with no model call involved, caught the same break as up to a 95-percentage-point drop instead of a barely-visible one. The lesson: test each piece in isolation, not just the system's overall average.
 - **Code**: `2026-08-27/code_example.py` — implements two real pure-mode layers (ontology resolution, safety repricing) plus a masking table across all 7 non-safety layers, breaking each one and printing the aggregate-score drop next to the matching slice's drop (1.6–26.4pp vs 25–100pp), then a `gate_ci()` demo that blocks a regressed slice and flags an uncovered one instead of passing it by default

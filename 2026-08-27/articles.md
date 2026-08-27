@@ -1,4 +1,4 @@
-# Further Reading: How to Test an AI Agent So a Broken Layer Can't Hide
+# Further Reading: How to Catch the Broken Step Your Agent's Tests Miss
 
 ## Articles
 

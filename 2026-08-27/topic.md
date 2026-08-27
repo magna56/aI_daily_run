@@ -1,4 +1,4 @@
-# How to Test an AI Agent So a Broken Layer Can't Hide
+# How to Catch the Broken Step Your Agent's Tests Miss
 
 **Category**: Evals & Reliability
 **Tags**: reliability, benchmarks, agents, paper
@@ -6,27 +6,29 @@
 **Level**: Building
 **For**: Shipping AI
 **Hook**: An AI agent's overall pass rate can barely move while one whole step inside it stops working completely — unless you test that step on its own.
-**Time to read**: ~11 minutes
+**Time to read**: ~8 minutes
 
 ## Explain Like I'm 5
 
-Imagine a school gave you one overall grade for the semester instead of a grade per class. If you get a perfect score in four classes and completely fail the fifth, your overall grade only drops a little — the report card still looks basically fine. Nobody glancing at that one number would ever guess you failed an entire class. The only way to catch it is to also look at each class's grade on its own, not just the average across all of them. That is the whole idea here, just applied to testing a piece of software instead of a student.
+Imagine your school gave you one overall grade for the semester instead of a grade per class. Ace four classes, completely fail the fifth, and your overall grade barely moves — the report card still looks fine. Nobody glancing at that one number would guess you failed an entire subject. The only way to catch it is to look at each class on its own. That's the whole idea, applied to software instead of students.
 
 ## The Problem
 
-A team running an AI ordering agent in production watches one number after every release: the percentage of end-to-end test conversations that finish correctly. It holds steady release after release, so nobody looks any further — until a support ticket surfaces that the agent stopped escalating suspicious high-value orders for human review two weeks ago, and has been silently auto-approving them ever since. The regression was sitting in the eval suite the whole time; it just never moved the number anyone was watching. A single pass-rate score is an average across every kind of conversation a customer might have, and escalation only ever fires on a narrow slice of those — orders over a spend limit, orders with a mismatched shipping address, orders flagged for fraud. Break escalation completely and most test conversations never touch that code path at all, so the score that actually broke does not look broken. It is the same failure mode as a dashboard that only tracks median latency: a page that is unusably slow for one in twenty users can sit invisible under a healthy median indefinitely.
+A team running an AI ordering agent watches one number after every release: the percentage of end-to-end test conversations that finish correctly. It holds steady for weeks. Then a support ticket lands — the agent stopped escalating high-value orders for human review a fortnight ago, and has been quietly auto-approving them ever since.
+
+The regression was in the eval suite the whole time. It just never moved the number anyone was watching. A single pass rate averages every kind of conversation a customer might have, and escalation only fires on a narrow slice of them — orders over a spend limit, orders flagged for fraud. Break it completely and most test conversations never touch that path, so the score that broke doesn't look broken.
+
+An average is very good at hiding something that only happens sometimes.
 
 ## How Layer-Isolated Testing Catches What the Average Hides
 
-A new paper (arXiv:2606.11686, Zhang, Wang & Lei, June 2026) names this precisely and measures it on a real, deployed ordering agent. Their fix is to stop grading the agent once and start grading each step of it separately.
+A June 2026 paper (arXiv:2606.11686) measures this on a deployed ordering agent. The fix: stop grading the agent once, and grade each step separately.
 
-### The Layers of an Ordering Agent
+### One Slice Per Layer
 
-The paper decomposes the agent into eight named layers, each the unit that gets its own test suite: **ontology** (turning a customer's words into a canonical product ID), **intent** (a signal vector describing what the customer wants), **routing** (which tool or handler gets invoked), **decomposition** (splitting one request into ordered sub-goals), **escalation** (deciding when an order must go to a human), **safety** (price, SKU and allergen checks that can reject an order outright), **memory** (recalling prior session context), and a cross-cutting **envelope/defense** band (out-of-distribution rejection, input reformulation, locale handling).
+The paper splits its agent into eight layers. Three matter here: **escalation** decides when an order needs a human — the one that broke above; **ontology** turns a customer's words into a canonical product ID; the **out-of-distribution gate** rejects inputs the agent was never built for.
 
-### A Pure-Mode Assertion Slice
-
-Each layer gets an **assertion slice**: a small set of test cases run in **pure mode** — the layer's own deterministic logic, called directly, with the LLM stubbed out of the picture entirely. An ontology slice looks like this:
+Each gets an **assertion slice**: test cases run in **pure mode** — the layer's own logic, called directly, LLM stubbed out entirely.
 
 ```python
 def ontology_resolve(sku: str, broken: bool) -> str | None:
@@ -36,15 +38,15 @@ def ontology_resolve(sku: str, broken: bool) -> str | None:
 assert ontology_resolve("sku-42", broken=False) == "CANON-COLA-42"
 ```
 
-"No LLM is invoked; a slice failure is a real contract violation," in the paper's own words — there is no ambiguity to argue about, unlike an LLM-judge scoring a free-form answer.
+"No LLM is invoked; a slice failure is a real contract violation," in the paper's words. Nothing to argue about, unlike an LLM judge scoring a free-form answer.
 
 ### The Locked Baseline
 
-Every slice's pass rate is frozen into a **locked baseline** — a JSON record of `(total, passed, rate, failed_ids)` per slice. The paper's production baseline is 238 cases across 23 slices, all at 100%, and the whole pure suite runs in 2.39 seconds — about 10 milliseconds per case, fast enough for every pull request. CI diffs the current run against that baseline: **any per-slice rate drop blocks the merge.** The gate also enforces **coverage honesty**: a slice with zero cases reports its rate as `null` ("uncovered"), never a false `1.0` — an untested layer can't silently look tested.
+Each slice's pass rate is frozen into a **locked baseline** — a JSON record of `(total, passed, rate, failed_ids)`. The paper's is 238 cases across 23 slices, all at 100%, running in 2.39 seconds — fast enough for every pull request. CI diffs against it, and **any per-slice drop blocks the merge.** It also enforces **coverage honesty**: a slice with zero cases reports `null`, never `1.0`, so an untested layer can't look tested.
 
-### The Masking Effect, By the Numbers
+### The Masking Effect
 
-The paper validates this by breaking one layer at a time — monkeypatching a single entry point (ontology resolver → null, escalation → never escalate, defense scan → allow everything). Across the seven non-safety layers, here is what they measured:
+To validate this, the authors broke one layer at a time — monkeypatching a single entry point. Across the seven non-safety layers:
 
 | Layer regressed | Aggregate score moved | The matching slice moved |
 | --- | --- | --- |
@@ -56,24 +58,24 @@ The paper validates this by breaking one layer at a time — monkeypatching a si
 | Decomposer | −5.88 pp | −90.91 pp |
 | Ontology (foundational) | −26.47 pp | −95.24 pp |
 
-Six of the seven regressions barely dent the aggregate — a 2-to-6-point wobble a team would read as noise — while the slice built to test exactly that layer falls off a cliff. The one outlier, ontology, is **foundational**: every other layer depends on a correctly resolved product ID, so breaking it cascades downstream and the aggregate score notices. A layer's position in the pipeline, not its importance, determines whether the average can hide it.
+Six of seven barely dent the aggregate — a wobble any team would read as noise — while the matching slice falls off a cliff. The outlier, ontology, is **foundational**: everything downstream needs a resolved product ID, so breaking it cascades and the average notices. A layer's *position* in the pipeline, not its importance, decides whether the average can hide it.
 
 ## For a Software Engineer
 
-This is the same lesson as replacing one aggregate error-rate alert with a per-endpoint alert. If `/checkout` starts throwing 500s on every request but it is one endpoint out of forty behind a single "overall API error rate" metric, that metric moves by a fraction most on-call rotations would page right past. Nobody would seriously monitor a multi-service API with one combined error rate instead of one per endpoint — yet that is exactly how most teams evaluate an agent today: one end-to-end task-success number standing in for eight layers of very different logic.
+This is the per-endpoint alert argument. If `/checkout` throws 500s on every request but it's one endpoint of forty behind a single "overall API error rate," that metric moves by a fraction most on-call rotations would page right past. Nobody would monitor a multi-service API that way — yet it's exactly how most teams evaluate an agent: one task-success number standing in for eight layers of very different logic.
 
-**The number worth feeling:** in the paper's own regression tests, six of seven layer-breaking bugs moved the aggregate score by less than six percentage points while destroying 25 to 91 percentage points of the one slice that actually owned the bug. Whatever dashboard you currently watch for your own agent, ask whether it could show the same six-point wobble while something underneath it is completely dead.
+**The number worth feeling:** six of seven layer-breaking bugs moved the aggregate under six points while destroying 25 to 91 points of the slice that owned the bug. Ask whether your own dashboard could show a six-point wobble while something underneath it is dead.
 
 ## What This Means for You
 
-**When this matters:** you have an agent (or any multi-step LLM pipeline) in production, you watch one end-to-end success rate as your main health signal, and that rate has been stable for a while — which you have been reading as "nothing changed."
+**When this matters:** you run an agent or multi-step LLM pipeline, you watch one end-to-end success rate as your health signal, and it's been stable a while — which you've read as "nothing changed."
 
-**How it affects you:** stability in an aggregate score is not proof that every part underneath it still works. If your agent has a rarely-exercised path — an escalation rule, a safety check, a fallback for malformed input — that path can regress completely and your one dashboard number will not tell you. You find out from a support ticket, not from CI.
+**How it affects you:** a stable aggregate is not proof the parts underneath still work. A rarely-exercised path — an escalation rule, a safety check, a malformed-input fallback — can regress completely without moving it. You find out from a support ticket, not CI.
 
 **What to do about it:**
-1. List the distinct logical steps your agent actually takes (not files — steps: something like "resolve entity," "decide tool," "validate output," "escalate or not"). This is your layer taxonomy, and most agents already have 4-8 of them whether or not anyone named them.
-2. For each step, write a handful of deterministic assertions that call that step's code directly with the LLM call stubbed out or bypassed — see `Implementing It` below for the exact shape.
-3. Freeze the current pass rate per step as your baseline, and gate CI on any step's rate dropping — not just the aggregate.
+1. List the distinct steps your agent takes — "resolve entity," "decide tool," "validate output," "escalate or not." Most agents already have 4-8, named or not.
+2. For each, write a few deterministic assertions calling that step directly, LLM bypassed. Shape is below.
+3. Freeze today's per-step rates as your baseline, and gate CI on any step dropping — not just the aggregate.
 
 ## Implementing It
 
@@ -114,8 +116,8 @@ Point `--baseline` at a `baseline_layers.json` checked into the repo next to the
 
 ## When Layer-Isolated Testing Is the Wrong Tool
 
-This costs real setup: it only works on layers with a clean, callable boundary you can invoke without a live model, which means it assumes your agent's code is already factored that way. A pipeline built as one long prompt with no isolable steps has to be refactored before this technique applies at all — and that refactor is itself a real project, not a testing add-on.
+It only works on layers with a clean, callable boundary you can invoke without a live model — so it assumes your code is already factored that way. A pipeline built as one long prompt has to be refactored first, and that refactor is a real project, not a testing add-on.
 
-It also tests the **scaffold**, not the model's reasoning quality. A layer can pass every pure-mode assertion while the LLM call feeding it drifts to worse answers in ways no deterministic case captures — that is still a job for LLM-judged evals or human review, run alongside this, not replaced by it. And it adds a maintenance surface: every new layer needs its own slice and its own baseline entry, or it silently becomes the "memory" row in this article's own CI example — present in the taxonomy, uncovered in the tests.
+It also tests the **scaffold**, not reasoning quality. A layer can pass every pure-mode assertion while the LLM feeding it drifts to worse answers. That stays a job for LLM-judged evals or human review, run alongside this — never replaced by it.
 
-Three questions before you build this: **Does your agent's code actually separate into callable steps**, or would isolating one require a rewrite? **Do you have a mechanism (LLM-judge evals, human review, production monitoring) covering the reasoning quality this technique cannot see?** And **who owns updating the baseline** when a layer's correct behavior legitimately changes — an unowned baseline either goes stale or gets bypassed the first time it's inconvenient.
+Three questions first: **Does your code separate into callable steps**, or would isolating one require a rewrite? **What covers the reasoning quality this can't see?** And **who owns the baseline** when a layer's correct behavior legitimately changes — an unowned baseline goes stale or gets bypassed the first time it's inconvenient.
