@@ -1,7 +1,7 @@
 {
   "name": "The AI Commit",
-  "short_name": "AI Commit",
-  "description": "Daily 30-minute AI learning sessions — topic, diagram, runnable code and further reading, in one place.",
+  "short_name": "theaicommit",
+  "description": "Daily AI engineering lab for software engineers — one mechanism, 30 minutes, code that runs.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#111217",

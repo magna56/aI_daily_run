@@ -1236,6 +1236,9 @@ const HOME_H1 = {
 const PUBLISHER = {
   "@type": "Organization",
   name: "The AI Commit",
+  alternateName: "theaicommit.com",
+  disambiguatingDescription:
+    "Daily AI engineering lab for software engineers. Not a git commit-message generator.",
   url: SITE_ORIGIN + "/",
   logo: `${SITE_ORIGIN}/icon-512.png`,
 };
@@ -1368,8 +1371,9 @@ function frontierPageSpec(frontierCards) {
 
 function homePageSpec(cards, categories) {
   const description =
-    "Understand one real AI development in 30 minutes — a plain-English explanation, " +
-    "a diagram of the actual mechanism, and code that runs live in your browser.";
+    "theaicommit.com — a daily AI engineering lab for software engineers. " +
+    "One real mechanism in 30 minutes: explanation, diagram, and code that runs in the browser. " +
+    "Not a git commit-message app.";
 
   return {
     isHome: true,
@@ -1381,7 +1385,9 @@ function homePageSpec(cards, categories) {
       "@context": "https://schema.org",
       "@type": "WebSite",
       name: "The AI Commit",
-      alternateName: "AI Commit",
+      alternateName: "theaicommit.com",
+      disambiguatingDescription:
+        "Daily AI engineering lab for software engineers. Not a git commit-message generator.",
       description,
       url: SITE_ORIGIN + "/",
       publisher: PUBLISHER,
