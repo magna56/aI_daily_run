@@ -88,7 +88,20 @@ node video.js 2026-08-28 --dry-run    # stop before ffmpeg
 OPENAI_API_KEY=sk-... make video ID=2026-08-28
 ```
 
-### Manual demo capture (v0)
+### Automated demo capture (v0)
+
+When `visualize.html` exists, `make video` records it headlessly with Playwright
+(slider 1 → 6, drop-call bug, Conversations API, reset) into `capture/demo.mp4`.
+Requires a one-time install:
+
+```bash
+npm install --prefix .video-deps playwright
+npx playwright install chromium
+```
+
+To skip: `node video.js <id> --no-capture`. To re-record: `node video.js <id> --capture`.
+
+### Manual demo capture (fallback)
 
 1. `make serve` and open the session's Visualize tab, or open `2026-08-28/visualize.html` locally.
 2. Record **20–30s** at 1080×1920 (or 1080×1920 crop): slide the tool-count slider, toggle a replay bug.
@@ -112,8 +125,8 @@ OPENAI_API_KEY=sk-... make video ID=2026-08-28
 
 | Version | Deliverable |
 |---------|-------------|
-| **v0 (this sketch)** | Script + storyboard + slide PNGs + ffmpeg concat; manual demo drop-in |
-| **v1** | Playwright headless capture of `visualize.html` with preset interactions |
+| **v0 (this sketch)** | Script + storyboard + slide PNGs + ffmpeg concat; Playwright capture of `visualize.html` |
+| **v1** | Playwright presets per session (which sliders/buttons to hit) |
 | **v2** | Word-level TTS timestamps → accurate captions (SRT) burned in |
 | **v3** | `video.md` override file per session (custom beats, B-roll notes) |
 | **v4** | Optional publish hook (upload API / `yt-dlp` metadata sidecar) |

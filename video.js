@@ -20,6 +20,7 @@ const { buildStoryboard } = require("./lib/video/storyboard");
 const { slideForBeat } = require("./lib/video/slides");
 const { synthesize, audioDurationSec } = require("./lib/video/tts");
 const { assemble } = require("./lib/video/assemble");
+const { captureVisualize } = require("./lib/video/capture");
 
 const ROOT = __dirname;
 const args = process.argv.slice(2).filter((a) => a !== "--");
@@ -27,6 +28,8 @@ const id = args.find((a) => !a.startsWith("-"));
 const scriptOnly = args.includes("--script");
 const dryRun = args.includes("--dry-run");
 const skipTts = args.includes("--no-tts");
+const skipCapture = args.includes("--no-capture");
+const forceCapture = args.includes("--capture");
 
 function usage() {
   console.error(`Usage: node video.js <session-id> [--script] [--dry-run] [--no-tts]
@@ -48,7 +51,28 @@ async function main() {
 
   if (scriptOnly) return;
 
-  const demoCapture = fs.existsSync(path.join(outDir, "capture", "demo.mp4"));
+  const capturePath = path.join(outDir, "capture", "demo.mp4");
+  let demoCapture = fs.existsSync(capturePath);
+  if (session.hasVisualize && !demoCapture && !skipCapture) {
+    try {
+      console.log("==> capture: recording visualize.html …");
+      const cap = await captureVisualize(session, outDir);
+      if (cap.ok) {
+        demoCapture = true;
+        console.log(`==> capture: ${cap.path}`);
+      } else {
+        console.log(`==> capture skipped (${cap.reason})`);
+      }
+    } catch (err) {
+      console.log(`==> capture failed (${err.message}) — continuing with slides only`);
+    }
+  } else if (forceCapture && session.hasVisualize) {
+    const cap = await captureVisualize(session, outDir);
+    if (!cap.ok) throw new Error(cap.reason || "capture failed");
+    demoCapture = true;
+    console.log(`==> capture: ${cap.path}`);
+  }
+
   const storyboard = buildStoryboard(session, script, { outDir, hasDemoCapture: demoCapture });
   fs.writeFileSync(path.join(outDir, "storyboard.json"), JSON.stringify(storyboard, null, 2));
   console.log(`==> storyboard: ${outDir}/storyboard.json`);
@@ -87,7 +111,7 @@ async function main() {
   const result = assemble(storyboard, outDir, { audioDurationSec: dur });
   console.log(`==> video: ${result.outPath}${result.hasAudio ? " (with audio)" : " (silent — add TTS or mux manually)"}`);
   if (!demoCapture && session.hasVisualize) {
-    console.log(`    tip: add ${outDir}/capture/demo.mp4 for a real demo segment on the next run`);
+    console.log(`    tip: re-run without --no-capture, or add ${capturePath}`);
   }
 }
 

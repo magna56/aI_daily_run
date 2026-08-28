@@ -26,6 +26,9 @@ site/
 
 # Generated short videos (see docs/video-pipeline.md)
 videos/
+
+# Playwright install for automated visualize capture
+.video-deps/
 .env
 .dev.vars
 .mcp.json
