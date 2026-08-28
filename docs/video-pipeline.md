@@ -186,10 +186,10 @@ To skip: `node video.js <id> --no-capture`. To re-record: `node video.js <id> --
 
 | Variable | Purpose |
 |----------|---------|
-| `OPENAI_API_KEY` | Enable TTS (`gpt-4o-mini-tts`, voice `coral`, style instructions) |
-| `VIDEO_VOICE` | Override TTS voice (default `coral`) |
-| `VIDEO_TTS_MODEL` | Default `gpt-4o-mini-tts` (steerable). Falls back to `tts-1-hd` |
-| `VIDEO_TTS_INSTRUCTIONS` | Delivery style prompt (not used by tts-1) |
+| `OPENAI_API_KEY` | Enable TTS (`tts-1-hd`, voice `alloy` — even, factual) |
+| `VIDEO_VOICE` | Override TTS voice (default `alloy`) |
+| `VIDEO_TTS_MODEL` | Default `tts-1-hd` |
+| `VIDEO_TTS_SPEED` | Speech rate (default `1.0`) |
 | `VIDEO_WPM` | Slide timing when TTS is off (default `125`) |
 | `PUBLIC_URL` | Site origin for CTA links (default `https://theaicommit.com`) |
 
