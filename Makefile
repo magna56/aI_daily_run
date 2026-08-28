@@ -29,7 +29,19 @@ check: ## Lint every session without writing anything (use in review/CI)
 mix: ## What to publish next: trailing-10 audience mix, what's due, what to avoid
 	@node build.js --mix
 
-site: build ## Assemble the publishable site/ folder
+prune: ## Drop generated page dirs so a renamed slug cannot outlive its rename
+	@# site/ is build output but was never cleaned, and deploy.sh publishes the
+	@# whole folder — so every slug the site ever had stayed live, each serving
+	@# the article with a SELF-referencing canonical. That is 38 duplicate URLs
+	@# competing with the real ones, and one more every time an article is
+	@# retitled. Only the slug-keyed PAGE dirs go stale: data/, og/ and assets/
+	@# are keyed on session id, and dropping assets/ would invalidate the run
+	@# cache and re-execute every code_example.py for nothing.
+	@test -d $(OUTPUT_DIR) && find $(OUTPUT_DIR) -mindepth 1 -maxdepth 1 -type d \
+		! -name assets ! -name data ! -name og ! -name functions \
+		-exec rm -rf {} + || true
+
+site: prune build ## Assemble the publishable site/ folder
 	mkdir -p $(OUTPUT_DIR)
 	# index.html is NOT copied — build.js generates it (with the crawlable
 	# <noscript> index baked in), same as sitemap.xml and feed.xml. Copying it
