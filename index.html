@@ -2808,16 +2808,30 @@
   // load — never override it.
   (function () {
     if (location.hash) return;
-    var t = location.pathname.match(/\/topics\/([a-z0-9-]+)\/?$/);
-    if (t) {
+    var seg = location.pathname.replace(/\/+$/, "").split("/").pop();
+    if (!seg) return;
+
+    function go(hash) {
       history.replaceState(null, "", location.pathname);
-      location.hash = "#topic/" + t[1];
-      return;
+      location.hash = hash;
     }
-    var m = location.pathname.match(/\/(\d{4}-\d{2}-\d{2}(?:-s\d+)?)(?:-[a-z0-9-]+)?\/?$/);
-    if (!m) return;
-    history.replaceState(null, "", location.pathname);
-    location.hash = "#" + m[1];
+
+    var t = location.pathname.match(/\/topics\/([a-z0-9-]+)\/?$/);
+    if (t) return go("#topic/" + t[1]);
+    if (seg === "frontier") return go("#frontier");
+
+    /* Match against the slug build.js actually generated, on every track. This
+       used to be a regex over the date, which silently matched nothing for any
+       URL not shaped like a daily session: a Frontier slug is
+       /frontier-<date>-<words>/ (the date follows a hyphen, not a slash) and a
+       learn slug carries no date at all. No match meant no hash, so the router
+       fell through to the homepage and the canonical-path sync then rewrote the
+       URL to "/" — the article was reachable only through in-app navigation,
+       never from the sitemap, the feed, or a shared link. sessionHash() knows
+       each track's hash form, so this stays correct as tracks are added. */
+    for (var i = 0; i < DATA.length; i++) {
+      if (DATA[i].slug === seg || DATA[i].id === seg) return go("#" + sessionHash(DATA[i].id));
+    }
   })();
 
   // On a plain load this resolves immediately (no ?code= present). Returning
