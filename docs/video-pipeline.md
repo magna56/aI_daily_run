@@ -69,6 +69,57 @@ videos/2026-08-28/
 
 ## Beat template (default)
 
+Research across YouTube Shorts, TikTok/Reels, and B2B technical channels (2025–2026)
+points to the same shape for **engineering explainers**: hook with stakes → frame the topic
+→ one mechanism → screen proof → CTA. Skip slow intros, logos, and ELI5 analogies in
+the short — those belong in the article.
+
+| # | Beat | Job | Source | Visual | Target |
+|---|------|-----|--------|--------|--------|
+| 1 | **Cold open** | Problem + stakes in plain language (pattern interrupt) | Hook / Problem urgency | Big text on slide: pain or number | ~3s |
+| 2 | **Topic frame** | Explain *what this is about* for cold viewers | Title or one-line insight | Title slide | ~4s |
+| 3 | **Mechanism** | One "so what" — prefer a number (`4.5×`, `3 tools`) | Key insight | Stat callout | ~8s |
+| 4 | **Demo** | Show, don't tell | `visualize.html` capture | Screen recording | ~12s |
+| 5 | **CTA** | Article handoff | Canonical URL | End card | ~4s |
+
+**Total target:** 30–45s (YouTube Shorts sweet spot); up to 60s for LinkedIn B2B.
+
+### What works in this category (market notes)
+
+- **First 1–3 seconds decide everything** — retention must stay high through second 3 or the
+  algorithm throttles distribution ([Pexo](https://pexo.ai/blog/explainer-video-for-social-media-6536),
+  [Grow Creator tech Shorts](https://growcreator.pro/blog/tech-youtube-shorts-hook-tips)).
+- **Problem-first, then technical fast** — broad pain in plain language by second 3, specifics
+  by second 5. Your buyer self-selects; everyone else still understands the sentence
+  ([Blitzcut B2B hooks](https://blitzcutai.com/blog/b2b-saas-reel-hooks-2026)).
+- **Numbers beat adjectives** — "4.5× base context" outperforms "expensive" for AI/dev audiences
+  ([Grow Creator](https://growcreator.pro/blog/tech-youtube-shorts-hook-tips)).
+- **Screen demos are the highest-save format** in B2B — your `visualize.html` capture is the moat
+  ([Blitzcut](https://blitzcutai.com/blog/b2b-saas-reel-hooks-2026)).
+- **Captions are mandatory** — 80–85% watch muted on Reels/LinkedIn
+  ([Pexo platform table](https://pexo.ai/blog/explainer-video-for-social-media-6536)).
+- **One micro-problem per video** — not a summary of the whole article. The article is the depth;
+  the short is the hook + one insight + proof
+  ([iStudios B2B script audit](https://istudiosmedia.com/technical-script-audit-b2b-explainer-videos/)).
+- **LinkedIn vs Shorts tone** — LinkedIn: cut "stop scrolling" energy, state the claim plainly.
+  Shorts/TikTok: slightly more contrast and pace. Same structure, different delivery.
+
+### What to leave in the article only
+
+- ELI5 analogies (restaurant/waiter) — too slow for shorts; keep in `topic.md`
+- Full migration code — article + `code_example.py`
+- Implementing It section — never compress into a 45s clip
+
+### Platform fit for theaicommit
+
+| Platform | Length | Tone | Primary goal |
+|----------|--------|------|--------------|
+| YouTube Shorts | 30–45s | Searchable, evergreen hook | Discovery → article |
+| LinkedIn | 45–60s | Plain, credible, captioned | Engineer trust → click |
+| Reels/TikTok | 25–40s | Faster cuts, on-screen text | Reach → profile |
+
+## Beat template (legacy reference)
+
 | # | Beat | Source | Visual | Target duration |
 |---|------|--------|--------|-----------------|
 | 1 | Hook | `topic.md` `**Hook**` | Title slide | ~8s |
