@@ -1,14 +1,20 @@
-# Short-video pipeline (sketch)
+# Short-video pipeline
 
-Turn a daily session folder into a **60–90 second vertical explainer** (9:16) suitable for Shorts, Reels, or TikTok. The reader site is unchanged; output lives under `videos/<id>/` and is not deployed by `make deploy`.
+Turn a daily session folder into a **~30–45s vertical explainer** (9:16). The reader
+site is unchanged. Scratch output is `videos/<id>/` (gitignored). Committable copies
+go to `media/videos/` with `--media`.
+
+**First-draft lock** (2026-08-28 accepted cut): `tts-1-hd` / `alloy` @ 1.0; news →
+what changed → cost → optional engineer beat → demo → CTA. Automate via
+`/ai-daily-learn-video` (Claude) or `.cursor/skills/ai-daily-learn-video`.
 
 ## Goals
 
-- **One command** per article: `make video ID=2026-08-28`
-- **Reuse session artifacts** — `topic.md`, `journal.md`, `visualize.html`, `diagram.excalidraw`
-- **Dependency-free Node** for scripting and assembly (same as `build.js`); only **ffmpeg** required on PATH
-- **Optional OpenAI TTS** when `OPENAI_API_KEY` is set; otherwise emit `narration.txt` for manual recording or external TTS
-- **Human in the loop** for the interactive demo beat until automated browser capture lands
+- **One command** per article: `make video` (newest) or `make video ID=2026-08-28 MEDIA=1`
+- **Reuse session artifacts** — `topic.md`, `journal.md`, `visualize.html`
+- **Node + ffmpeg**; Playwright only for visualize capture (`make video-setup`)
+- **TTS** from `OPENAI_API_KEY` or macOS Keychain `openai-api-key-theaicommit`
+- **Captions** burned in from per-beat SRT
 
 ## Non-goals (for now)
 
@@ -24,7 +30,7 @@ topic.md + journal.md
         │
         ▼
   ┌───────────┐
-  │  script   │  lib/video/script.js — beats: hook, setup, insight, demo cue, CTA
+  │  script   │  lib/video/script.js — cold open, frame, mechanism, engineer?, demo, CTA
   └─────┬─────┘
         ▼
   ┌─────────────┐
@@ -38,7 +44,7 @@ topic.md + journal.md
   └─────┬─────┘     └──────┬─────┘
         │                  │
         │    ┌─────────────┴──────────────┐
-        │    │  capture/ (manual v0)      │  Screen record visualize.html → demo.mp4
+        │    │  capture/              │  Playwright records visualize.html → demo.mp4
         │    └─────────────┬──────────────┘
         ▼                  ▼
   ┌─────────────────────────────────────┐

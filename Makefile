@@ -18,7 +18,7 @@ ifeq ($(NORUN),1)
 BUILD_FLAGS := --no-run
 endif
 
-.PHONY: build check mix site serve deploy clean help video
+.PHONY: build check mix site serve deploy clean help video video-setup
 
 build: ## Regenerate site/data/ from the session folders
 	node build.js $(BUILD_FLAGS)
@@ -64,9 +64,13 @@ deploy: ## Build and publish the site to the gh-pages branch
 clean: ## Remove build output and the cached run results
 	rm -rf $(OUTPUT_DIR) .build-cache.json
 
-video: ## Generate short 9:16 video for session ID=YYYY-MM-DD (needs ffmpeg)
-	@test -n "$(ID)" || (echo "Usage: make video ID=2026-08-28" && exit 1)
-	node video.js $(ID)
+video: ## Generate short 9:16 video (ID=YYYY-MM-DD, default newest; MEDIA=1 copies to media/videos/)
+	node video.js $(ID) $(if $(MEDIA),--media,) $(VIDEO_FLAGS)
+
+video-setup: ## One-time Playwright install for visualize.html capture
+	npm install --prefix .video-deps playwright
+	npx playwright install chromium
+	@echo "==> ffmpeg must be on PATH. OPENAI_API_KEY or Keychain openai-api-key-theaicommit for voice."
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \

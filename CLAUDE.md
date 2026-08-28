@@ -34,6 +34,14 @@ per session); `index.html` is the reader SPA that loads that data. `site/` is bu
 committed — `deploy.sh` publishes it to Cloudflare Pages (theaicommit.com, the primary host) and
 force-pushes it to the `gh-pages` branch (GitHub Pages, kept as a mirror).
 
+**Short video.** `video.js` turns a daily session into a ~30–45s 9:16 explainer
+(slides, optional Playwright capture of `visualize.html`, OpenAI TTS, burned-in
+captions). Scratch output is `videos/<id>/` (gitignored). Committable copies live
+in `media/videos/`. Run via `/ai-daily-learn-video` (Claude) or the Cursor skill
+of the same name; first-draft lock is `tts-1-hd` / `alloy`, with `## For a Software
+Engineer` as one extra beat — see `.claude/skills/ai-daily-learn-video/SKILL.md`.
+Voiceover uses `OPENAI_API_KEY` or macOS Keychain `openai-api-key-theaicommit`.
+
 ## Commands
 
 ```bash
@@ -43,6 +51,9 @@ make check             # lint every session, write nothing (use in review/CI)
 make mix              # what to publish next — trailing-10 audience mix, due/avoid
 make deploy           # build and publish to Cloudflare Pages + gh-pages (runs deploy.sh)
 make clean             # drop site/ and the run cache
+make video             # newest session → 9:16 short (ffmpeg; optional OPENAI_API_KEY)
+make video ID=YYYY-MM-DD MEDIA=1   # named session + copy to media/videos/
+make video-setup       # one-time Playwright install for visualize.html capture
 
 make serve NORUN=1    # skip executing code_example.py files (~45s faster, no output pane)
 node build.js --check  # same as `make check`
