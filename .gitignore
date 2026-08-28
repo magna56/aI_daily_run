@@ -23,6 +23,9 @@ site/
 
 # Cached code_example.py run results (keyed by source hash)
 .build-cache.json
+
+# Generated short videos (see docs/video-pipeline.md)
+videos/
 .env
 .dev.vars
 .mcp.json
