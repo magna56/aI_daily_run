@@ -64,7 +64,7 @@ async function main() {
       beatDurations = Object.fromEntries(
         tts.beats.filter((b) => b.durationSec).map((b) => [b.id, b.durationSec]),
       );
-      console.log(`==> TTS: ${tts.path} (${tts.bytes} bytes, ${process.env.VIDEO_VOICE || "nova"} @ ${process.env.VIDEO_TTS_SPEED || "1.0"}x)`);
+      console.log(`==> TTS: ${tts.path} (${tts.bytes} bytes, ${tts.voice || "coral"} / ${tts.model || "gpt-4o-mini-tts"})`);
     } else {
       console.log(`==> TTS skipped (${tts.reason})`);
     }
