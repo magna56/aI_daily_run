@@ -7,7 +7,6 @@
 
 const fs = require("fs");
 const path = require("path");
-const { execFileSync } = require("child_process");
 
 const { loadSession } = require("./lib/video/session");
 const { buildScript } = require("./lib/video/script");
@@ -15,6 +14,7 @@ const { buildStoryboard } = require("./lib/video/storyboard");
 const { slideForBeat } = require("./lib/video/slides");
 const { synthesizeBeats, audioDurationSec } = require("./lib/video/tts");
 const { assemble } = require("./lib/video/assemble");
+const { writeSrt } = require("./lib/video/captions");
 const { captureVisualize } = require("./lib/video/capture");
 
 const ROOT = __dirname;
@@ -29,10 +29,6 @@ const forceCapture = args.includes("--capture");
 if (!id) {
   console.error("Usage: node video.js <session-id> [--script] [--dry-run] [--no-tts] [--capture]");
   process.exit(1);
-}
-
-function wordsApprox(t) {
-  return String(t || "").split(/\s+/).filter(Boolean).length;
 }
 
 async function main() {
@@ -68,34 +64,16 @@ async function main() {
       beatDurations = Object.fromEntries(
         tts.beats.filter((b) => b.durationSec).map((b) => [b.id, b.durationSec]),
       );
-      console.log(`==> TTS: ${tts.path} (${tts.bytes} bytes, ${process.env.VIDEO_VOICE || "nova"} @ ${process.env.VIDEO_TTS_SPEED || "1.18"}x)`);
+      console.log(`==> TTS: ${tts.path} (${tts.bytes} bytes, ${process.env.VIDEO_VOICE || "nova"} @ ${process.env.VIDEO_TTS_SPEED || "1.0"}x)`);
     } else {
       console.log(`==> TTS skipped (${tts.reason})`);
-      const stale = path.join(outDir, "audio", "narration.mp3");
-      if (fs.existsSync(stale)) {
-        const fast = path.join(outDir, "audio", "narration-fast.mp3");
-        const tempo = Number(process.env.VIDEO_AUDIO_RETEMPO) || 1.28;
-        execFileSync("ffmpeg", [
-          "-y", "-i", stale, "-filter:a", `atempo=${tempo}`, fast,
-        ], { stdio: "pipe" });
-        fs.renameSync(fast, stale);
-        const dur = audioDurationSec(stale);
-        const total = dur || 30;
-        const share = script.beats.map((b) => wordsApprox(b.text));
-        const sum = share.reduce((a, b) => a + b, 0) || 1;
-        beatDurations = Object.fromEntries(
-          script.beats.map((b, i) => [b.id, (share[i] / sum) * total]),
-        );
-        console.log(`==> audio retempo ${tempo}x on stale narration (voice unchanged — set OPENAI_API_KEY for nova)`);
-      }
     }
   }
 
   if (demoCapture && beatDurations.demo) {
     const demoLen = audioDurationSec(capturePath);
     if (demoLen) {
-      // Keep demo clip tight — trim to narration, cap at 10s.
-      beatDurations.demo = Math.min(10, Math.max(beatDurations.demo, Math.min(demoLen, 8)));
+      beatDurations.demo = Math.min(14, Math.max(beatDurations.demo, Math.min(demoLen, 12)));
     }
   }
 
@@ -115,11 +93,15 @@ async function main() {
   }
   console.log(`==> slides: ${slidesDir}/ (${storyboard.beats.length} PNGs)`);
 
+  const srtPath = writeSrt(storyboard, path.join(outDir, "captions.srt"));
+  console.log(`==> captions: ${srtPath}`);
+
   if (dryRun) return;
 
   const audioPath = path.join(outDir, storyboard.audioFile);
   const result = assemble(storyboard, outDir, {
     audioDurationSec: fs.existsSync(audioPath) ? audioDurationSec(audioPath) : null,
+    srtPath,
   });
   console.log(`==> video: ${result.outPath}${result.hasAudio ? " (with audio)" : " (silent)"}`);
 }

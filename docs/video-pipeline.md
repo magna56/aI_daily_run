@@ -186,10 +186,10 @@ To skip: `node video.js <id> --no-capture`. To re-record: `node video.js <id> --
 
 | Variable | Purpose |
 |----------|---------|
-| `OPENAI_API_KEY` | Enable TTS (`tts-1`, voice `nova`, speed `1.18`) |
-| `VIDEO_VOICE` | Override TTS voice (default `nova`; try `shimmer` for warmer) |
-| `VIDEO_TTS_SPEED` | Speech rate 0.25–4.0 (default `1.18`) |
-| `VIDEO_WPM` | Slide timing when TTS is off (default `185`) |
+| `OPENAI_API_KEY` | Enable TTS (`tts-1`, voice `nova`, speed `1.0`) |
+| `VIDEO_VOICE` | Override TTS voice (default `nova`) |
+| `VIDEO_TTS_SPEED` | Speech rate 0.25–4.0 (default `1.0` — educational, not rushed) |
+| `VIDEO_WPM` | Slide timing when TTS is off (default `125`) |
 | `PUBLIC_URL` | Site origin for CTA links (default `https://theaicommit.com`) |
 
 ## Integration notes
