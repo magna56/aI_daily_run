@@ -24,8 +24,8 @@ site/
 # Cached code_example.py run results (keyed by source hash)
 .build-cache.json
 
-# Generated short videos (see docs/video-pipeline.md)
-videos/
+# Generated short videos (see docs/video-pipeline.md) — pipeline output at repo root only
+/videos/
 
 # Playwright install for automated visualize capture
 .video-deps/
