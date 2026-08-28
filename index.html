@@ -221,7 +221,15 @@
 
   /* Header */
   header.top { text-align: center; padding: 44px 24px 6px; }
+  .brand { display: block; text-decoration: none; color: inherit; }
+  .brand:hover .title { color: var(--accent); }
   .brand-mark { display: block; width: 56px; height: 56px; margin: 0 auto 14px; }
+  /* Article pages hide the whole index header, so the reader carries its own
+     brand link — otherwise the only route home is the browser back button, and
+     anyone arriving from search or a shared link has no back to press. */
+  .rbrand { display: inline-flex; align-items: center; flex: 0 0 auto; text-decoration: none; opacity: .85; }
+  .rbrand:hover { opacity: 1; }
+  .rbrand img { display: block; width: 26px; height: 26px; }
   .title {
     font-family: var(--mono); font-weight: 700;
     font-size: clamp(24px, 4.6vw, 44px); letter-spacing: .06em; margin: 0;
@@ -827,8 +835,14 @@
            build.js), leaving it a <p> on session and topic pages where the
            article/topic title is the h1 instead. Both classes set explicit
            margin/font-size, so the tag swap is visually identical. -->
-      <img class="brand-mark" src="/favicon.svg" width="56" height="56" alt="" />
-      <p class="title">THE AI COMMIT</p>
+      <!-- The brand is a link because every reader expects it to be one. It stays
+           a real <a href> so crawlers and middle-click work; goHome() below
+           upgrades a plain left-click to hash routing when we are already on the
+           SPA root, so in-app navigation stays instant. -->
+      <a class="brand" id="brandHome" href="/" aria-label="The AI Commit — home">
+        <img class="brand-mark" src="/favicon.svg" width="56" height="56" alt="" />
+        <p class="title">THE AI COMMIT</p>
+      </a>
       <p class="kicker">read · see · run · keep</p>
       <p class="tagline">A daily AI engineering lab for software engineers</p>
       <p class="subtitle">Understand one real AI development in 30 minutes — a plain-English explanation, a diagram of the actual mechanism, and code you can run, then publish to your own GitHub. Written for software engineers.</p>
@@ -1908,6 +1922,8 @@
 
     var head =
       '<div class="rbar"><div class="rbar-top">' +
+        '<a class="rbrand" id="rbrandHome" href="' + SITE_ROOT + '/" aria-label="The AI Commit — home">' +
+          '<img src="' + SITE_ROOT + '/favicon.svg" width="26" height="26" alt="" /></a>' +
         '<button class="back" id="back">' + (p.kind === "learn" ? "← AI basics" : p.kind === "frontier" ? "← Frontier" : "← All sessions") + "</button>" +
         "<h1>" + esc(plain(p.title)) + "</h1>" +
         '<div class="nav">' +
@@ -1985,6 +2001,7 @@
     document.title = plain(p.title) + " — The AI Commit";
     renderPane(p, pane);
 
+    wireHome("rbrandHome");
     $("back").addEventListener("click", function () {
       location.hash = p.kind === "learn" ? "learn" : p.kind === "frontier" ? "frontier" : "";
     });
@@ -2426,6 +2443,26 @@
     el.hidden = false;
   }
 
+  /* Both brand links point at the site root. On the SPA root that is a wasted
+     page load, so a plain left-click becomes a hash route instead; anywhere else
+     — a standalone session page reached from search, RSS or a shared link — the
+     path itself has to change, so the anchor is left alone. Modified clicks and
+     middle-clicks always fall through to the browser. */
+  function onRootPath() {
+    var p = location.pathname.replace(/\/+$/, "");
+    return p === SITE_ROOT.replace(/\/+$/, "");
+  }
+  function goHome(ev) {
+    if (ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
+    if (!onRootPath()) return;   // let the real navigation happen
+    ev.preventDefault();
+    location.hash = "";
+  }
+  function wireHome(id) {
+    var el = $(id);
+    if (el && !el.dataset.wired) { el.dataset.wired = "1"; el.addEventListener("click", goHome); }
+  }
+
   function syncChrome() {
     document.body.classList.toggle("on-learn", !!state.learn);
     document.body.classList.toggle("on-frontier", !!state.frontier);
@@ -2642,6 +2679,14 @@
   });
 
   // Reveal the Frontier pill and the homepage strip only if the track has content.
+  /* The static href is "/" so a crawler sees a real root link; the mirror serves
+     from /aI_daily_run/, where that would leave the site entirely. */
+  (function () {
+    var b = $("brandHome");
+    if (b) b.setAttribute("href", SITE_ROOT + "/");
+    wireHome("brandHome");
+  })();
+
   initFrontierChrome();
 
   window.addEventListener("hashchange", route);
