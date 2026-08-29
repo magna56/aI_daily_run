@@ -1970,6 +1970,17 @@
           : "") +
       "</div>";
 
+    // Overview gets one subtle cue: category. It fits between the title and
+    // Key insight, is not a full metadata row, and helps the reader orient
+    // themselves. The dot comes from .catdot, which already exists for the full
+    // rmeta row on the doing tabs. Computed before `meta` below, which reads it —
+    // `var` hoisting had this declared after its use, so `meta` picked up the
+    // hoisted `undefined` and rendered the literal text "undefined" on every
+    // Overview tab until this was reordered.
+    var categoryDot = pane === "overview" && p.category
+      ? '<div style="margin: 2px 0 6px; font-size: 12px;"><span class="catdot ' + famClass(p.category) + '" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle;"></span><span style="color: var(--dim); text-transform: uppercase; font-size: 9px; letter-spacing: .05em;">' + esc(p.category) + "</span></div>"
+      : "";
+
     // Overview is for READING, so nothing but the thesis stands between the title
     // and the first sentence. The metadata row, the share strip, a Publish-to-GitHub
     // promo and the newsletter form used to sit there — four blocks of chrome ahead
@@ -1985,14 +1996,6 @@
       (p.insight && pane === "overview"
         ? '<div class="insight"><span class="k">Key insight</span>' + md(p.insight).replace(/^<p>|<\/p>$/g, "") + "</div>"
         : "");
-
-    // Overview gets one subtle cue: category. It fits between the title and
-    // Key insight, is not a full metadata row, and helps the reader orient
-    // themselves. The dot comes from .catdot, which already exists for the full
-    // rmeta row on the doing tabs.
-    var categoryDot = pane === "overview" && p.category
-      ? '<div style="margin: 2px 0 6px; font-size: 12px;"><span class="catdot ' + famClass(p.category) + '" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle;"></span><span style="color: var(--dim); text-transform: uppercase; font-size: 9px; letter-spacing: .05em;">' + esc(p.category) + "</span></div>"
-      : "";
 
     // Rendered after the pane, not before it. The newsletter form is wired by a
     // delegated submit listener on document, so it keeps working wherever it lands.
