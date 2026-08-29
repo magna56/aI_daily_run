@@ -549,21 +549,11 @@
   /* Centered reading column (Medium/reader-app pattern) — prioritizes the
      comfortable measure over strict edge-alignment with the header/tabs
      above, which stay full-width. */
-  .insight, .prose, .rmeta, .share, .keep { max-width: var(--measure); margin-left: auto; margin-right: auto; }
-  .keep {
-    display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;
-    background: rgba(167,139,250,.07); border: 1px solid rgba(167,139,250,.22);
-    border-radius: 8px; padding: 12px 16px; margin-top: 10px; margin-bottom: 8px;
-    color: var(--muted); font-size: 14.5px; line-height: 1.55;
-  }
-  .keep .k { display: block; color: var(--accent2); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
-  .keep a {
-    font-family: var(--mono); font-size: 12.5px; font-weight: 650;
-    color: var(--publish-ink); background: var(--accent); text-decoration: none;
-    border-radius: 999px; padding: 7px 13px; white-space: nowrap;
-  }
-  .keep a:hover { filter: brightness(1.08); text-decoration: none; }
-  :root[data-theme="light"] .keep { color: #3a362e; }
+  .insight, .prose, .rmeta, .share, .article-end { max-width: var(--measure); margin-left: auto; margin-right: auto; }
+  /* Everything a reader might do AFTER reading: share it, subscribe. Separated by
+     a rule so it reads as an afterword rather than more article. */
+  .article-end { margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--line); }
+  .article-end .share { margin: 0 0 18px; }
   .insight { background: rgba(167,139,250,.07); border: 1px solid rgba(167,139,250,.22); border-left: 3px solid var(--accent); border-radius: 8px; padding: 16px 20px; margin-top: 18px; margin-bottom: 14px; color: #cfe6f2; font-size: 15.5px; line-height: 1.7; }
   .insight .k { display: block; color: var(--accent2); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
   .pane { padding: 22px 0 0; }
@@ -1968,7 +1958,7 @@
         '<button type="button" data-share-app="discord" aria-label="Copy link and open Discord">' + shareIcon("discord") + "Discord</button>" +
       "</div>";
 
-    var meta =
+    var rmeta =
       '<div class="rmeta">' +
         (p.category ? '<span><span class="k">Category</span><span class="catdot ' + famClass(p.category) + '"></span>' + esc(p.category) + "</span>" : "") +
         (p.level ? '<span><span class="k">Level</span>' + esc(p.level) + "</span>" : "") +
@@ -1978,20 +1968,29 @@
         (p.source && p.source.url
           ? '<span><span class="k">Source</span><a href="' + esc(p.source.url) + '" target="_blank" rel="noopener">' + esc(p.source.label) + "</a></span>"
           : "") +
-      "</div>" +
-      // Only on Overview, same reasoning as .keep and .insight below: the
-      // other tabs are for doing, and repeating Share on every tab (it used
-      // to render on Visualize/Diagram/Code/Articles too) is dead weight.
-      (pane === "overview" ? share : "") +
-      (p.code && pane === "overview"
-        ? '<div class="keep"><div><span class="k">Publish to GitHub</span>Run it here, then save it to your own GitHub — code plus its output.</div><a href="#' + sessionHash(p.id, "code") + '">Open Code tab →</a></div>'
-        : "") +
-      // Only on Overview: the other tabs are for doing, and a 10-line thesis
-      // above the fold pushes the code and the diagram off the screen.
+      "</div>";
+
+    // Overview is for READING, so nothing but the thesis stands between the title
+    // and the first sentence. The metadata row, the share strip, a Publish-to-GitHub
+    // promo and the newsletter form used to sit there — four blocks of chrome ahead
+    // of a single line of article, which is what the site is for.
+    //
+    // The row still renders on the doing tabs (Visualize/Diagram/Code/Articles),
+    // where there is no prose to interrupt and Level/Read is genuine orientation.
+    // Share and the signup move BELOW the article: a reader who wants either has,
+    // by definition, finished reading. The GitHub promo is gone outright — the Code
+    // tab is one click away and carries the same button in context.
+    var meta =
+      (pane === "overview" ? "" : rmeta) +
       (p.insight && pane === "overview"
         ? '<div class="insight"><span class="k">Key insight</span>' + md(p.insight).replace(/^<p>|<\/p>$/g, "") + "</div>"
         : "");
-    var signup = pane === "overview" ? newsletterMarkup() : "";
+
+    // Rendered after the pane, not before it. The newsletter form is wired by a
+    // delegated submit listener on document, so it keeps working wherever it lands.
+    var articleEnd = pane === "overview"
+      ? '<div class="article-end">' + share + newsletterMarkup() + "</div>"
+      : "";
 
     var li = learnIndex(p.id);
     var trailBar = "";
@@ -2010,7 +2009,7 @@
         "</div>";
     }
 
-    $("viewReader").innerHTML = head + meta + signup + trailBar + '<div class="pane" id="pane"></div>';
+    $("viewReader").innerHTML = head + meta + trailBar + '<div class="pane" id="pane"></div>' + articleEnd;
     document.title = plain(p.title) + " — The AI Commit";
     renderPane(p, pane);
 
