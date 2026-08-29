@@ -1,0 +1,236 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Slow Tool Call Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#141821;--line:#303747;--text:#f4f6fb;--muted:#929db1;--bad:#f97316;--ok:#34d399;--acc:#818cf8;--warn:#facc15;--dim:#252b38}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111827,var(--bg) 48%);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:24px}
+.kicker{font:800 .75rem ui-monospace;color:var(--warn);letter-spacing:.13em}
+h1{font-size:clamp(1.7rem,4.4vw,2.9rem);line-height:1.08;margin:.4rem 0}
+.lede{max-width:800px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.panel h2{margin:0 0 12px;font-size:1rem}
+label{display:block;font:700 .78rem ui-monospace;color:var(--muted);margin-bottom:8px}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.chooser{display:flex;flex-wrap:wrap;gap:8px}
+.chooser button{background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:99px;padding:8px 14px;font:600 .82rem system-ui;cursor:pointer}
+.chooser button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#0a0d18}
+.checks{display:flex;flex-wrap:wrap;gap:18px;margin-top:4px}
+.checks label{display:flex;align-items:center;gap:8px;font:600 .84rem system-ui;color:var(--text);margin:0;cursor:pointer}
+.checks input{accent-color:var(--bad);width:17px;height:17px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:760px){.grid4{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+.stat{background:#0c1018;border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font:900 1.55rem ui-monospace;line-height:1.15}
+.stat small{color:var(--muted);font-size:.76rem}
+.track{position:relative;height:64px;margin-top:10px;background:#0c1018;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.jobbar{position:absolute;left:0;top:10px;height:20px;border-radius:4px;background:var(--acc)}
+.cut{position:absolute;top:0;bottom:0;width:2px;background:var(--bad)}
+.cutlab{position:absolute;top:36px;font:700 .68rem ui-monospace;color:var(--bad);white-space:nowrap}
+.ticks{position:absolute;left:0;right:0;top:34px;height:8px}
+.tick{position:absolute;width:1px;height:8px;background:var(--ok);opacity:.55}
+.trackcap{display:flex;justify-content:space-between;color:var(--muted);font:600 .72rem ui-monospace;margin-top:6px}
+.rows{display:grid;gap:6px;margin-top:8px}
+.row{display:grid;grid-template-columns:150px 1fr 120px;gap:10px;align-items:center;font:600 .78rem ui-monospace;padding:8px 10px;border-radius:8px;background:#0c1018;border:1px solid var(--line)}
+.row.on{border-color:var(--acc)}
+.row small{color:var(--muted);font-family:system-ui;font-weight:500}
+.row .out{text-align:right}
+.ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+.verdict{margin-top:14px;padding:14px;border-radius:12px;border:1px solid var(--line);background:#0c1018}
+.verdict b{display:block;font:900 1.1rem ui-monospace}
+.verdict p{margin:.4rem 0 0;color:var(--muted);font-size:.88rem}
+.verdict.good b{color:var(--ok)} .verdict.bad b{color:var(--bad)} .verdict.warn b{color:var(--warn)}
+code{font-family:ui-monospace,monospace;color:var(--warn)}
+#reset{width:100%;margin-top:16px;background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:10px;cursor:pointer;font-weight:700}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main class="wrap" data-visualizer="2026-08-29">
+<header>
+<div class="kicker">MCP TASKS &middot; A RECEIPT INSTEAD OF AN ANSWER</div>
+<h1>How long can your tool run before something cuts the wire?</h1>
+<p class="lede">Set how long the tool really takes and what the shortest idle timeout in the path is, then pick how the server answers. The poll counts and byte totals are the same arithmetic <code>code_example.py</code> prints &mdash; 295 bytes per <code>tasks/get</code> round trip, and 8,000 tokens of context re-read on every model turn.</p>
+</header>
+
+<section class="panel">
+<div class="grid2">
+<div>
+<label for="job">Tool really takes: <span id="jobOut" style="color:var(--acc)">20 min</span></label>
+<input type="range" id="job" min="10" max="3600" step="10" value="1200">
+<label for="timeout" style="margin-top:16px">Shortest idle timeout in the path: <span id="toOut" style="color:var(--bad)">60 s</span></label>
+<input type="range" id="timeout" min="5" max="600" step="5" value="60">
+</div>
+<div>
+<label for="poll">Server's <code>pollIntervalMs</code>: <span id="pollOut" style="color:var(--acc)">5000</span></label>
+<input type="range" id="poll" min="500" max="60000" step="500" value="5000">
+<label style="margin-top:16px">What goes wrong</label>
+<div class="checks">
+<label><input type="checkbox" id="restart"> Agent process restarts mid-job</label>
+<label><input type="checkbox" id="nocap"> Client never declared the capability</label>
+</div>
+</div>
+</div>
+<label for="stratGroup" style="margin-top:16px">How the server answers a slow <code>tools/call</code></label>
+<div class="chooser" id="stratGroup" role="group" aria-label="Server strategy"></div>
+</section>
+
+<section class="panel">
+<h2>What happens on the wire</h2>
+<div class="track" id="track">
+<div class="jobbar" id="jobbar"></div>
+<div class="ticks" id="ticks"></div>
+<div class="cut" id="cut"></div>
+<div class="cutlab" id="cutlab">idle timeout</div>
+</div>
+<div class="trackcap"><span>t = 0</span><span id="endcap">t = 20 min</span></div>
+<div class="grid4" style="margin-top:14px">
+<div class="stat"><b id="pollsOut">240</b><small><code>tasks/get</code> polls</small></div>
+<div class="stat"><b id="kbOut">69.2 KB</b><small>protocol traffic</small></div>
+<div class="stat"><b id="turnsOut">0</b><small>model turns spent</small></div>
+<div class="stat"><b id="tokOut">0</b><small>context tokens re-read</small></div>
+</div>
+<div class="verdict" id="verdict"><b id="vHead"></b><p id="vBody"></p></div>
+</section>
+
+<section class="panel">
+<h2>All three answers, side by side</h2>
+<div class="rows" id="rows"></div>
+<button id="reset" type="button" aria-label="Reset to the article's numbers">Reset</button>
+</section>
+</main>
+<script>
+(()=>{"use strict";
+const $=s=>document.querySelector(s);
+const BYTES_PER_POLL=295;      // measured in code_example.py: 69.2 KB / 240 polls
+const CTX_TOKENS=8000;         // conversation the model re-reads on every turn
+const MODEL_CHECK_S=30;        // how often a model realistically re-checks a text handle
+const DEF={job:1200,timeout:60,poll:5000,restart:false,nocap:false,strat:"tasks"};
+const STRATS=[
+  {id:"block",label:"Block the connection"},
+  {id:"string",label:"Return “job 7f2a started”"},
+  {id:"tasks",label:"Return a task handle"}
+];
+let strat=DEF.strat;
+
+const grp=$("#stratGroup");
+STRATS.forEach(s=>{
+  const b=document.createElement("button");
+  b.type="button"; b.textContent=s.label; b.dataset.id=s.id;
+  b.setAttribute("aria-pressed",String(s.id===strat));
+  b.addEventListener("click",()=>{strat=s.id;render();});
+  grp.appendChild(b);
+});
+
+function fmtDur(s){return s<60?s+" s":(s/60).toFixed(s%60?1:0)+" min";}
+function fmtNum(n){return n.toLocaleString("en-US");}
+
+// One model of the run, evaluated for any strategy. Returns what the reader
+// pays and whether the agent ever learns the answer.
+function model(id,st){
+  const {job,timeout,poll,restart,nocap}=st;
+  if(id==="block"){
+    const survived=job<=timeout;
+    return {polls:0,bytes:0,turns:1,tokens:CTX_TOKENS,
+      ok:survived&&!restart,
+      head:survived?(restart?"Lost on restart":"Completed"):"Cut at the idle timeout",
+      body:survived
+        ?(restart?"The connection was in flight when the process died. Nothing on either side remembers the call.":"Under the timeout, blocking is genuinely the simplest thing that works.")
+        :"The proxy closed the connection at "+fmtDur(timeout)+". The tool is still running on the server; the agent will never hear how it ended."};
+  }
+  if(id==="string"){
+    const checks=Math.max(1,Math.round(job/MODEL_CHECK_S));
+    return {polls:0,bytes:0,turns:checks,tokens:checks*CTX_TOKENS,
+      ok:!restart,
+      head:restart?"Lost on restart":"Completed, expensively",
+      body:restart
+        ?"The job id only ever existed as a sentence in the conversation. The restart took it with it."
+        :"The model carries the poll loop: "+fmtNum(checks)+" turns, each re-reading the whole context. It also has to decide, unprompted, that “started” is not “finished”."};
+  }
+  if(nocap){
+    return {polls:0,bytes:0,turns:0,tokens:0,ok:false,
+      head:"−32021 Missing capability",
+      body:"The server may not hand a task to a client that did not declare io.modelcontextprotocol/tasks in _meta. It cannot do the work inline either, so the call fails outright — loudly, which is the point."};
+  }
+  const polls=Math.max(1,Math.ceil(job/(poll/1000)));
+  return {polls,bytes:polls*BYTES_PER_POLL,turns:0,tokens:0,ok:true,
+    head:restart?"Resumed and completed":"Completed",
+    body:(restart?"The taskId was on disk, so the new process picked the same job back up rather than starting a second one. ":"")
+      +"The timeout never applies: no request stays open longer than one "+"tasks/get"+". "+fmtNum(polls)+" polls cost "+(polls*BYTES_PER_POLL/1024).toFixed(1)+" KB and no model turns at all."};
+}
+
+function render(){
+  const st={job:+$("#job").value,timeout:+$("#timeout").value,poll:+$("#poll").value,
+            restart:$("#restart").checked,nocap:$("#nocap").checked};
+  $("#jobOut").textContent=fmtDur(st.job);
+  $("#toOut").textContent=fmtDur(st.timeout);
+  $("#pollOut").textContent=fmtNum(st.poll);
+  $("#endcap").textContent="t = "+fmtDur(st.job);
+  [...grp.children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.id===strat)));
+
+  const r=model(strat,st);
+  $("#pollsOut").textContent=fmtNum(r.polls);
+  $("#kbOut").textContent=(r.bytes/1024).toFixed(1)+" KB";
+  $("#turnsOut").textContent=fmtNum(r.turns);
+  $("#tokOut").textContent=fmtNum(r.tokens);
+
+  // Timeline: the job bar spans the run; ticks are polls; the red line is the
+  // idle timeout, which only ever cuts the blocking strategy.
+  const span=Math.max(st.job,st.timeout);
+  $("#jobbar").style.width=(100*st.job/span).toFixed(2)+"%";
+  $("#jobbar").style.background=r.ok?"var(--acc)":"var(--bad)";
+  const cutPct=100*Math.min(st.timeout,span)/span;
+  $("#cut").style.left=cutPct.toFixed(2)+"%";
+  $("#cutlab").style.left="calc("+cutPct.toFixed(2)+"% + 6px)";
+  $("#cutlab").textContent="idle timeout "+fmtDur(st.timeout);
+  const ticks=$("#ticks"); ticks.textContent="";
+  if(strat==="tasks"&&!st.nocap){
+    const shown=Math.min(r.polls,120), step=r.polls/shown;
+    for(let i=1;i<=shown;i++){
+      const d=document.createElement("div");
+      d.className="tick";
+      d.style.left=(100*(i*step)/r.polls*(st.job/span)).toFixed(2)+"%";
+      ticks.appendChild(d);
+    }
+  }
+
+  const v=$("#verdict");
+  v.className="verdict "+(r.ok?"good":"bad");
+  $("#vHead").textContent=r.head;
+  $("#vBody").textContent=r.body;
+
+  const rows=$("#rows"); rows.textContent="";
+  STRATS.forEach(s=>{
+    const m=model(s.id,st);
+    const row=document.createElement("div");
+    row.className="row"+(s.id===strat?" on":"");
+    const a=document.createElement("div"); a.textContent=s.label;
+    const b=document.createElement("div");
+    b.innerHTML="<small></small>";
+    b.firstChild.textContent=m.head;
+    const c=document.createElement("div");
+    c.className="out "+(m.ok?"ok":"bad");
+    c.textContent=m.turns?fmtNum(m.turns)+" turns":(m.polls?fmtNum(m.polls)+" polls":"—");
+    row.append(a,b,c);
+    rows.appendChild(row);
+  });
+  reportHeight();
+}
+
+["job","timeout","poll"].forEach(id=>$("#"+id).addEventListener("input",render));
+["restart","nocap"].forEach(id=>$("#"+id).addEventListener("change",render));
+$("#reset").addEventListener("click",()=>{
+  $("#job").value=DEF.job; $("#timeout").value=DEF.timeout; $("#poll").value=DEF.poll;
+  $("#restart").checked=DEF.restart; $("#nocap").checked=DEF.nocap;
+  strat=DEF.strat; render();
+});
+
+function reportHeight(){
+  parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+}
+addEventListener("load",reportHeight);
+new ResizeObserver(reportHeight).observe(document.documentElement);
+render();
+})();
+</script>
+</body></html>
