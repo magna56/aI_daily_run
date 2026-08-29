@@ -946,7 +946,12 @@
   // there's no way for JS to compute its path first. document.write, run
   // synchronously during parsing, is the correct (if old-school) tool for
   // exactly this "resolve one tag's src before the parser reaches it" case.
-  document.write('<script src="' + window.SITE_ROOT + '/data/index.js"><' + '/script>');
+  // ?v= is stamped per build by build.js. Without it, a browser that cached this
+  // manifest can resolve a just-published id against a stale copy and render the
+  // article as "No session <id>" while its payload sits live and fresh alongside.
+  // The custom domain's zone-level Browser Cache TTL overrides Cache-Control, so
+  // a versioned URL — not a header — is what actually guarantees freshness here.
+  document.write('<script src="' + window.SITE_ROOT + '/data/index.js?v=__ADL_BUILD__"><' + '/script>');
 </script>
 <script>
 (function () {

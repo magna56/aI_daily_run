@@ -1150,7 +1150,12 @@ function jsonLdSafe(obj) {
 // session's metadata — called once per session, not once per byte, so this
 // stays cheap even as the archive grows.
 function makeShellTemplate() {
-  const raw = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  // One stamp per build, substituted into every page this renderer emits, so the
+  // manifest URL changes whenever the site is rebuilt and no browser can serve a
+  // stale window.SESSIONS to a freshly published id. See index.html's own note.
+  const buildStamp = Date.now().toString(36);
+  const raw = fs.readFileSync(path.join(ROOT, "index.html"), "utf8")
+    .replace(/__ADL_BUILD__/g, buildStamp);
   const cut = (text, startMarker, endMarker) => {
     const s = text.indexOf(startMarker);
     const e = text.indexOf(endMarker);
