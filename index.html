@@ -1129,7 +1129,15 @@
   function ghSignOut() { localStorage.removeItem("gh_token"); localStorage.removeItem("gh_user"); }
 
   function ghSignIn() {
-    var redirect = location.origin + location.pathname;
+    // redirect_uri must be ONE fixed URL. GitHub matches it against the OAuth app's
+    // registered callback, and since sessions got real permalinks this was sending
+    // /2026-08-29-some-slug/ instead of the site root — which GitHub rejects outright
+    // with "The redirect_uri is not associated with this application", before the user
+    // ever sees a consent screen. Where to return to rides in `state` instead, which
+    // GitHub echoes back untouched and ghHandleOAuthReturn already restores.
+    // (The token exchange in functions/api/github/token.js sends no redirect_uri, so
+    // pinning it here cannot desynchronise the two halves of the flow.)
+    var redirect = location.origin + (window.SITE_ROOT || "") + "/";
     // public_repo: create a public repository with the session code + README.
     // (Replaces the old gist-only flow — existing localStorage tokens with only
     // the gist scope will fail publish and get bounced back through here.)
