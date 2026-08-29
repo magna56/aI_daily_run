@@ -52,6 +52,13 @@ site: prune build ## Assemble the publishable site/ folder
 	@echo "note: functions/ (OAuth + newsletter) only run on Cloudflare Pages — GitHub Pages has no serverless functions; the signup form posts to theaicommit.com"
 	touch $(OUTPUT_DIR)/.nojekyll
 	printf '%s\n' '/api/*  /api/:splat  200' '/*  /index.html  200' > $(OUTPUT_DIR)/_redirects
+	# data/index.js is the manifest the reader resolves every session id against, so a
+	# stale copy makes a just-published article render as "No session <id>" even though
+	# its payload is live. Cloudflare's zone default Browser Cache TTL (4h) applies to
+	# .js but not .json, so the manifest went stale while the payloads stayed fresh —
+	# which is exactly the window the newsletter fires in. _headers overrides the zone
+	# default; GitHub Pages ignores it, same as _redirects.
+	printf '%s\n' '/data/*' '  Cache-Control: public, max-age=0, must-revalidate' > $(OUTPUT_DIR)/_headers
 	@echo "==> Built $(OUTPUT_DIR)/"
 
 serve: site ## Preview locally at http://127.0.0.1:$(PORT) (Ctrl-C to stop)
