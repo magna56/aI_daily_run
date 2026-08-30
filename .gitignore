@@ -32,3 +32,6 @@ site/
 .env
 .dev.vars
 .mcp.json
+
+# Agreed article briefs from /ai-daily-learn-pick — local working notes, not content
+.briefs/
