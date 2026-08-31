@@ -1,0 +1,255 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>What Gets Remembered</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#141821;--line:#303747;--text:#f4f6fb;--muted:#929db1;--bad:#f97316;--ok:#34d399;--acc:#818cf8;--warn:#facc15}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111827,var(--bg) 48%);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:24px}
+.kicker{font:800 .75rem ui-monospace;color:var(--warn);letter-spacing:.13em}
+h1{font-size:clamp(1.7rem,4.4vw,2.9rem);line-height:1.08;margin:.4rem 0}
+.lede{max-width:820px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.panel h2{margin:0 0 12px;font-size:1rem}
+label{display:block;font:700 .78rem ui-monospace;color:var(--muted);margin-bottom:8px}
+.chooser{display:flex;flex-wrap:wrap;gap:8px}
+.chooser button{background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:99px;padding:9px 15px;font:600 .85rem system-ui;cursor:pointer}
+.chooser button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#0a0d18}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:760px){.grid4{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+.stat{background:#0c1018;border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font:900 1.5rem ui-monospace;line-height:1.15}
+.stat small{color:var(--muted);font-size:.76rem}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.val{color:var(--text);font-weight:700}
+.rows{display:grid;gap:6px;margin-top:10px}
+.row{display:grid;grid-template-columns:26px 1fr 74px;gap:10px;align-items:center;font:600 .78rem ui-monospace;padding:9px 10px;border-radius:8px;background:#0c1018;border:1px solid var(--line)}
+.row.hit{border-color:var(--ok)}
+.row .tag{text-align:right;font-size:.7rem}
+.hit .tag{color:var(--ok)} .row .tag{color:var(--muted)}
+.bar{height:9px;border-radius:5px;background:#1c2130;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--acc)}
+.verdict{margin-top:14px;padding:14px;border-radius:12px;border:1px solid var(--line);background:#0c1018}
+.verdict b{display:block;font:900 1.02rem ui-monospace}
+.verdict.good b{color:var(--ok)} .verdict.bad b{color:var(--bad)}
+.verdict p{margin:.4rem 0 0;color:var(--muted);font-size:.88rem}
+code{font-family:ui-monospace,monospace;color:var(--warn)}
+#reset{width:100%;margin-top:16px;background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:11px;cursor:pointer;font-weight:700}
+#reset:hover{border-color:var(--acc)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main class="wrap" data-visualizer="2026-08-31">
+<header>
+<div class="kicker">AGENT MEMORY &middot; CONSOLIDATION VS SCORING</div>
+<h1>What you index decides what you can retrieve</h1>
+<p class="lede">A 53-session haystack where every topic is asked about constantly and answered once. Same BM25 and same two-stage retrieval as <code>code_example.py</code> &mdash; the only thing you change is what got written into memory, and how it is scored.</p>
+</header>
+
+<section class="panel">
+<h2>1. What goes into the index</h2>
+<div class="chooser" id="policy" role="group" aria-label="Consolidation policy">
+  <button data-v="all" aria-pressed="false">Index everything</button>
+  <button data-v="durable" aria-pressed="true">Index durable claims only</button>
+</div>
+<div style="margin-top:16px">
+  <label for="cap">Max memories kept per session <span class="val" id="capV">8</span></label>
+  <input type="range" id="cap" min="1" max="12" step="1" value="8">
+</div>
+</section>
+
+<section class="panel">
+<h2>2. Retrieval knobs</h2>
+<div class="grid2">
+  <div>
+    <label for="k1">Stage 1 &mdash; sessions scoped to <span class="val" id="k1V">3</span></label>
+    <input type="range" id="k1" min="1" max="12" step="1" value="3">
+  </div>
+  <div>
+    <label for="k">Stage 2 &mdash; memories injected <span class="val" id="kV">2</span></label>
+    <input type="range" id="k" min="1" max="8" step="1" value="2">
+  </div>
+</div>
+</section>
+
+<section class="panel">
+<h2>3. The clever signals</h2>
+<div class="grid2">
+  <div>
+    <label for="wd">Recency weight <span class="val" id="wdV">0.00</span></label>
+    <input type="range" id="wd" min="0" max="100" step="5" value="0">
+  </div>
+  <div>
+    <label for="wc">Usefulness weight <span class="val" id="wcV">0.00</span></label>
+    <input type="range" id="wc" min="0" max="100" step="5" value="0">
+  </div>
+</div>
+<p class="lede" style="margin:12px 0 0;font-size:.86rem">Both are bounded 0&ndash;1. Raw BM25 is not. Drag them to the top and watch the number refuse to move.</p>
+</section>
+
+<section class="panel">
+<h2>Result across all 16 questions</h2>
+<div class="grid4">
+  <div class="stat"><b id="sRecall">&mdash;</b><small>recall@k</small></div>
+  <div class="stat"><b id="sPer">&mdash;</b><small>memories / session</small></div>
+  <div class="stat"><b id="sIdx">&mdash;</b><small>index size</small></div>
+  <div class="stat"><b id="sTok">&mdash;</b><small>injected tokens</small></div>
+</div>
+<div class="bar"><i id="bar" style="width:0%"></i></div>
+<div class="verdict" id="verdict"><b>&mdash;</b><p></p></div>
+</section>
+
+<section class="panel">
+<h2>One question, traced</h2>
+<p class="lede" style="margin:0 0 4px;font-size:.86rem">&ldquo;why is the payment webhook safe to retry&rdquo; &mdash; what stage 2 actually injected:</p>
+<div class="rows" id="trace"></div>
+<p class="lede" style="margin:14px 0 0;font-size:.84rem">Back to the article's settings: durable only, cap 8, k1 3, k 2, both weights zero.</p>
+<button id="reset">Reset</button>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var TOPICS=["payment webhook","search index","auth token","image upload","rate limiter",
+    "billing export","cache warmer","audit log","session store","webhook replay",
+    "invoice job","email digest","thumbnail queue","sync worker","report builder","device token"];
+  var DURABLE=/\b(because|decided|turned out|root cause)\b/;
+
+  function lcg(seed){var s=seed>>>0;return function(){s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
+  function pick(r,a){return a[Math.floor(r()*a.length)];}
+  function tok(t){return (t.toLowerCase().match(/[a-z0-9]+/g)||[]);}
+
+  function buildCorpus(){
+    var r=lcg(7),N=53,sessions=[],answers={},i,t;
+    for(i=0;i<N;i++)sessions.push({id:i,lines:[]});
+    for(i=0;i<TOPICS.length;i++){t=TOPICS[i];
+      answers[t]=(i%4)?("the "+t+" is safe to retry because we key on the event id")
+                      :("the "+t+" keys on the event id so a retry is a no-op");
+      sessions[Math.floor(r()*N)].lines.push(answers[t]);}
+    for(i=0;i<N;i++){for(var j=0;j<11;j++){var x=pick(r,TOPICS);
+      sessions[i].lines.push(pick(r,[
+        "someone asked in standup whether the "+x+" is safe to retry again",
+        "rebased the "+x+" branch and reran the whole suite this morning",
+        "moved the "+x+" ticket back into the review column for now",
+        "paged about the "+x+" overnight, nothing actionable in the logs",
+        "nobody has signed off the "+x+" yet because the owner is away"]));}}
+    var qs=TOPICS.map(function(t){return {q:"why is the "+t+" safe to retry",a:answers[t]};});
+    return {sessions:sessions,questions:qs};
+  }
+
+  function BM25(docs){
+    var D=docs.map(tok),n=D.length,df=Object.create(null),avg=0,i,k;
+    for(i=0;i<n;i++){avg+=D[i].length;var seen=Object.create(null);
+      for(k=0;k<D[i].length;k++){var w=D[i][k];if(!seen[w]){seen[w]=1;df[w]=(df[w]||0)+1;}}}
+    avg=n?avg/n:0;
+    function score(q,i){var f=Object.create(null),d=D[i],s=0,j;
+      for(j=0;j<d.length;j++)f[d[j]]=(f[d[j]]||0)+1;
+      var qt=tok(q);
+      for(j=0;j<qt.length;j++){var term=qt[j];if(!f[term])continue;
+        var idf=Math.log(1+(n-df[term]+0.5)/(df[term]+0.5)),tf=f[term];
+        s+=idf*tf*2.5/(tf+1.5*(0.25+0.75*d.length/(avg||1)));}
+      return s;}
+    return {score:score,n:n};
+  }
+
+  function memories(sessions,policy,cap){
+    var out=[];
+    sessions.forEach(function(s){
+      var lines=policy==="durable"?s.lines.filter(function(l){return DURABLE.test(l);}):s.lines;
+      lines.slice(0,cap).forEach(function(l){
+        out.push({sid:s.id,text:l,
+          decay:Math.exp(-0.05*(s.id%30)),cw:0.5+0.5*Math.sin(s.id)});});});
+    return out;
+  }
+
+  function retrieve(query,mem,k1,k,wd,wc){
+    if(!mem.length)return [];
+    var top=BM25(mem.map(function(m){return m.text;})),idx=mem.map(function(_,i){return i;});
+    idx.sort(function(a,b){return top.score(query,b)-top.score(query,a);});
+    var scoped=Object.create(null);
+    idx.slice(0,k1).forEach(function(i){scoped[mem[i].sid]=1;});
+    var pool=mem.filter(function(m){return scoped[m.sid];});
+    if(!pool.length)return [];
+    var sub=BM25(pool.map(function(m){return m.text;})),order=pool.map(function(_,i){return i;});
+    order.sort(function(a,b){
+      return (sub.score(query,b)+wd*pool[b].decay+wc*pool[b].cw)
+           - (sub.score(query,a)+wd*pool[a].decay+wc*pool[a].cw);});
+    return order.slice(0,k).map(function(i){return pool[i];});
+  }
+
+  var C=buildCorpus(),el=function(id){return document.getElementById(id);};
+  var state={policy:"durable",cap:8,k1:3,k:2,wd:0,wc:0};
+
+  function render(){
+    var mem=memories(C.sessions,state.policy,state.cap);
+    var hits=0,tokens=0;
+    C.questions.forEach(function(q){
+      var got=retrieve(q.q,mem,state.k1,state.k,state.wd,state.wc);
+      got.forEach(function(m){tokens+=tok(m.text).length;});
+      if(got.some(function(m){return m.text===q.a;}))hits++;});
+    var recall=hits/C.questions.length;
+    el("sRecall").textContent=recall.toFixed(3);
+    el("sPer").textContent=(mem.length/C.sessions.length).toFixed(1);
+    el("sIdx").textContent=mem.length;
+    el("sTok").textContent=Math.round(tokens/C.questions.length);
+    el("bar").style.width=Math.round(recall*100)+"%";
+
+    var v=el("verdict"),b=v.querySelector("b"),p=v.querySelector("p");
+    v.className="verdict "+(recall>=0.5?"good":"bad");
+    if(state.policy==="all"){b.textContent="The answer is buried in its own chatter";
+      p.textContent="Every restatement of the question is now a memory, and a short restatement matches the question better than a long answer does. More coverage, worse index.";}
+    else if(recall>=0.5){b.textContent="Consolidation is doing the work";
+      p.textContent="A fraction of the index, and the answer surfaces. The paper's version of this is +0.128 accuracy on LongMemEval-S, the largest single term in its ablation.";}
+    else {b.textContent="Filter is on, but the cap is starving it";
+      p.textContent="Extraction is keeping too few memories per session to cover the resolutions. Precision beats coverage, but zero coverage beats nothing.";}
+
+    var got=retrieve(C.questions[0].q,mem,state.k1,state.k,state.wd,state.wc),t=el("trace");
+    t.textContent="";
+    if(!got.length){var d=document.createElement("div");d.className="row";
+      d.textContent="nothing retrieved";t.appendChild(d);}
+    got.forEach(function(m,i){
+      var hit=m.text===C.questions[0].a,row=document.createElement("div");
+      row.className="row"+(hit?" hit":"");
+      var n=document.createElement("span");n.textContent=String(i+1);
+      var s=document.createElement("span");s.textContent=m.text;
+      var g=document.createElement("span");g.className="tag";
+      g.textContent=hit?"the answer":"session "+m.sid;
+      row.appendChild(n);row.appendChild(s);row.appendChild(g);t.appendChild(row);});
+    reportHeight();
+  }
+
+  Array.prototype.forEach.call(el("policy").querySelectorAll("button"),function(btn){
+    btn.addEventListener("click",function(){
+      state.policy=btn.dataset.v;
+      Array.prototype.forEach.call(el("policy").querySelectorAll("button"),function(o){
+        o.setAttribute("aria-pressed",String(o===btn));});
+      render();});});
+
+  [["cap","capV",1,function(x){return x;}],["k1","k1V",1,function(x){return x;}],
+   ["k","kV",1,function(x){return x;}],["wd","wdV",0.01,function(x){return x.toFixed(2);}],
+   ["wc","wcV",0.01,function(x){return x.toFixed(2);}]].forEach(function(cfg){
+    var input=el(cfg[0]);
+    input.addEventListener("input",function(){
+      var raw=Number(input.value)*cfg[2];
+      state[cfg[0]]=raw;el(cfg[1]).textContent=cfg[3](raw);render();});});
+
+  el("reset").addEventListener("click",function(){
+    state={policy:"durable",cap:8,k1:3,k:2,wd:0,wc:0};
+    el("cap").value=8;el("capV").textContent="8";
+    el("k1").value=3;el("k1V").textContent="3";
+    el("k").value=2;el("kV").textContent="2";
+    el("wd").value=0;el("wdV").textContent="0.00";
+    el("wc").value=0;el("wcV").textContent="0.00";
+    Array.prototype.forEach.call(el("policy").querySelectorAll("button"),function(o){
+      o.setAttribute("aria-pressed",String(o.dataset.v==="durable"));});
+    render();});
+
+  function reportHeight(){
+    parent.postMessage({type:"adl-visualize-height",
+      height:document.documentElement.scrollHeight},"*");}
+  addEventListener("load",reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+  render();
+})();
+</script>
+</body></html>
