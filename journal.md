@@ -157,6 +157,6 @@
 
 ## 2026-08-31 — How an Agent Decides What to Remember
 - **Category**: Building Agents & MCP
-- **Key insight**: A memory system for agents got better when its authors deleted most of it. Three of five retrieval signals scored worse than not having them, and tuning the weights with reinforcement learning changed the result by exactly nothing. What moved the number was writing three facts per session instead of five hundred.
+- **Key insight**: A memory system for agents got better when its authors deleted most of it. The clever parts — scoring by recency, learning which memories had helped before — turned out to be noise, and taking them out improved the answers. What mattered was deciding what to write down at all: three notes per session beat the whole transcript.
 - **Code**: `2026-08-31/code_example.py` — builds a 53-session haystack where every topic is asked about constantly and answered once, then runs the same BM25 two-stage retrieval over two indexes. Indexing every line scores 0.000 recall@2 (0.188 at k=8) against 0.750 for indexing durable claims only, at a fifth of the index size; a second table adds recency and usefulness weights up to 0.50 each and the recall stays flat at 0.750, because unbounded BM25 cannot be reordered by a bounded signal.
 - **Articles**: 4 sources (the MEMTIER paper as primary, LongMemEval's paper for the indexing/retrieval/reading split, its GitHub release as the hands-on harness, and MemGPT as the tiered-memory contrast)

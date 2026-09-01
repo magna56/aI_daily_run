@@ -31,13 +31,18 @@ Three of the five signals scored *negative*. Removing recency weighting improved
 0.012, removing the learned usefulness score by 0.014. Tuning the weights with reinforcement
 learning moved the final number by exactly zero.
 
-What worked was upstream of all of it.
+What worked was the step before any of that: **deciding what gets written down at all**. Instead
+of storing every line and searching it later, a background pass reads the finished session and
+keeps a handful of durable facts — the decisions, the constraints, the things that broke.
+Retrieval then searches those, not the transcript.
+
+That one change was worth more than every scoring adjustment combined.
 
 ## How Memory Consolidation Works
 
-The benchmark is LongMemEval-S: 500 questions whose answers sit in 53-session haystacks, with the
-conversations *not* in context at query time. A 7B model with no memory scores 0.050; the full
-system scores 0.382, on a laptop with a 6 GB GPU.
+Everything below is measured on LongMemEval-S: 500 questions whose answers sit in 53-session
+haystacks, with the conversations *not* in context at query time. A 7B model with no memory
+scores 0.050; the full system scores 0.382, on a laptop with a 6 GB GPU.
 
 ### The episodic log
 
@@ -92,19 +97,25 @@ already have the intuition. New to retrieval scoring? Start at AI basics →
 
 ## What This Means for You
 
-**When this matters** — you are building memory for an agent that runs across sessions, and your
-current plan is to embed every message and retrieve by similarity. Or you already shipped that,
-it degrades as history grows, and your next sprint is "improve the ranking."
+**When this matters** — anything your agent is supposed to remember after the conversation ends.
+That covers a chat assistant that should recall last week, a coding agent that keeps notes across
+sessions, and the `CLAUDE.md`-style file you top up by hand. If you have ever watched an agent
+confidently forget something it was told on Tuesday, this is the machinery that failed.
 
-**How it affects you** — the ranking work will not pay. Three of five signals measured negative
-and learned weights moved nothing, because an unbounded lexical score swamps everything else in a
-linear combination. The step most teams skip — deciding what becomes a memory at all — was worth
-more than every scoring change combined.
+**How it affects you** — the obvious next move is the wrong one. Faced with an agent that forgets,
+almost everyone reaches for better retrieval: more signals, better weights, a smarter ranker. That
+work will not pay. Three of five signals here measured negative and learned weights moved nothing,
+because an unbounded lexical score swamps everything else in a linear combination. The step nearly
+everyone skips — deciding what is worth keeping at all — was worth more than every scoring change
+combined.
 
-**What to do about it** — before touching your scorer, add a consolidation pass: an LLM call per
-session that emits a handful of durable facts, and retrieve against those. Then measure recall
-against known-answer questions rather than eyeballing it. If you have already built the weighted
-scorer, set every non-lexical weight to zero for one run and see whether anything moves.
+**What to do about it** — start with the cheapest version, today: at the end of a session, ask the
+model for the five things worth remembering and append *only those* to your notes file. That is
+consolidation, done by hand, and it is most of the win. When you are ready to automate it, run
+that as a background pass and retrieve against the facts rather than the transcript. Then measure:
+write twenty questions whose answers you know, and count how often the answer appears in what came
+back. If you already own a weighted scorer, set every non-lexical weight to zero for one run and
+see whether anything moves — on this evidence, nothing will.
 
 ## Implementing It
 

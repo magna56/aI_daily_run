@@ -557,6 +557,10 @@
   .insight { background: rgba(167,139,250,.07); border: 1px solid rgba(167,139,250,.22); border-left: 3px solid var(--accent); border-radius: 8px; padding: 16px 20px; margin-top: 18px; margin-bottom: 14px; color: #cfe6f2; font-size: 15.5px; line-height: 1.7; }
   .insight .k { display: block; color: var(--accent2); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
   .pane { padding: 22px 0 0; }
+  .inline-fig { margin: 26px 0; }
+  .inline-fig .visualize-note { margin-top: 8px; }
+  .inline-dgm { border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: #0a0d18; overflow-x: auto; }
+  .inline-dgm svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
   .visualize-shell { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #0a0d18; }
   .visualize-frame { display: block; width: 100%; min-height: 680px; border: 0; background: #0a0d18; }
   .visualize-note { margin: 9px 4px 0; color: var(--dim); font: 11px/1.5 var(--mono); }
@@ -1889,7 +1893,8 @@
 
   function availablePanes(p) {
     return PANES.filter(function (name) {
-      if (name === "visualize") return !!p.visualize;
+      // Inlined into the reading flow, the tab would be the same artifact twice.
+      if (name === "visualize") return !!p.visualize && !hasInlineFigure(p, "visualize");
       if (name === "diagram") return !!p.diagram;
       if (name === "code") return !!p.code;
       if (name === "articles") return !!(p.articles && p.articles.length);
@@ -2057,7 +2062,7 @@
 
   function renderPane(p, pane) {
     var el = $("pane");
-    if (pane === "overview") { el.innerHTML = '<div class="prose">' + md(p.topic) + "</div>"; return; }
+    if (pane === "overview") { el.innerHTML = '<div class="prose">' + overviewBody(p) + "</div>"; return; }
     if (pane === "visualize") { renderVisualize(el, p); return; }
     if (pane === "diagram") { renderDiagram(el, p); return; }
     // Opening the Code pane is the strongest signal someone may hit Run, so
@@ -2069,14 +2074,45 @@
   }
 
   /* interactive artifact: isolated, lazy, and independently scrollable */
-  function renderVisualize(el, p) {
+  function visualizeShell(p) {
     var src = SITE_ROOT + "/" + p.visualize.file;
-    el.innerHTML =
-      '<div class="visualize-shell">' +
+    return '<div class="visualize-shell">' +
         '<iframe class="visualize-frame" id="visualizeFrame" title="Interactive visualization: ' +
           esc(plain(p.title)) + '" loading="lazy" sandbox="allow-scripts" src="' + esc(src) + '"></iframe>' +
       "</div>" +
       '<p class="visualize-note">Runs locally in a restricted sandbox. No account, API key, or external requests.</p>';
+  }
+
+  function renderVisualize(el, p) { el.innerHTML = visualizeShell(p); }
+
+  /* ---- inline figures -------------------------------------------------
+     A figure is worth most at the point of difficulty, not one tab away. A
+     topic.md line reading exactly [[visualize]] or [[diagram]] splices the
+     artifact into the reading flow there. Everything else about the artifacts
+     is unchanged; this only moves where they are seen.
+
+     md() escapes < and >, so an HTML comment cannot survive as a marker — the
+     body is split on the marker BEFORE rendering and each run is rendered on
+     its own. */
+  var FIGURE_RE = /^[ \t]*\[\[(visualize|diagram)\]\][ \t]*$/m;
+
+  function hasInlineFigure(p, which) {
+    if (!p || !p.topic) return false;
+    return new RegExp("^[ \\t]*\\[\\[" + which + "\\]\\][ \\t]*$", "m").test(p.topic);
+  }
+
+  function overviewBody(p) {
+    var src = String(p.topic || ""), out = "", m;
+    while ((m = FIGURE_RE.exec(src))) {
+      out += md(src.slice(0, m.index));
+      if (m[1] === "visualize" && p.visualize) {
+        out += '<figure class="inline-fig">' + visualizeShell(p) + "</figure>";
+      } else if (m[1] === "diagram" && p.diagram) {
+        out += '<figure class="inline-fig inline-dgm">' + p.diagram.svg + "</figure>";
+      }
+      src = src.slice(m.index + m[0].length);
+    }
+    return out + md(src);
   }
 
   /* diagram: build-time SVG in a pan/zoom viewport */
