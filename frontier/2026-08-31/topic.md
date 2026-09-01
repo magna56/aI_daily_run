@@ -168,8 +168,8 @@ rather than string equality. It costs N times more per item, so run it on a samp
 hundred, not in the live path.
 
 **How you know it worked.** Plot verbal against internal for a few hundred logged instances. A
-useful signal is a visible upward cloud; a collapsed channel is a horizontal stripe near the top,
-and you will recognise it immediately. Then compare escalation sets: take the bottom decile by
+healthy channel is a visible upward cloud; a collapsed one is a horizontal stripe, and you will
+recognise it immediately. Then compare escalation sets: take the bottom decile by
 verbal confidence and the bottom decile by internal confidence and measure the overlap. If it is
 near 10%, your gate is selecting a random tenth of traffic. Track that overlap as the number that
 has to move before you trust the threshold again.
