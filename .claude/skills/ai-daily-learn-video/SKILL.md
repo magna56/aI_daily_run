@@ -25,7 +25,7 @@ The accepted draft for 2026-08-28 is the contract:
 |------|--------|
 | Voice | OpenAI `tts-1-hd` / `alloy` at speed `1.0` |
 | Script | News → what changed → cost → **optional engineer beat** → demo → CTA |
-| Engineer beat | Extra section only (`## For a Software Engineer`). Not the whole video. |
+| Engineer beat | The mechanism section's opening sentence, which begins "From a software engineering perspective, …". One beat, not the whole video. (`## For a Software Engineer` was retired on 2026-09-01.) |
 | Tone | Factual. No "you've done this before", no wry/teammate acting. |
 | Length | ~30–45s, ~80 words |
 | Captions | Burned-in SRT |

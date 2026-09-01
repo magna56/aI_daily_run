@@ -90,9 +90,12 @@ never fix it by loosening the spec. The blocking ones:
   never open and nobody reading on a phone will run.
 - anything about `visualize.html` — a session without a working visualizer has no Visualize tab.
 - **the readability warnings** — a paragraph over 110 words, a sentence over 45, a single-block
-  `The Problem`, or the document over **1,300 words of prose**. Landing an unreadable session on
+  `The Problem`, or **any section outside its word band** (floors block as well as caps), plus the
+  structural checks: section order, a retired section, a missing engineer anchor, an unplaced
+  `[[visualize]]`, a bad `Key insight`. Landing an unreadable session on
   `main` is worse than it sounds: it becomes the example every future session is written against.
-  Fix by **cutting, never by redistributing** between sections, and correct `**Time to read**` to
+  Fix **in the section named** — over its cap, cut it there; under its floor, it is owed words
+  back rather than trimmed further — and correct `**Time to read**` to
   match what you shipped.
 
 Then the **audience gate** — did this session take a slot that was already at cap?

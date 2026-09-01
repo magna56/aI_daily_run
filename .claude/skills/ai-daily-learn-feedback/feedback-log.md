@@ -866,3 +866,27 @@ reached it for free — the real gap was that nothing *gated* the live push.
 - **Not changed**: the Fix shape stays the default, `Explain Like I'm 5` stays first in both, and
   the word bands are untouched — the reference being 6,000 words is a reason not to tighten them,
   not a reason to widen them yet.
+
+## 2026-08-31 — sibling skills (the contract change had not propagated)
+- **Note**: "did you update the skill /ai-daily-learn-publish ?"
+- **Verdict**: compliance gap, and a serious one — the answer was no.
+- **What was broken**: `publish.sh` gates a publish by grepping `--check` output for a hard-coded
+  list of blocking warning patterns. Every rule added in the six-section rewrite was missing from
+  it, so a session breaking them would have published. Worst case was the word bands: the pattern
+  read `words of prose \(cap`, which matches an over-cap warning and **silently misses**
+  `words of prose (floor …)`. The floors are the load-bearing half — the regression being fixed
+  was sections getting *drained* — so the gate would have passed every article that caused the
+  original complaint.
+- **Changed**: `publish.sh` — floors added alongside caps, plus section order, retired sections,
+  the engineer anchor, an unplaced `[[visualize]]`, and `Key insight`. The reader's-question
+  sub-heading check is deliberately left advisory: it is a heuristic over heading phrasing and can
+  reasonably be wrong about a given article.
+- **Changed**: `ai-daily-learn-publish/SKILL.md` and `ai-daily-learn-github/SKILL.md` — both
+  described the blocking set in prose and both still named the 1,300-word total.
+- **Changed**: `ai-daily-learn-video/SKILL.md` — it sourced the video's engineer beat from
+  `## For a Software Engineer`, a section that no longer exists. It now reads the mechanism
+  section's opening sentence.
+- **Verified**: a scratch session with drained sections, an over-cap mechanism section, and a
+  missing engineer anchor each produce warnings the gate's regex matches.
+- **Standing lesson**: a contract change is not finished at `.claude/skills/ai-daily-learn/`.
+  At least four other files consume it, and the gate's regex is the one that fails silently.
