@@ -27,10 +27,10 @@ or `$HOME/ai_learning`).
 
 ## Cursor notes
 
-- Use **WebSearch** then **WebFetch**. Do not skip sources. Every scan must
-  include https://mlconcepts.viveksingh-heritage.workers.dev/ as the
-  **intermediate / basics** feed (LoRA, attention, embeddings, calibration,
-  agents). On-ramp or `articles.md` only — not the news lead. Full rules:
+- Use **WebSearch** then **WebFetch**. Do not skip sources. Every source you
+  build on or cite must pass the admission test — you can name the institution
+  or person accountable for it, and a senior engineer would accept it as a
+  citation in a design doc. Full rules:
   [selection.md](../../../.claude/skills/ai-daily-learn/selection.md).
 - Prefer the most capable model. If you are clearly on a small/fast one, say so before writing.
 - Diagram generator:

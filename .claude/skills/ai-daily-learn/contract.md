@@ -39,37 +39,96 @@ session uses the identical layout under `frontier/YYYY-MM-DD/`.
 **Time to read**: ~10 minutes
 ```
 
-Required `##` sections, in this order — **seven, five fixed and two named for the topic**:
+Required `##` sections, in this order — **six from 2026-09-01, four fixed and two named for the
+topic**:
 
 | # | heading | fixed or topic-named |
 | --- | --- | --- |
 | 1 | `## Explain Like I'm 5` | fixed |
 | 2 | `## The Problem` | fixed |
-| 3 | `## How <the thing> Works` | **topic-named**, must start `How ` |
-| 4 | `## For a Software Engineer` | fixed |
-| 5 | `## What This Means for You` | fixed |
-| 6 | `## Implementing It` | fixed |
-| 7 | `## When <the thing> Is the Wrong Tool` | **topic-named**, must start `When ` |
+| 3 | `## How <the fix> Works` | **topic-named**, must start `How ` |
+| 4 | `## What to Do About It` | fixed |
+| 5 | `## Implementing It` | fixed |
+| 6 | `## When <the thing> Is the Wrong Tool` | **topic-named**, must start `When ` |
 
-Sections 3 and 7 carry the topic in the heading the way a reference article does — `## How the
-Hook Matcher Decides`, `## When a Hook Is the Wrong Tool` — so the table of contents describes
-*this* article rather than the template. `--check` matches them by pattern. Inside section 3, use
-`###` sub-headings named for their subject (`### Byte Pair Encoding`), not for their function.
+**Two shapes, one contract.** Which spine an article uses depends on the reader's state, and it
+is declared by a section rather than a metadata key, so the two can never drift apart:
+
+| shape | the reader | spine |
+| --- | --- | --- |
+| **Fix** (default) | has a live problem and wants the answer now | `The Problem` **names the fix before it ends** |
+| **Explainer** | is curious; there is no emergency | a `## By the End of This You Will` section sits at position 2, and `The Problem` may withhold the fix so the reveal is earned |
+
+An Explainer buys its deferral with a promise: two to four bullets saying what the reader will
+understand by the end. That promise is what keeps a reader oriented while the apparatus is built,
+and it is the only thing that licenses withholding the answer. Without it, withhold nothing.
+
+**Everything else is identical in both shapes** — the five artifacts, the engineer anchor, the
+implementation payload, `What to Do About It`, the counter-case, every band and lint. This is one
+contract with a documented variant, not a second standard. The reference article this borrows
+from is a pure explainer with no code to ship and a product plug at the end; that half is
+deliberately not copied, because the implementation payload is what makes this site a lab rather
+than a blog.
+
+**Sub-headings inside the mechanism section are the reader's question, in the reader's voice.**
+Not `### Ratio versus count` but `### Why not just cap retries per call?`; not `### Budget
+exhaustion` but `### Wait, what happens when the budget runs out?`. Say the doubt out loud at the
+moment it forms, then answer it. `--check` warns when a mechanism section has two or more
+sub-headings and none of them is a question — that is the difference between a lecture and
+someone explaining something to you.
+
+**Figures go in the flow, at the point of difficulty.** A line reading exactly `[[visualize]]`
+splices the interactive artifact into the Overview prose there; `[[diagram]]` does the same for
+the Excalidraw SVG. `--check` warns from 2026-09-01 when a session ships `visualize.html` and
+never places the marker. When a session inlines the visualizer, the reader drops the now-duplicate
+Visualize tab — the artifact is unchanged, only where it is met.
+
+**The article is one argument, and every section advances it.** That is the whole reason this
+shape replaced the seven-section one on 2026-09-01. The old shape had two sections that re-entered
+the topic from a new angle instead of moving forward: `For a Software Engineer` was a *second*
+analogy arriving after the mechanism (the first is `Explain Like I'm 5`), and `What This Means for
+You` restated the problem in its "When this matters" part before reaching the action. Read end to
+end, an article went problem → mechanism → analogy again → applicability again → and only fifth,
+the fix. The reader is a working engineer spending scarce time; a document that re-enters its own
+topic three times spends it badly.
+
+The spine now reads: **problem → the fix, named → how it works → what to do → build it → when
+not to.** The problem is stated once, in section 2, which must end by naming the fix.
+
+**The engineer anchor survives as a sentence, not a heading**, and it opens section 3. It must
+announce itself — begin it literally *"From a software engineering perspective, …"* — and then
+name the thing the reader has already shipped ("this is a configuration precedence bug, and you
+have shipped one"). `--check` enforces the opener. As a *heading* this move invited re-teaching
+the topic before drawing the analogy, which is what made it a digression; as one signposted
+sentence it is a bridge into the mechanism and still the site's most distinctive beat. What it
+must not do is re-explain: it compares, in one or two sentences, and hands over.
+
+`## What to Do About It` is **one beat, not three labelled parts.** Its old "When this matters"
+and "How it affects you" belong in `The Problem`, which is where the reader meets the failure.
+What stays here is the decision and the graduated actions — and **the first action must carry no
+precondition**, so a reader outside the exact case still has something to do today.
 
 **Retired**, and warned on for sessions from 2026-08-26: `What It Is` and `Key Technical Details`
 (merged into section 3, which now runs shallow to deep in one pass instead of explaining the
-topic twice); `Why It Matters` (its significance argument belongs in `The Problem`, and the
+topic twice); `For a Software Engineer` and `What This Means for You` (retired 2026-09-01 — see
+the six-section table above); `Why It Matters` (its significance argument belongs in `The Problem`, and the
 momentum-reporting check moved with it); `How It Connects to What You Know` (its analogy was the
-same move as `For a Software Engineer`, done twice — what survives is a one-line pointer into the
+same move as the engineer anchor, done twice — what survives is a one-line pointer into the
 `learn/` track, in the body, not a heading); `Try It Yourself` (a pointer to a tab the reader can
 already see); `Glossary`.
 
-**Total prose budget: 1,300 words**, fenced code excluded, warned by `--check`. Every *other*
-length rule here governs proportion — `Implementing It` is the longest section, ELI5 is 3-5
-sentences — and none governed how big the document gets, so sessions drifted to ~1,700 words with
-every individual rule green. `**Time to read**` was a number the author typed, checked by nothing.
-When over budget, **cut, do not redistribute**: the explanatory sections carry the excess, and
-`Implementing It` is the payload that survives the trim.
+**Per-section word bands**, fenced code excluded, warned by `--check` from 2026-09-01:
+`Explain Like I'm 5` 60-120 · `The Problem` 190-320 · mechanism section cap 370 (no floor) ·
+`What to Do About It` 150-260 · `Implementing It` 300-460 · counter-case 150-250.
+`Implementing It` keeps its longest-section rule on top of its band.
+
+These replace a single 1,300-word document total that ran 2026-08-27 to 2026-08-31. The total was
+the right diagnosis and the wrong instrument: paired with "cut, do not redistribute — the
+explanatory sections carry the excess", it could only be paid out of whichever sections had the
+weakest rule protecting them, and it was. Across the four articles written under it, `The Problem`
+fell 48% and `What This Means for You` fell 37% while `Implementing It` gave up 23%. **A floor is
+therefore as load-bearing as a cap here**, and a below-floor section is a defect, not a tidy
+article.
 
 **Reading rhythm is part of the contract, not a style preference.** In the on-ramp sections
 (`Explain Like I'm 5`, `The Problem`, the mechanism section), `--check` warns on any paragraph over
@@ -93,8 +152,8 @@ without derailing the sentence is a term the article should not be using yet. Th
 The old eleven-section order stands in the back catalog and is not warned on. It is not the
 shape to copy: it explained the topic four times and named the object in the fifth section.
 
-`What This Means for You` is three labelled parts: **When this matters**, **How it affects you**,
-**What to do about it**. Required on Tier C too.
+`What to Do About It` is required on Tier C too. If the honest answer is "this will not affect
+your work for a year", say that and name the signal to watch for — never invent applicability.
 
 `Implementing It` is a hard requirement, and it is the one most easily faked. Four conditions,
 all checked by `--check`:
@@ -135,7 +194,7 @@ node build.js --check
 
 Fix every warning that names today's id (missing file, bad Category/Level/For/Hook/tag,
 visualize contract, unrenderable diagram, crashing JS, **paragraph/sentence caps, single-block
-`The Problem`, the 1,300-word budget**). Then tell the user:
+`The Problem`, any section outside its word band**). Then tell the user:
 
 ```
 cd ~/ai_learning && make serve

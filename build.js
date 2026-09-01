@@ -197,13 +197,40 @@ const READING_RHYTHM_SINCE = "2026-08-28";
 const MAX_PARAGRAPH_WORDS = 110;
 const MAX_SENTENCE_WORDS = 45;
 
-// Total prose budget. Every other length rule in this file governs PROPORTION --
-// "Implementing It" must be the longest section, ELI5 is 3-5 sentences -- and none
-// governs how big the whole thing gets, which is why sessions drifted to ~1,700
-// words with every individual rule reporting green. `Time to read` was a number the
-// author typed, checked by nothing. Fenced code is excluded: the cap is on how much
-// there is to READ, and a long code block is scanned, not read.
-const MAX_TOPIC_WORDS = 1300;
+// Per-section prose budgets, replacing the single 1,300-word document total that
+// ran from 2026-08-27 to 2026-08-31. The total was the right diagnosis and the
+// wrong instrument. Because the spec told the author to "cut, do not redistribute
+// -- the explanatory sections carry the excess", a document-wide cap could only be
+// paid for out of whichever sections had the weakest rule protecting them, and it
+// was: measured across the four sessions written under it, "The Problem" fell 48%
+// (266 -> 138 words) and "What This Means for You" fell 37% (246 -> 154) while
+// "Implementing It", protected by the longest-section rule, gave up only 23%. The
+// article that survives that trim is dense, specific and has nothing left that
+// says why a reader outside the exact case should care -- which is what the site's
+// owner reported on 2026-08-31 ("very specific, sometimes too deep, not
+// application focused").
+//
+// A band per section makes the raid structurally impossible: a section cannot be
+// drained to pay for another, because it has its own floor. Floors go on the
+// sections that were the donors; caps go on the sections where depth accumulates.
+// The mechanism section gets a cap and no floor -- a simple topic is allowed to
+// explain itself briefly, but it is where a spec dump lands when it lands. Numbers
+// are taken from 2026-08-25 and 2026-08-26, the last two articles written before
+// the total cap and the last two the owner did not object to.
+//
+// Fenced code is excluded throughout: these are budgets on how much there is to
+// READ, and a code block is scanned, not read.
+const SECTION_BANDS = new Map([
+  ["Explain Like I'm 5",   [60, 120]],
+  // widened: The Problem now carries "when this matters" and must name the fix
+  ["The Problem",          [190, 320]],
+  // widened: the mechanism section now opens with the engineer-anchor sentence
+  ["mechanism",            [0, 370]],
+  // one beat now (the decision and the graduated actions), not three labelled parts
+  ["What to Do About It",  [150, 260]],
+  ["Implementing It",      [300, 460]],
+  ["counter-case",         [150, 250]],
+]);
 
 // The seven-section order. The old eleven-section shape explained the topic four
 // times (ELI5, For a Software Engineer, What It Is, Key Technical Details) and
@@ -213,11 +240,86 @@ const MAX_TOPIC_WORDS = 1300;
 // so they are matched by pattern, not by string. Date-gated: 41 existing
 // sessions use the old order and are a dated log, not a backlog.
 const SECTION_ORDER_SINCE = "2026-08-25";
+
+// Per-section budgets bind from the first session written under them. The four
+// articles written under the old total cap would every one of them warn (Problem
+// and What This Means for You below floor) -- that is the evidence the bands are
+// aimed at the right sections, not a backlog to go and fix.
+const SECTION_BANDS_SINCE = "2026-09-01";
+
+// `Key insight` renders in a highlighted box ABOVE `Explain Like I'm 5` -- it is the
+// first prose anyone reads, at the moment they have met none of the article's
+// vocabulary. Every rule on it was honour-system until 2026-08-31, when the site's
+// owner reported getting lost at the *second* sentence across six consecutive
+// entries. The measurement behind these checks: all six were comfortably inside the
+// 3-sentence / ~70-word caps (52-69 words), and five of six broke the one-number
+// rule, with 2026-08-31 carrying five. Size was never the defect. Density in the
+// middle sentence was, and a quantity is the cheapest way to get dense.
+//
+// Only "one" is exempt from the number count: it is an article far more often than
+// it is a quantity ("one setting", "one of the"), and counting it would fire on
+// entries that read perfectly well.
+const KEY_INSIGHT_SINCE = "2026-09-01";
+const KEY_INSIGHT_MAX_SENTENCES = 3;
+const KEY_INSIGHT_MAX_WORDS = 80;
+const KEY_INSIGHT_NUMBER_RE = /\b(two|three|four|five|six|seven|eight|nine|ten|dozen|hundred|thousand|million|\d+(?:[.,]\d+)?%?)\b/gi;
+const KEY_INSIGHT_JARGON_RE = /`[^`]+`|\b[a-z]+_[a-z_]+\b|\b[a-z]+[A-Z][A-Za-z]*\b/;
 const FIXED_SECTIONS = [
   "Explain Like I'm 5",
   "The Problem",
   "For a Software Engineer",
   "What This Means for You",
+  "Implementing It",
+];
+
+// The six-section order, from 2026-09-01. The seven-section shape above still had
+// two sections that re-entered the topic instead of advancing it: `For a Software
+// Engineer` was a second analogy arriving AFTER the mechanism (the first is
+// `Explain Like I'm 5`), and `What This Means for You` restated the problem in its
+// "When this matters" part before getting to the action. Reading 2026-08-30 end to
+// end, the spine was: problem stated, mechanism, analogy again, applicability
+// restated, and only then -- fifth -- the fix. The site's owner reported it as "no
+// clear soltuin to the proble we introdcues" and "doesnt seem a single flow".
+//
+// The engineer anchor is not gone; it is demoted from a heading to one required
+// sentence opening the mechanism section. As a heading it invited re-explaining the
+// topic, which is what made it a digression rather than a bridge.
+const SIX_SECTION_SINCE = "2026-09-01";
+
+// The engineer anchor, demoted from a heading to the mechanism section's opening
+// sentence, must still ANNOUNCE itself. Without the old `## For a Software Engineer`
+// heading the reader loses the signal that this is the translate-it-into-something-
+// you-have-shipped move, which is the site's most distinctive beat -- so the
+// sentence carries the signpost instead, and the lint holds it to that.
+// Two shapes, one contract. A "Fix" article answers a reader who has a live
+// problem, so it names the fix in `The Problem`. An "Explainer" answers a reader
+// who is curious, so it builds the apparatus and earns the reveal -- and buys that
+// deferral with a promise instead: a `## By the End of This You Will` section of
+// two to four bullets, placed straight after the ELI5. The shape is declared by
+// that section being present, not by a metadata key, so the two can never drift
+// out of sync. Everything else -- the artifacts, the implementation payload, the
+// counter-case -- is identical, which is the point: this is one contract with a
+// documented variant, not a second standard to maintain.
+const CONTRACT_SECTION = "By the End of This You Will";
+
+// Sub-headings inside the mechanism section should be the reader's interruption,
+// in the reader's voice ("Why not just split on spaces?", "Wait, what about
+// temperature?"), not a subject label. Answering the objection at the moment it
+// forms is what keeps a long explanation readable. Warned only when there are two
+// or more sub-headings, so a short mechanism section is not penalised.
+const READER_QUESTION_RE = /\?\s*$|^(wait|hold on|hold up|but |so |why |what |how come|does |do |isn't|is it|can |should )/i;
+
+// A figure earns its place at the point of difficulty. `[[visualize]]` on its own
+// line in topic.md splices the interactive artifact into the reading flow there,
+// and the reader drops the now-duplicate tab.
+const INLINE_FIGURE_SINCE = "2026-09-01";
+
+const ENGINEER_ANCHOR_RE =
+  /^\s*(?:\*\*)?From a software engineer(?:'s|ing)?\s+(?:perspective|standpoint|point of view)\b/i;
+const FIXED_SECTIONS_V6 = [
+  "Explain Like I'm 5",
+  "The Problem",
+  "What to Do About It",
   "Implementing It",
 ];
 const MECHANISM_RE = /^How\s+.+/;      // "How the Hook Matcher Decides"
@@ -690,15 +792,6 @@ function compile(id, journal, runner, opts) {
         }
       }
     }
-    /* The whole-document budget. Enforced last so the per-section warnings above
-       point at where to cut before this one says how much. */
-    const totalWords = [...splitSections(topic.body).values()]
-      .reduce((n, b) => n + (proseOnly(b).trim().match(/\S+/g) || []).length, 0);
-    if (totalWords > MAX_TOPIC_WORDS) {
-      warn(`${id}: topic.md is ${totalWords} words of prose (cap ${MAX_TOPIC_WORDS}) — cut, do `
-        + `not redistribute. The explanatory sections carry the excess; "Implementing It" is the `
-        + `payload and is measured separately. Fenced code is excluded from this count.`);
-    }
 
     const problem = splitSections(topic.body).get("The Problem");
     if (problem !== undefined) {
@@ -706,6 +799,62 @@ function compile(id, journal, runner, opts) {
       if (paras.length < 2) {
         warn(`${id}: "The Problem" is a single block — it is the section a reader decides to `
           + `stay on. Develop the failure, then land it in a short paragraph of its own.`);
+      }
+    }
+  }
+
+  /* `Key insight` is the first thing rendered and the last thing anyone checked.
+     The caps below are the honour-system rules made enforceable; the rule these
+     cannot check -- that sentence two continues sentence one rather than starting
+     the evidence -- lives in SKILL.md Step 10. */
+  if (kind === "daily" && date >= KEY_INSIGHT_SINCE) {
+    const insight = String(j["Key insight"] || "").trim();
+    if (insight) {
+      const sentences = insight.split(/(?<=[.!?])\s+/).filter(Boolean);
+      const words = (insight.match(/\S+/g) || []).length;
+      const numbers = insight.match(KEY_INSIGHT_NUMBER_RE) || [];
+      if (sentences.length > KEY_INSIGHT_MAX_SENTENCES) {
+        warn(`${id}: "Key insight" is ${sentences.length} sentences (cap `
+          + `${KEY_INSIGHT_MAX_SENTENCES}) — it is a hook, not a summary.`);
+      }
+      if (words > KEY_INSIGHT_MAX_WORDS) {
+        warn(`${id}: "Key insight" is ${words} words (cap ${KEY_INSIGHT_MAX_WORDS}) — it sits `
+          + `above "Explain Like I'm 5", so a dense one cancels every on-ramp below it.`);
+      }
+      if (numbers.length > 1) {
+        warn(`${id}: "Key insight" carries ${numbers.length} numbers (${numbers.join(", ")}) — `
+          + `keep one, chosen for how surprising it is. Stacked quantities are what makes the `
+          + `second sentence unreadable; the rest belong in the write-up.`);
+      }
+      const jargon = insight.match(KEY_INSIGHT_JARGON_RE);
+      if (jargon) {
+        warn(`${id}: "Key insight" contains the identifier "${jargon[0]}" — this box is read `
+          + `before the reader has met any of the article's vocabulary. Say what it does.`);
+      }
+    }
+  }
+
+  /* Per-section prose budgets. Deliberately NOT nested inside the reading-rhythm
+     gate above: this is a separate rule with its own start date, and nesting it
+     would silently retire it if that gate ever moved. A floor is as load-bearing
+     as a cap here — the failure being corrected was sections getting drained to
+     pay for a document-wide total, not sections overflowing. */
+  if (date >= SECTION_BANDS_SINCE) {
+    for (const [name, body] of splitSections(topic.body)) {
+      const key = MECHANISM_RE.test(name) ? "mechanism"
+        : COUNTERCASE_RE.test(name) ? "counter-case" : name;
+      const band = SECTION_BANDS.get(key);
+      if (!band) continue;
+      const [lo, hi] = band;
+      const n = (proseOnly(body).trim().match(/\S+/g) || []).length;
+      if (n > hi) {
+        warn(`${id}: "${name}" is ${n} words of prose (cap ${hi}) — cut here, not elsewhere. `
+          + `A section runs over when the article starts explaining the source system instead `
+          + `of the reader's problem.`);
+      } else if (n < lo) {
+        warn(`${id}: "${name}" is only ${n} words of prose (floor ${lo}) — a section this short `
+          + `has been squeezed to make room somewhere else. Take the words back rather than `
+          + `trimming it further; every section here has a floor for that reason.`);
       }
     }
   }
@@ -794,8 +943,9 @@ function compile(id, journal, runner, opts) {
        heading can name the topic the way a reference article does, and no
        Glossary -- definitions are made at the moment of use instead. */
     if (date >= SECTION_ORDER_SINCE) {
+      const v6 = date >= SIX_SECTION_SINCE;
       const names = [...sections.keys()];
-      for (const want of FIXED_SECTIONS) {
+      for (const want of (v6 ? FIXED_SECTIONS_V6 : FIXED_SECTIONS)) {
         if (!sections.has(want)) warn(`${id}: topic.md has no "## ${want}" section — see contract.md.`);
       }
       const mech = names.find((n) => MECHANISM_RE.test(n));
@@ -803,23 +953,45 @@ function compile(id, journal, runner, opts) {
       if (!mech) {
         warn(`${id}: topic.md has no mechanism section — it must be named for the topic and `
           + `start with "How", e.g. "## How the Hook Matcher Decides".`);
+      } else if (v6) {
+        const subs = (sections.get(mech) || "").split("\n")
+          .filter((l) => /^###\s+/.test(l)).map((l) => l.replace(/^###\s+/, "").trim());
+        if (subs.length >= 2 && !subs.some((h) => READER_QUESTION_RE.test(h))) {
+          warn(`${id}: none of "${mech}"'s sub-headings is a reader's question — at least one `
+            + `should be the objection forming in their head at that moment ("Why not just `
+            + `split on spaces?", "Wait, what about temperature?"), not a subject label. `
+            + `Answering the doubt where it arises is what keeps a long explanation readable.`);
+        }
+        const first = proseOnly(sections.get(mech) || "")
+          .split(/\n\s*\n/).map((x) => x.trim()).find(Boolean) || "";
+        if (!ENGINEER_ANCHOR_RE.test(first)) {
+          warn(`${id}: "${mech}" must open with the engineer anchor, and it has to say so — `
+            + `start it "From a software engineering perspective, …" and then name the thing `
+            + `the reader has already shipped. Without the old heading, the signpost is the `
+            + `only thing telling them this is the translation beat.`);
+        }
       }
       if (!counter) {
         warn(`${id}: topic.md has no counter-case section — name it for the topic and start it `
           + `with "When", e.g. "## When a Hook Is the Wrong Tool". A technique with no stated `
           + `downside reads as marketing.`);
       }
-      for (const gone of ["What It Is", "Key Technical Details", "Why It Matters",
-                          "How It Connects to What You Know", "Try It Yourself", "Glossary"]) {
+      const retired = ["What It Is", "Key Technical Details", "Why It Matters",
+                       "How It Connects to What You Know", "Try It Yourself", "Glossary"];
+      if (v6) retired.push("For a Software Engineer", "What This Means for You");
+      for (const gone of retired) {
         if (sections.has(gone)) {
-          warn(`${id}: "## ${gone}" was retired with the seven-section order — see contract.md `
-            + `for where its content goes now.`);
+          warn(`${id}: "## ${gone}" is retired — see contract.md for where its content goes now.`);
         }
       }
-      // Order matters as much as membership: the object has to be established
-      // before the article explains what it means for the reader.
-      const spine = ["Explain Like I'm 5", "The Problem", mech, "For a Software Engineer",
-                     "What This Means for You", "Implementing It", counter].filter(Boolean);
+      // Order matters as much as membership: the article is one argument, and each
+      // section has to advance it rather than re-enter the topic from a new angle.
+      const explainer = sections.has(CONTRACT_SECTION);
+      const spine = (v6
+        ? ["Explain Like I'm 5"].concat(explainer ? [CONTRACT_SECTION] : [],
+           ["The Problem", mech, "What to Do About It", "Implementing It", counter])
+        : ["Explain Like I'm 5", "The Problem", mech, "For a Software Engineer",
+           "What This Means for You", "Implementing It", counter]).filter(Boolean);
       const seen = names.filter((n) => spine.includes(n));
       if (seen.join("|") !== spine.join("|")) {
         warn(`${id}: section order is ${seen.join(" → ")}; contract.md wants `
@@ -983,6 +1155,24 @@ function compile(id, journal, runner, opts) {
 
   const source = firstLink(topic.meta.Source) ||
     (topic.meta.Source ? { label: topic.meta.Source, url: "" } : null);
+
+  /* An interactive artifact behind a tab is one click past the paragraph that
+     needed it. From INLINE_FIGURE_SINCE a session places it in the flow. */
+  if (date >= INLINE_FIGURE_SINCE) {
+    const marks = (topic.body.match(/^[ \t]*\[\[(visualize|diagram)\]\][ \t]*$/gm) || [])
+      .map((m) => m.trim().slice(2, -2));
+    if (visualize && !marks.includes("visualize")) {
+      warn(`${id}: topic.md never places [[visualize]] — put it on its own line at the point of `
+        + `difficulty it resolves, so the reader meets it while the question is live rather `
+        + `than one tab away.`);
+    }
+    if (marks.includes("visualize") && !visualize) {
+      warn(`${id}: topic.md has a [[visualize]] marker but there is no visualize.html.`);
+    }
+    if (marks.includes("diagram") && !diagram) {
+      warn(`${id}: topic.md has a [[diagram]] marker but there is no diagram.excalidraw.`);
+    }
+  }
 
   const payload = {
     id,

@@ -99,7 +99,8 @@ category is Tier C.
 
 ### Every day, whatever is due
 
-- https://news.ycombinator.com/ — framing, and what practitioners are actually arguing about
+- https://news.ycombinator.com/ — **noticing only, never cited.** Framing, and what practitioners
+  are actually arguing about. Follow the link out and cite what it points at.
 - https://simonwillison.net/ — the single best filter for "does this matter to an engineer"
 - https://www.latent.space/ — AI engineering practice, interviews, what shipped and why
 - https://www.deeplearning.ai/the-batch/ — Andrew Ng's weekly. Its real value is the
@@ -107,12 +108,16 @@ category is Tier C.
   them for people who build rather than train. Strongest as the **industry-analysis slot in
   `articles.md`** and as a way to notice a topic; weakest as the primary source, because it
   summarises. When it points at something good, go fetch what it points at.
-- https://www.deeplearning.ai/short-courses/ and `/courses/` — on-ramp only, same rule as ML
-  Concepts: `articles.md` further reading when a session assumes a concept, never the news lead.
-- https://mlconcepts.viveksingh-heritage.workers.dev/ — ML Concepts: interactive primers (LoRA,
-  self-attention, embeddings, calibration, backprop, agents in prod). **On-ramp only, never the
-  news lead.** Use it when Level is `Start here`, or as `articles.md` further reading. Do not
-  re-teach a `learn/` chapter as "today's article."
+- https://www.deeplearning.ai/short-courses/ and `/courses/` — on-ramp only: `articles.md`
+  further reading when a session assumes a concept, never the news lead.
+
+**The basics on-ramp slot.** When a session assumes a concept the reader may not have
+(attention, embeddings, LoRA, calibration, the agent loop), the on-ramp is **this site's own
+`learn/` track first** — link it inline as `#learn/<slug>`, which is what the reader already
+expects and the only on-ramp held to our own standard. After that, a Tier 1 conceptual doc or a
+Tier 3 named practitioner. Do not reach for a third-party explainer site to fill this slot; most
+of them fail the admission test below, and none of them are better than the chapter we wrote.
+Do not re-teach a `learn/` chapter as "today's article" either — link it and move on.
 
 ---
 
@@ -288,9 +293,46 @@ normal outcome, not an error, and say what you looked at and why none of it clea
 - Secondary — https://www.lesswrong.com/ and https://openreview.net/ for review threads when the
   argument about a paper is the story
 
-The same four source quality gates below apply, with gate 3 reading: the source must contain
-enough for you to implement the core mechanism from scratch. If it does not — no algorithm, no
+The admission test and the four source quality gates below apply unchanged — a preprint from a
+named lab passes admission, an anonymous write-up of it does not — with gate 3 reading: the source
+must contain enough for you to implement the core mechanism from scratch. If it does not — no algorithm, no
 released code, no reproducible detail — that is a thin day, and thin days are skipped.
+
+### The admission test — is this source citable at all?
+
+The four gates below judge whether a source is *good enough to build on*. This one comes first and
+judges whether it belongs on the site at all. Both halves must hold:
+
+1. **You can name the institution or the person accountable for the page.**
+2. **A senior engineer would accept it as a citation in a design doc.**
+
+That admits a named practitioner on a personal domain — Simon Willison, Hamel Husain, Eugene Yan,
+Lilian Weng, Sebastian Raschka all publish on their own sites and all pass, because the author is
+publicly identifiable and has standing in the thing they are writing about. It rejects a personal
+site with no verifiable author standing no matter how useful the explainer is. The bar is
+accountability, not domain shape. Pedagogical usefulness does not buy admission.
+
+This matters because `articles.md` is published. A weak citation is a public statement about the
+site's judgement, not an internal shortcut.
+
+Three specific rejections that keep recurring:
+
+- **The published spec, never the working repo.** When a standard has a dated, versioned surface —
+  `modelcontextprotocol.io/specification/<revision>`, an API reference, a release note — that is
+  the citation. ✗ `github.com/modelcontextprotocol/ext-tasks/blob/main/specification/...` as the
+  article's authority. ✓ the published revision, with the repo cited separately *only* for a schema
+  or code file and labelled as such ("the TypeScript schema, to paste into your client").
+- **Aggregators are for noticing, never for citing.** Hacker News, Reddit, X, `huggingface.co/papers`
+  and Papers with Code tell you something happened. Fetch what they point at and cite that. A link
+  to the aggregator in `articles.md` means you never opened the original.
+- **Vendor launch and press posts** are not primary sources for what changed. Build on the
+  changelog, the docs page, the technical report or the model card.
+- **An unknown author needs evidence, and is a last resort.** Passing admission is not the same as
+  being a good choice. Prefer the first-party doc, the spec revision, the lab engineering post or a
+  named practitioner with a public track record; reach for a post by an engineer nobody can place
+  only when nothing better covers the point *and* the post carries its own strong evidence — a
+  reproducible benchmark, a public repo, production numbers, a method you could re-run. "It
+  explains it well" is not evidence.
 
 ### Source quality gates
 

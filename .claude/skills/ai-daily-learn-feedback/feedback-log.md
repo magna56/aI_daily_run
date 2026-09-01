@@ -607,3 +607,262 @@ reached it for free — the real gap was that nothing *gated* the live push.
   match the shortened article.
 - **Not changed**: the four title shapes. This is a grammar check applied to whichever shape was
   chosen, not a fifth shape — same relationship as the 2026-08-25 cold-reader check.
+
+## 2026-08-29 — 2026-08-29 (How an Agent Calls a Tool That Takes Twenty Minutes)
+- **Note**: "Dont seem great source to select and write articles we aonly need ti consider
+  reputable and vetteed industry sources" — about `mlconcepts.viveksingh-heritage.workers.dev`
+  cited in `articles.md`, and about `github.com/modelcontextprotocol/ext-tasks` used as the
+  article's primary authority.
+- **Verdict**: standing rule (both halves). Not a judgement lapse on the day: the ML Concepts page
+  was **mandated** by the spec — `SKILL.md` Step 9 said "include one ML Concepts page … as the
+  intermediate / basics slot" whenever a session touched agents, it was listed in `selection.md`'s
+  everyday sources, and the Cursor runner said "Every scan must include" it. The generator was
+  obeying the spec, so the spec was the bug.
+- **Diagnosis**: the spec had four source *quality* gates (dated/primary, something changed,
+  implementable, verified) but no *admissibility* gate. Every gate assumed the publisher was
+  already acceptable and only asked whether the content was good enough. A personal Cloudflare
+  Workers deployment with no institutional backing and no publicly identifiable author standing
+  passes all four and should never have been citable. Separately, nothing said that a working spec
+  repo is not the citation surface when a published, versioned revision of the same text exists.
+- **Changed**: `selection.md` — new "### The admission test — is this source citable at all?"
+  placed above the four quality gates. Two conditions, both required: you can name the institution
+  or person accountable for the page, and a senior engineer would accept it as a citation in a
+  design doc. Explicitly admits named practitioners on personal domains (Willison, Husain, Yan,
+  Weng, Raschka) and rejects unvetted personal sites — the bar is accountability, not domain shape,
+  and pedagogical usefulness does not buy admission. Plus three recurring rejections: published
+  spec never the working repo (with the ext-tasks ✗/✓ pair), aggregators for noticing never citing,
+  vendor launch posts are not primary sources.
+- **Changed**: `selection.md` — ML Concepts bullet deleted from "Every day, whatever is due";
+  replaced by a "**The basics on-ramp slot**" rule pointing at this site's own `learn/` track first
+  (`#learn/<slug>` inline), then a Tier 1 conceptual doc or Tier 3 named practitioner. HN relabelled
+  "noticing only, never cited". Frontier section now names the admission test alongside the gates.
+- **Changed**: `SKILL.md` Step 2 — ML Concepts bullet deleted; HN relabelled noticing-only; a new
+  paragraph requires every source built on *or cited* to pass the admission test, noting it applies
+  to `articles.md` as hard as to the primary source because those links are published.
+- **Changed**: `SKILL.md` Step 9 — the mandated ML Concepts slot deleted and replaced with the
+  `learn/`-track on-ramp. "Rank by teaching value, not by authority" retained but scoped: it now
+  reads "**above the admission floor**", because as written it argued *against* the new rule.
+  Surfaced as a conflict rather than silently overwritten — the ranking rule governs choice among
+  admissible sources; it never governed admission.
+- **Changed**: `.cursor/skills/ai-daily-learn/SKILL.md` — the runner's "Every scan must include
+  [ML Concepts]" mandate replaced with the admission test. Touching the Cursor twin was warranted
+  here because it carried its own hard content mandate rather than linking to the canonical rule.
+- **Changed (follow-up, same session)**: the "rank by teaching value, not by authority" rule was
+  first *scoped* to sit above the admission floor, and the user then tightened it further — "It
+  needs to be vetted and backed by strong evidence if unknown engineer; if possible avoid this flow
+  as much as possible." So standing is now a **tiebreaker above the floor**, not a neutral factor:
+  prefer the first-party doc, spec revision, lab engineering post or named practitioner with a
+  public track record, and reach for an unplaceable author only when nothing better covers the
+  point *and* the post carries its own strong evidence (reproducible benchmark, public repo,
+  production numbers, a re-runnable method). "It explains it well" is explicitly not evidence.
+  Written into `SKILL.md` Step 9 and mirrored as a fourth recurring rejection in `selection.md`.
+- **Not changed**: the four source quality gates, and their numbering — the admission test is a
+  precondition above them, not a fifth gate, so the Frontier section's "gate 3" reference still
+  resolves. No published session was edited.
+
+## 2026-08-31 — spec-wide (per-section word bands replace the document total)
+- **Note**: "the quliaty of articles has gone down they seems very speefic , some times to deep
+  not application focssueued take a deep and find ou t what went wrong", then, on being shown the
+  cause: "rather than a 1300 word limit lets do section limit".
+- **Verdict**: standing rule, and a **spec regression introduced by this log's own 2026-08-27
+  entry** — the rarest and most important kind to catch. The total-length rule did what it said;
+  what it said was wrong.
+- **Diagnosis, measured before editing**: `MAX_TOPIC_WORDS = 1300` was paired with "cut, do not
+  redistribute: the explanatory sections carry the excess, and `Implementing It` is the payload
+  that survives the trim." A document-wide cap can only be paid out of whichever sections have the
+  weakest rule protecting them, so it was. Comparing the last two pre-cap articles (08-25, 08-26)
+  with the four written under it (08-28..08-31): `The Problem` 266 → 138 words (−48%), `What This
+  Means for You` 246 → 154 (−37%), mechanism 469 → 288 (−39%), `Implementing It` 421 → 323 (−23%,
+  protected by the longest-section rule). All four post-cap articles sat within five words of the
+  ceiling, so the cap was binding on every one of them. The visible symptom was the article's
+  entry condition: `When this matters` became a compound precondition ("you maintain an MCP server
+  *and* have a tool that exceeds your proxy timeout") where 08-26 had given three graduated
+  actions, the first with no precondition at all. That is the "not application focused" the note
+  names — the words that generalised a narrow topic were the ones being cut.
+- **Changed**: `build.js` — `MAX_TOPIC_WORDS` deleted, replaced by `SECTION_BANDS` (floor/cap per
+  section) under a new `SECTION_BANDS_SINCE = 2026-09-01`. Bands taken from 08-25/08-26, the last
+  two articles written before the cap: ELI5 60-120, `The Problem` 170-280, mechanism 0-340 (cap
+  only — a simple topic may explain itself briefly, but this is where a spec dump lands),
+  `For a Software Engineer` 120-210, `What This Means for You` 200-300, `Implementing It` 300-460,
+  counter-case 150-250. Deliberately placed at top level rather than inside the
+  `READING_RHYTHM_SINCE` block where it was first written: nesting it would have silently retired
+  the rule if that gate ever moved, and it also hid the cap-side warnings on 08-25/08-26 during
+  testing.
+- **Changed**: `contract.md` and `SKILL.md` — the band table, and the replacement of "cut, do not
+  redistribute" with "fix it in the section named": a section over its cap is cut where it stands,
+  a section under its floor is **owed words back, not trimmed further**. Both files state why the
+  total was removed, so the next person to notice there is no overall length rule does not
+  reinstate the thing that caused this.
+- **Verified both directions**: with the gate temporarily dropped to 2026-08-25, floors fire on
+  every article written under the total (08-28..08-31 and frontier-08-29/08-30 — the regression
+  reached the Frontier track too, which had not been measured) and caps fire on the pre-cap ones
+  (08-25 mechanism 513, 08-26 425, 08-27 376, all against a 340 cap). Restored to 2026-09-01, the
+  lint is clean at 10 pre-existing warnings, none of them length.
+- **Not changed**: the `Implementing It` longest-section rule, the paragraph/sentence rhythm caps,
+  and the seven-section order — all three are orthogonal and none of them caused this. Also not
+  changed: the published articles 08-28 through 08-31, which is why the gate starts at 2026-09-01.
+  They are a dated log; the bands are aimed at the next session, not at a backlog.
+
+## 2026-08-31 — spec-wide (`Key insight`, the second sentence)
+- **Note**: "the key insights section I got lost at the second like see todays ands last 5
+  artciles I found it confusing"
+- **Verdict**: standing rule **plus** a compliance gap. The spec already required plain language
+  throughout and at most one number; nothing enforced either, and five of the six entries broke
+  the number rule. A second sentence saying the same thing would have changed nothing, so the
+  existing rules were made enforceable and the missing rule was added beside them.
+- **Diagnosis, measured across 08-26..08-31**: every entry was *inside* the size caps — 3
+  sentences, 52-69 words against a ~70-word cap — so size was never the defect. The pattern was
+  positional. Sentence one hooks in plain words; sentence three lands a takeaway; **sentence two
+  had become the evidence sentence**, where the article's proof, quantities and vocabulary
+  arrived. It cannot go there: the box renders above `Explain Like I'm 5`, so at sentence two the
+  reader has met none of the article's terms. Examples — 08-31 put four quantities and two
+  undefined terms ("retrieval signals", "reinforcement learning") in one sentence; 08-27 wrote a
+  garden-path clause ("caught the same break as up to a 95-percentage-point drop instead of a
+  barely-visible one"); 08-26 opened a new, unconnected subject; 08-28 left "four times its own
+  context" without a referent. The one clean entry, 08-29, is the only one whose second sentence
+  *continues* the first instead of arguing with it, and it carries no numbers at all.
+- **Root cause in the spec**: the journal template line read `[plain first sentence, then the
+  detail — see below]`. "Then the detail" licenses exactly the density that breaks, and it
+  contradicted the bullet three lines below it ("Plain language throughout — not just the first
+  sentence"). The author reads the template first.
+- **Changed**: `SKILL.md` Step 10 — template line now reads `[three plain sentences: the surprise,
+  its consequence, the takeaway]`, plus a table giving each sentence its job and the rule that
+  **sentence two must continue sentence one's subject and introduce no noun that needs
+  explaining**. ✗/✓ pair uses 08-31's second sentence against 08-29's.
+- **Changed**: `build.js` — `Key insight` had **no lint at all**; it was parsed, rendered at the
+  top of every Overview pane, and checked by nothing. Added `KEY_INSIGHT_SINCE = 2026-09-01` with
+  four checks: sentence count (3), word count (80), number count (1), and any backticked /
+  snake_case / camelCase identifier. "one" is exempt from the number count — it is an article more
+  often than a quantity, and counting it fired on entries that read fine.
+- **Verified**: with the gate dropped to 2026-08-26, the number check fires on 08-31 (five
+  numbers) and 08-28 (two) and stays silent on the four that read acceptably, including the clean
+  08-29. No false positives on the jargon or size checks across the corpus.
+- **Not changed**: the ~70-word and 3-sentence caps, which were never the problem and are kept as
+  a backstop; the `**Hook**` field in `topic.md`, which is a different string with a different job.
+  The six published entries are untouched pending the user's call.
+
+## 2026-08-31 — 2026-08-31 (`The Problem` never names the fix)
+- **Note**: "in current article see the pr0blem section it;s too long and in the article what is
+  toe solution fo the pobrle is not clear to me or atleast not crearly states think about it"
+- **Verdict**: standing rule. Both halves of the note are one defect, and the "think about it"
+  was warranted — the literal reading is wrong and following it would have made the article worse.
+- **Diagnosis**: `The Problem` was **119 words, the shortest in the recent run and below the floor
+  set earlier the same day**. So "too long" was not word count. It was that all four paragraphs
+  were setup, the section closed on "What worked was upstream of all of it" — a direction naming
+  nothing — and the mechanism section then opened with ninety more words of benchmark numbers and
+  an episodic-log subsection before reaching the answer. The word "consolidation" first appeared
+  as a `###` sub-heading. From the reader's seat the problem ran ~210 words before anything was
+  resolved, which is why it measured short and read long. **The variable is latency to the answer,
+  not length.**
+- **Checked against the run**: 08-31 is the outlier, which is what makes this a rule rather than
+  an excuse. Every other recent article names the fix at the handoff — 08-27 "The fix: stop
+  grading the agent once, and grade each step separately", 08-29 names the protocol extension in
+  its first line, 08-30 defines the subagent chain immediately, and 08-26 names the answer inside
+  `The Problem` itself.
+- **Changed**: `SKILL.md`, the `## The Problem` rules — new rule "Name the fix before the section
+  ends. Never hand off on a tease", with the failing sentence as ✗ and two shipped examples as ✓,
+  and the escape hatch that a fix which genuinely needs build-up may open the mechanism section
+  instead. The bar: the reader must not reach a `###` sub-heading still not knowing what the
+  article proposes.
+- **Changed**: `2026-08-31/topic.md` — `The Problem` now names consolidation in plain language
+  before it ends (119 → 180 words, inside the new band), and the mechanism section no longer opens
+  on benchmark setup. Also rewrote `What This Means for You` (164 → 263): its entry condition was
+  a compound precondition, now widened to "anything your agent is supposed to remember after the
+  conversation ends", and the first action is the no-precondition one (ask the model for five
+  things worth remembering, append only those) with the automated version after it.
+- **Incidental fix**: a bolded phrase ending in `.**` defeated the sentence splitter in the rhythm
+  lint, merging two sentences into a phantom 51-word one. Moved the period outside the bold.
+- **Not changed**: the `The Problem` band floor of 170. It fired on this article for the right
+  reason by accident — the missing words were exactly the missing answer — but the floor measures
+  the symptom and this new rule states the cause. Both stay.
+
+## 2026-08-31 — spec-wide (six-section order; the article as one argument)
+- **Note**: "also what it means for for a sfotware enginner the articles and sections doesnt seem
+  a single flow anf almosy all articles there no clear soltuin to the proble we introdcues take
+  time understadn introspect come up with options this is a complete reartcitecture of the entire
+  article strcture we need help enginners to learn as they are giving us time in thier super busy
+  schedule". Follow-up: "for the software engineer line it should explicitly start with from
+  'froma a software engineering prespective' or some thinglike that".
+- **Verdict**: standing rule, and the largest structural change since the seven-section order.
+  Handled as the note asked — diagnosed, three architectures designed with their trade-offs, and
+  the user chose. Not implemented unilaterally.
+- **Diagnosis, by reading 2026-08-30 end to end rather than by metric**: the spine ran problem →
+  mechanism → **analogy again** → **applicability restated** → the fix, fifth → caveat. Three
+  faults, and the note's first sentence names two of them. (1) **Two analogy sections**: `Explain
+  Like I'm 5` opens with one, `For a Software Engineer` gives another *after* the mechanism, where
+  momentum should be building toward the fix. (2) **The problem stated three times** — in `The
+  Problem`, again in the engineer analogy, again in "When this matters". (3) **The solution is
+  never announced as one**: `How X Works` presumes the reader already accepted X as the answer, so
+  the first actionable content is `Implementing It` at section six.
+- **Options put to the user**: (1) tighten the spine to six sections; (2) rename every heading to
+  the reader's question ("What to Do Instead", "Why That Works"), rejected as it would have undone
+  the 2026-08-25 topic-named-heading decision; (3) a fast path at section 3 with depth after,
+  rejected for inviting two code sections that duplicate. **User chose (1)**, and chose to demote
+  the engineer anchor to a sentence rather than keep or relocate the heading.
+- **Changed**: `build.js` — `SIX_SECTION_SINCE = 2026-09-01`, `FIXED_SECTIONS_V6`, a date-branched
+  spine check so the back catalog still validates against the seven-section order, `For a Software
+  Engineer` and `What This Means for You` added to the retired list from that date, and
+  `ENGINEER_ANCHOR_RE` requiring the mechanism section's first paragraph to begin "From a software
+  engineering perspective, …". Bands re-cut for the new shape: `The Problem` 190-320 (it now
+  carries "when this matters" and must name the fix), mechanism cap 370 (it now carries the anchor
+  sentence), new `What to Do About It` 150-260.
+- **Changed**: `contract.md` and `SKILL.md` — the six-section table, the spine stated as *problem →
+  the fix, named → how it works → what to do → build it → when not to*, the engineer-anchor rule
+  with its required opener and a ✗/✓ pair, and `What to Do About It` as one beat whose **first
+  action must carry no precondition**.
+- **Verified both directions** with a scratch 2026-09-01 session, since a new order that only ever
+  passes is untested: the correct shape draws no structural warning, dropping the "From a software
+  engineering perspective" opener fires the anchor check, and reinstating either retired heading
+  fires the retired check. Scratch session deleted; lint back to its 10 pre-existing warnings.
+- **Not changed**: `Explain Like I'm 5` stays first — a standing user preference, and no option
+  proposed touching it. The topic-named mechanism and counter-case headings stay. The back catalog
+  is untouched and still validated against the seven-section contract by date.
+
+## 2026-08-31 — spec-wide + reader (craft borrowed from ngrok's prompt-caching post)
+- **Note**: "see this article https://ngrok.com/blog/prompt-caching I really like the flow ,
+  organization the diagrams in bettween I was able to understand the article the solution and it
+  was egnging learn from it even if we have to completly change the strcutr or reinvent our
+  seleves understand and discuss". After discussion: "1. tow space, for 2. Most valuable ver
+  The ###-as-reader's-question rule. ageress I agree on this … lets stay on our soul see what we
+  can learn from it but we DO not want to comprise on our mission of application based software
+  engineering focused partical AI articles and labs".
+- **Verdict**: standing rules, three of them, adopted after reading the reference article closely
+  and discussing options rather than copying it.
+- **What the reference does well, and why**: (1) it opens with a price fact and a question, then
+  spends a `By the end of this post you will…` section making an explicit promise — that promise
+  is what lets it withhold its answer until ~80% through without losing the reader; (2) every H3
+  is the reader's own interruption in the reader's voice ("Hold up, what're these WQ and WK
+  variables?", "Wait, what about temperature?"), so the objection is spoken before it can become
+  irritation; (3) seven diagrams sit inline at each point of difficulty, several interactive, with
+  prose setting up and the figure doing the explaining; (4) it is ~6,000 words and the user
+  enjoyed it, which settles that length was never the complaint.
+- **Explicitly NOT copied**: the reference has no implementation at all — no code to ship, no
+  configuration, no Monday action — and closes on a product plug. The user's instruction was to
+  keep "our soul". Both shapes therefore keep `Implementing It`, `What to Do About It` and the
+  five artifacts unchanged. Any future restructuring that quietly reduces the payload should be
+  refused on these grounds however good the rest of it looks.
+- **Changed**: `build.js` — `CONTRACT_SECTION` ("By the End of This You Will"), which declares the
+  Explainer shape by its presence rather than a metadata key so the two cannot drift; the v6 spine
+  check now accepts it at position 2. `READER_QUESTION_RE` warns when a mechanism section has two
+  or more sub-headings and none is phrased as a question. `INLINE_FIGURE_SINCE = 2026-09-01` warns
+  when a session ships a visualizer and never places `[[visualize]]`.
+- **Changed**: `index.html` — `overviewBody()` splits `topic.md` on `[[visualize]]` / `[[diagram]]`
+  lines and splices the artifact into the Overview prose there. `md()` escapes `<` and `>`, so an
+  HTML comment cannot survive as a marker and the body is split before rendering rather than
+  after. A session that inlines the visualizer loses the now-duplicate Visualize tab; sessions
+  without a marker are untouched, which is the whole back catalog.
+- **Changed**: `contract.md`, `SKILL.md`, `visualize.md` — the two shapes, the reader-question
+  sub-heading rule with ✗/✓ pairs, and the figure-placement rule.
+- **Bug found and fixed during verification**: the inline-figure check was first written above the
+  `let visualize` declaration, so it threw a temporal-dead-zone `ReferenceError` for any session
+  dated on or after the gate. There is no try/catch around `compile()`, so the build crashed — and
+  because the verification grepped for the session id, the stack trace produced no matches and the
+  test *reported clean*. Two lessons applied: the check moved below the artifact resolution, and
+  negative tests are now run unfiltered so a crash cannot present as a pass.
+- **Verified** on a scratch 2026-09-02 session, both directions: the Explainer spine with a
+  `[[visualize]]` marker and reader-question sub-headings draws no structural warning; replacing
+  the sub-headings with subject labels, removing the marker, and moving the contract section out
+  of position 2 each fire their own warning. Scratch session deleted.
+- **Not changed**: the Fix shape stays the default, `Explain Like I'm 5` stays first in both, and
+  the word bands are untouched — the reference being 6,000 words is a reason not to tighten them,
+  not a reason to widen them yet.

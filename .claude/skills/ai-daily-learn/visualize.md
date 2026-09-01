@@ -15,6 +15,18 @@ quality bar.** Recent gold: `2026-08-23/visualize.html` (RAG grid heatmap) and
 `2026-08-23-s2/visualize.html` (memory-headroom lab). Both: one mechanism, live numbers
 from `code_example.py`, labelled controls, Reset, dark chrome, height postMessage.
 
+## Where it goes
+
+**In the reading flow, not in a tab.** From 2026-09-01, `topic.md` places a line reading exactly
+`[[visualize]]` at the point of difficulty the artifact resolves, and the reader splices it into
+the Overview prose there. When a session does that, the Visualize tab disappears — the artifact is
+identical, only where the reader meets it has changed.
+
+Put it immediately after the paragraph that raises the question it answers. A visualizer at the
+end of the article is a visualizer nobody opens; one sitting under the sentence that just confused
+someone is the thing that rescues them. `--check` warns when a session ships `visualize.html` and
+never places the marker.
+
 ## What it must do
 
 The reader changes one or two inputs and watches the article's claim appear. Pull constants

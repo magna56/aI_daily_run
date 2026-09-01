@@ -172,6 +172,12 @@ Read [selection.md](selection.md) before picking. Shortlist **three** candidates
 on the audience gates (Monday action, mechanism, 30 minutes, primary source, not a repeat),
 and name the two losers in the final summary. Do not grab the first interesting link.
 
+**If the user is in the room and wants a say in what gets written, this is the wrong skill for
+Step 2.** `/ai-daily-learn-pick` researches the same sources, puts three worked proposals in front
+of them, settles the article *and its content* in conversation, and only then runs Steps 3-12 from
+here against the agreed brief. Autonomous selection below is correct for the unattended daily job,
+where there is nobody to ask.
+
 If the user provided a topic argument, use that. Otherwise:
 
 0. **Ask what is due. Do not estimate it.**
@@ -233,17 +239,22 @@ If the user provided a topic argument, use that. Otherwise:
      Gemini releases and API changes; the developers blog is the more practical of the two
    - `https://cursor.com/changelog` and the Gemini CLI / Codex release notes — for cross-tool
      comparison rather than single-vendor news
-   - `https://news.ycombinator.com/` — front page, for what practitioners are actually arguing
-     about; also the best signal for which framing of a topic will land
-   - `https://mlconcepts.viveksingh-heritage.workers.dev/` — **intermediate / basics, every
-     day.** Interactive primers (LoRA, self-attention, embeddings, calibration, backprop,
-     build-an-LLM, agents in prod). On-ramp or `articles.md` further reading — not the news
-     lead. Skip it as today's source if a changelog/eng post in the due category has a
-     Monday action, or if it would re-teach a `learn/` chapter.
+   - `https://news.ycombinator.com/` — **noticing only, never cited.** The front page tells you
+     what practitioners are arguing about and which framing will land; then follow the link out
+     and build on what it points at.
    - **Papers, subject to the one-per-7 budget above**: `https://arxiv.org/list/cs.AI/recent`
      and `https://arxiv.org/list/cs.LG/recent`
    - Try **WebSearch** first; if blocked (VPCSC error), fall back to WebFetch on the URLs above.
-     `openai.com` returns 403 to WebFetch; use the arXiv or HN mirror of the announcement.
+     `openai.com` returns 403 to WebFetch; route around it via the platform changelog or the
+     cookbook — and if you reach the announcement through an HN or arXiv mirror, cite the thing
+     itself, not the mirror.
+
+   **Every source you build on or cite must pass the admission test** in
+   [selection.md](selection.md): you can name the institution or person accountable for the page,
+   *and* a senior engineer would accept it as a citation in a design doc. Named practitioners on
+   personal domains pass; unvetted personal sites do not, however good the explainer is. Cite the
+   published, versioned spec rather than the working repo behind it. This applies to `articles.md`
+   just as hard as to the primary source — those links are published.
 3. Pick ONE focused topic that fits 30 minutes — specific, not broad
 4. Use **WebFetch** on the chosen article/paper URL to get full technical details
 
@@ -276,7 +287,7 @@ decision the reader makes this month.
 
 **Tier C — Frontier (~20%).** The credibility layer: proof this site reads primary sources
 rather than press releases. Keep it — but capped, and it still owes the reader a
-"What This Means for You" section like everything else.
+"What to Do About It" section like everything else.
 8. Applied Research — papers with working code, reproducible results, practical implications.
 9. AI Hardware for Engineers — **how to actually use the hardware you have or rent**: picking
    an instance type, quantization you can run today, inference-speed wins, memory limits,
@@ -342,20 +353,17 @@ Write `~/ai_learning/YYYY-MM-DD/topic.md`:
 [3-6 sentences. What breaks today, concretely, and what it costs — the significance argument
 lives here now. Open on the specific failure, never on a definition. See the rules below.]
 
-## How [the thing] Works
-[TOPIC-NAMED, must start with "How". The mechanism, shallow to deep in ONE pass — what it is,
-then how it actually works, then the detail an implementer needs. Use ### sub-headings named
-for their subject (### Byte Pair Encoding), not for their function. Define every term in the
-sentence that first needs it; there is no Glossary.]
+## How [the fix] Works
+[TOPIC-NAMED, must start with "How". OPENS with the engineer anchor as its first sentence,
+beginning literally "From a software engineering perspective, ..." and naming something the
+reader has already shipped — one or two sentences, comparing, never re-explaining. Then the
+mechanism, shallow to deep in ONE pass. Use ### sub-headings named for their subject
+(### Byte Pair Encoding), not for their function. Define every term in the sentence that first
+needs it; there is no Glossary.]
 
-## For a Software Engineer
-[2-4 short paragraphs. The bridge: ONE analogy to something they have already shipped, plus the
-Monday action. It sits AFTER the mechanism so it can compare rather than re-explain — see the
-rules below.]
-
-## What This Means for You
-[When this is useful, how it affects your work, and what to actually do about it — see the
-rules below. REQUIRED on every session, including Tier C.]
+## What to Do About It
+[ONE beat, not three labelled parts: the decision, then the graduated actions. The FIRST action
+must carry no precondition. REQUIRED on every session, including Tier C.]
 
 ## Implementing It
 [REQUIRED, and the section with the most prose in the document. Two labelled parts: **The
@@ -371,11 +379,46 @@ before adopting it.]
 
 ```
 
-**Three of the old sections are gone, and one line replaces them.** If this daily piece assumes
+**Two shapes, chosen by the reader's state.** Default to **Fix**: the reader has a live problem,
+so `The Problem` names the fix before it ends. Use **Explainer** when the reader is curious rather
+than stuck ("what actually is a cached token") — add `## By the End of This You Will` right after
+the ELI5, two to four bullets promising what they will understand, and `The Problem` may then
+withhold the answer so the reveal is earned. The promise is what buys the deferral; without it,
+withhold nothing. Both shapes keep every artifact and the whole implementation payload.
+
+```markdown
+## By the End of This You Will
+
+- Know why exponential backoff spreads retries out without reducing them
+- Have built the intuition for why a ratio is self-limiting and a count is not
+- Be able to set a retry budget from your own measured traffic rather than a default
+```
+
+**Sub-headings in the mechanism section are the reader's interruption, in their voice.** This is
+the single biggest flow win available and it is nearly free. At the moment a reader starts to
+doubt, say the doubt out loud as the heading, then answer it.
+- ✗ `### Ratio versus count` · `### Budget exhaustion` · `### The chain that just inverted`
+- ✓ `### Why not just cap retries per call?` · `### Wait, what happens when the budget runs out?`
+`--check` warns when a mechanism section has two or more sub-headings and none is a question.
+
+**Put the figure where the difficulty is.** A line reading exactly `[[visualize]]` splices the
+interactive artifact into the reading flow at that point, and `[[diagram]]` does the same for the
+diagram. Place the visualizer immediately after the paragraph that raises the question it answers
+— not at the end, and never in a tab the reader has to go looking for. `--check` warns if a
+session ships a visualizer and never places the marker.
+
+**Two more sections went on 2026-09-01**, and the reason is flow rather than length. `For a
+Software Engineer` was a *second* analogy landing after the mechanism, and `What This Means for
+You` restated the problem before reaching its action — so an article ran problem → mechanism →
+analogy again → applicability again → and only fifth, the fix. Both jobs survive: the engineer
+anchor as section 3's signposted opening sentence, and the action as `What to Do About It`, with
+"when this matters" moved into `The Problem` where the reader meets the failure.
+
+**Three older sections are gone, and one line replaces them.** If this daily piece assumes
 a chapter (tokens, the agent loop, RAG, the harness), put a single sentence in `The Problem` or
-`For a Software Engineer` linking the matching `learn/<slug>` page — *"New to this? Start at AI
+the mechanism section linking the matching `learn/<slug>` page — *"New to this? Start at AI
 basics → [Context and the harness](#learn/context-and-harness)."* That is what survived of `How
-It Connects to What You Know`; its analogy half was always `For a Software Engineer`'s job, done
+It Connects to What You Know`; its analogy half was always the engineer anchor's job, done
 twice. `Try It Yourself` pointed at a tab the reader can already see. `Glossary` is replaced by
 defining terms where they are used.
 
@@ -454,16 +497,32 @@ of the two is redundant. Both are `--check` warnings. The reader should finish t
 knowing exactly what to type, and open the Code tab to get the finished thing, not to get the
 same thing again.
 
-**Total budget: 1,300 words of prose**, fenced code excluded — a `--check` warning. Aim for
-~1,200 and treat the cap as the ceiling, not the target. Every other length rule in this file
-governs *proportion*; this is the only one that governs *size*, and without it sessions drifted to
-~1,700 words while every individual rule reported green. When you are over, **cut, do not
-redistribute** — moving words from the mechanism section into `What This Means for You` fixes
-nothing. The explanatory sections carry the excess; `Implementing It` is the payload and survives.
+**Every section has a word band — a floor and a cap, fenced code excluded**, both warned by
+`--check`. There is no document-wide total any more, and the reason it went is worth knowing
+before you are tempted to reinvent it. A single 1,300-word cap ran from 2026-08-27 and worked
+exactly as instructed: the spec said the explanatory sections absorb the cut and `Implementing It`
+is protected, so four consecutive articles paid the whole trim out of `The Problem` (−48%) and
+`What This Means for You` (−37%) while the implementation gave up 23%. The result was dense,
+specific articles with nothing left explaining why a reader outside the exact case should care.
+
+| Section | floor | cap |
+| --- | --- | --- |
+| `Explain Like I'm 5` | 60 | 120 |
+| `The Problem` | 190 | 320 |
+| `How <the fix> Works` | — | 370 |
+| `What to Do About It` | 150 | 260 |
+| `Implementing It` | 300 | 460 |
+| `When <the thing> Is the Wrong Tool` | 150 | 250 |
+
+**A floor is a real rule, not a suggestion.** Under a total, the sections that make an article
+*apply to someone* were always the cheapest to cut; a floor is what stops that, so treat a
+below-floor warning as the same class of defect as a missing section. **Cut inside the section
+that is over** — the mechanism section is the one with a cap and no floor, because that is where
+a spec dump lands and a simple topic is allowed to explain itself briefly.
 
 **No space filler.** Every section must carry something no other section has. These are the
 patterns that produce padding, and each one is a cut, not a rewrite:
-- The same point restated in `The Problem`, the mechanism section and `What This Means for You`.
+- The same point restated in `The Problem`, the mechanism section and `What to Do About It`.
   Pick the one that owns it. The seven-section order exists to make this hard: the old eleven
   explained the topic four times, so restating was the path of least resistance.
 - `The Problem` explaining *that* it matters rather than what it costs or enables.
@@ -615,7 +674,7 @@ for what someone would plausibly filter by, not to describe the article exhausti
 practically. Assume fluency in general software engineering — caching, padding, schedulers,
 quantization, compilers, batching, indexes, back-pressure. Do **not** assume fluency in AI
 internals, and do not assume they can decode an acronym from context. The framing sections
-(Problem, For a Software Engineer, What This Means for You) exist because the deep sections
+(Problem, the engineer anchor, What to Do About It) exist because the deep sections
 alone lose this reader.
 
 **`## Explain Like I'm 5`** — leads the document deliberately, because a reader who bounces off
@@ -659,6 +718,21 @@ topic from feeling like showing off.
     along for free.`
   `build.js --check` warns when this section contains a version string, a rival product name, or
   adoption language, so this one is caught rather than trusted.
+- **Name the fix before the section ends. Never hand off on a tease.** The reader has just been
+  given three or four paragraphs of what is broken; if the section closes without saying what the
+  answer *is*, they carry the whole problem into the next section unresolved, and the article
+  reads as long no matter how few words it has. This was diagnosed on 2026-08-31 from an article
+  whose `The Problem` was 119 words — the shortest in its run — and which the site's owner still
+  reported as too long, because it ended on "What worked was upstream of all of it" and then spent
+  another ninety words on benchmark setup before naming anything. Length was not the defect;
+  **latency to the answer** was.
+  - ✗ *"What worked was upstream of all of it."* — a direction, not a thing. Nothing is named.
+  - ✓ *"The fix: stop grading the agent once, and grade each step separately."* (2026-08-27)
+  - ✓ *"What worked was the step before any of that: deciding what gets written down at all."*
+  One plain sentence naming the mechanism is enough — the section that follows explains it. If the
+  fix genuinely cannot be stated before the mechanism is built up, say so in a clause and open the
+  mechanism section with it instead; what is not allowed is the reader reaching a `###`
+  sub-heading still not knowing what the article proposes.
 - Criticism belongs here at full strength. If there is a real objection ("has this just
   rediscovered REST?"), state the strongest version of it and answer it with a mechanism.
 - 3-6 sentences. This section motivates; section 3 explains.
@@ -714,50 +788,50 @@ two sections they explained the same thing twice at two depths.
   explained abstractly is not.
 - Depth is not the problem and never gets reduced. The entry to it was the problem.
 
-**`## For a Software Engineer`** — the load-bearing section. Explain the topic using **generic
-engineering principles the reader already owns**, not AI ones.
-- Anchor to something familiar and name it explicitly: "this is a quantization problem", "this
-  is head-of-line blocking", "this is a cache invalidation problem", "this is padding waste in
-  a tensor, but for pixels".
-- State plainly what an engineer would *do differently* on Monday — a config to check, a cost
-  to measure, an assumption to stop making. Practical application is the whole point.
-- Give at least one number from the session that a non-specialist can feel (a cost multiple, a
-  percentage wasted, a hard ceiling) and say why it is surprising.
-- **It now sits after the mechanism, so compare — do not re-explain.** This was the section's
-  main failure while it ran third: it had to teach the topic before it could draw the analogy,
-  which made it the second-longest section in the document. Placed after `How <the thing>
-  Works`, it can assume the mechanism and be short. Aim for ~150-200 words.
-- **One analogy, not three.** Pick the closest thing the reader has already shipped and commit
-  to it. This is the site's most distinctive section — no comparable publication translates AI
-  topics into engineering the reader has already done — so it is worth doing sharply.
+**The engineer anchor — section 3's first sentence, not a section.** This is the site's most
+distinctive move: no comparable publication translates AI topics into engineering the reader has
+already done. It stays, and it must **announce itself**, because without the old heading nothing
+else tells the reader this is the translation beat.
 
-**`## What This Means for You`** — the anchor section, and the one that decides whether a deep
-topic lands or bounces. The reader's real question is never "is this clever?", it is *"does this
-touch my work, and what do I do about it?"* Answer that explicitly rather than leaving them to
-infer it. Three short labelled parts, in this order:
+- **Begin it literally "From a software engineering perspective, …"** (or "From a software
+  engineer's perspective"). `--check` enforces the opener. The signpost is the point: it is what
+  the heading used to do.
+- **Then name the thing they have already shipped**, explicitly: "this is a configuration
+  precedence bug, and you have shipped one", "this is head-of-line blocking", "this is log
+  compaction". One anchor, not three.
+- **One or two sentences. It compares; it never re-explains.** As a heading this move ran to 220+
+  words and re-taught the topic before drawing the analogy, which is exactly what made it a
+  digression. The mechanism follows immediately after it.
+  - ✗ a paragraph explaining what subagents are, then the analogy
+  - ✓ *"From a software engineering perspective, this is a configuration precedence bug, and you
+    have shipped one — the same shape as a framework that reads `DATABASE_URL`, a config file and
+    a CLI flag, then reorders them in a minor release."*
 
-- **When this matters** — the concrete situation where this shows up. Name the trigger, not the
-  topic: "you're paying more than you expect for a long Claude Code session", "your RAG answers
-  got worse after you raised top-k", "you're choosing between an A10G and an L4". If the reader
-  can't recognise themselves in this line, the framing is wrong — rewrite it before continuing.
-- **How it affects you** — the consequence in their terms. Money, latency, a bug class they'll
-  hit, a decision they're about to get wrong, a belief they hold that's outdated.
-- **What to do about it** — at least one thing they can actually do: a setting to change, a
-  command to run, a number to go measure in their own logs, a check to add to CI, or an
-  explicit "nothing yet, but here's the signal to watch for". Be specific enough to act on
-  without re-reading the article.
+**`## What to Do About It`** — one beat, and the section that decides whether the article was
+worth the reader's time. Its old three-part shape ("When this matters" / "How it affects you" /
+"What to do about it") restated the problem twice before reaching the action; the first two parts
+now live in `The Problem`, where the reader actually meets the failure.
 
-Rules:
-- **Required on every session, including Tier C.** A frontier paper still owes the reader this.
-  If the honest answer is "this won't affect your work for a year", *say that* — a truthful
-  "not yet, and here's what would change that" is far better than an invented use case.
-- **At least one item must be a change, not an audit.** "Go check whether your client honours
-  the TTL" only tells the reader to open a file; it does not tell them what to write once they
-  are in it. An audit is a fine *first* step, but every audit item owes its second half — "and
-  if the answer is bad, here is the fix" — pointing at `## Implementing It` rather than
-  restating it.
-- **Never invent applicability.** Overstating relevance is worse than admitting there is little;
-  this section is the site's credibility, not its marketing.
+- **Lead with the decision**, in the reader's terms: what they should conclude and why. One or two
+  sentences.
+- **Then graduated actions, and the first one must carry no precondition.** This is the rule that
+  fixes the narrowness measured on 2026-08-31, where every recent article opened on a compound
+  condition ("you maintain an MCP server *and* have a tool that exceeds your proxy timeout") and
+  left everyone else with nothing. Give the thing anyone can do today first — a five-line config
+  file, a `grep`, one question to ask the model — then the deeper move for the reader already in
+  the specific case.
+  - ✗ *"Add the poll branch to your client before you add tasks to your server."*
+  - ✓ *"At the end of a session, ask the model for the five things worth remembering and append
+    only those to your notes file. That is consolidation, done by hand, and it is most of the win.
+    When you are ready to automate it, …"*
+- **At least one item must be a change, not an audit.** "Go check whether your client honours the
+  TTL" tells the reader to open a file, not what to write once they are in it. An audit is a fine
+  *first* step, but it owes its second half — "and if the answer is bad, here is the fix" —
+  pointing at `## Implementing It` rather than restating it.
+- **Required on every session, including Tier C.** If the honest answer is "this will not affect
+  your work for a year", say that and name the signal to watch for. **Never invent applicability**;
+  overstating relevance is worse than admitting there is little, and this section is the site's
+  credibility rather than its marketing.
 - Write it in second person, plainly. This is the least academic section in the document.
 
 **`## Implementing It`** — the section that makes this site worth reading instead of the
@@ -1018,15 +1092,25 @@ the reader *able to do*. A link that is merely *about* the topic is filler with 
 - **At least one link must be something they can open in an editor** — a repo, a reference
   implementation, a cookbook page, a spec with worked examples. A list of five essays teaches
   reading, not building.
-- **Rank by teaching value, not by authority.** A precise post from an unknown engineer who
-  actually shipped it beats a vague one from a famous lab.
+- **Prefer the vetted source. Rank by teaching value only between sources of equal standing.**
+  Admission (can you name who is accountable?) is the floor; standing is still a tiebreaker above
+  it. Given a choice, take the first-party doc, the spec revision, the lab's engineering post or a
+  named practitioner with a public track record over a post by an engineer nobody can place —
+  **avoid that flow wherever an alternative exists.** An unknown author earns a slot only when the
+  post carries its own strong evidence: a reproducible benchmark, a public repo, production
+  numbers, a method you could re-run. A precise-sounding post with no evidence behind it is the
+  weakest link on the page, not a scrappy find, and "it explained it well" is not evidence.
 - **Never pad to five.** Three excellent links beat five where the last two were symmetry.
 
 Slots to fill, in priority order: primary source · the best mechanical explanation · one
 genuinely hands-on thing · one wider-context piece.
-When the session touches LoRA, attention, embeddings, calibration, backprop, or agents,
-include one ML Concepts page from https://mlconcepts.viveksingh-heritage.workers.dev/
-as the **intermediate / basics** slot.
+
+**Every link must pass the admission test** — see [selection.md](selection.md). No exceptions for
+the basics slot: when a session assumes a concept (attention, embeddings, LoRA, calibration, the
+agent loop), the on-ramp is this site's own `learn/` track, linked inline in `topic.md` as
+`#learn/<slug>`, then a Tier 1 conceptual doc or a Tier 3 named practitioner. There is no
+third-party explainer site you are obliged to include, and there never was a good reason to fill
+that slot with one.
 
 Good candidates when they've covered the topic:
 - `deeplearning.ai/the-batch` — the industry-analysis slot; connects a development to the
@@ -1048,7 +1132,7 @@ Append to `~/ai_learning/journal.md`:
 ```markdown
 ## YYYY-MM-DD — [Topic Title]
 - **Category**: [category name]
-- **Key insight**: [plain first sentence, then the detail — see below]
+- **Key insight**: [three plain sentences: the surprise, its consequence, the takeaway — see below]
 - **Code**: `YYYY-MM-DD/code_example.py` — [what it demonstrates]
 - **Articles**: [count] articles collected
 ```
@@ -1059,10 +1143,40 @@ dense one cancels out every on-ramp below it. The homepage card uses `**Hook**` 
 not this field — keep both plain. It has been drifting into 200-word jargon walls; that is the
 single most daunting thing on the page.
 
-- **Hard cap: 3 sentences, ~70 words.** Count them. Longer is a defect, not a thorough entry.
+**Each of the three sentences has a job, and the second one is where these go wrong.** This was
+diagnosed on 2026-08-31, when the owner reported getting lost at the second line across six
+consecutive entries. All six were inside the size caps; the defect was that sentence two had
+become the *evidence* sentence — the place the article's proof, quantities and vocabulary landed.
+Evidence cannot go there. This box renders above `Explain Like I'm 5`, so at sentence two the
+reader has met none of the article's terms, and a sentence that argues instead of continuing is
+the moment they stop.
+
+| sentence | its job |
+| --- | --- |
+| 1 | **The surprise**, in words a stranger can read: what happened, or what turned out not to be true |
+| 2 | **The consequence** — the same subject, carried one step further. Not the proof, not the numbers, not the mechanism |
+| 3 | **The takeaway**: what it means, in one line |
+
+Sentence two must **continue sentence one's subject and introduce no noun that needs explaining**.
+If it names something the reader has not met, it belongs in the write-up.
+
+- ✗ *"Three of five retrieval signals scored worse than not having them, and tuning the weights
+  with reinforcement learning changed the result by exactly nothing."* — four quantities and two
+  unexplained terms, arriving before the reader has been told what a retrieval signal is. This is
+  the mechanism section, misfiled.
+- ✓ *"The tool protocol now has a proper answer: the server returns a numbered ticket, and your
+  client polls it."* — same subject as sentence one, no new vocabulary, no numbers, and the reader
+  can picture it.
+
+- **Hard cap: 3 sentences, ~70 words** (`--check` warns above 80). Count them. Longer is a defect,
+  not a thorough entry. Note that size was never what broke these — every failing entry was inside
+  the cap, which is why the sentence-job rule above exists alongside it.
 - **Plain language throughout** — not just the first sentence. No acronyms, no config identifiers
-  (`min_pixels`, `patch_size`), no formulas, no arrow-chains of pipeline steps.
-- **At most ONE number**, picked for how surprising it is rather than how precise.
+  (`min_pixels`, `patch_size`), no formulas, no arrow-chains of pipeline steps. `--check` warns on
+  a backticked or snake_case or camelCase token appearing here at all.
+- **At most ONE number**, picked for how surprising it is rather than how precise, and warned by
+  `--check`. Stacked quantities are the single most reliable way to make sentence two unreadable:
+  five of the six entries that prompted this rule broke it, one of them with five numbers.
 - **Do not restate the write-up.** The full thesis, every constant, and all the supporting numbers
   already live a few hundred pixels below in `## The Problem` and the mechanism section.
   Duplicating them here buys nothing and costs the reader the on-ramp.
@@ -1091,12 +1205,14 @@ topic), `code_example.py` over 150 lines, a visualizer missing its CSP / session
 **Readability is now measured too**, because it was ignored for weeks as advice. `--check` warns
 on any paragraph over **110 words** or sentence over **45 words** in the on-ramp sections
 (`Explain Like I'm 5`, `The Problem`, the mechanism section), on a `The Problem` written as a
-single block, and on the whole document exceeding **1,300 words of prose** (fenced code excluded).
+single block, and on any section falling outside its **word band** (fenced code excluded).
 
-When the word-budget warning fires, **cut — do not redistribute.** Moving words from the mechanism
-section into `What This Means for You` satisfies nothing; the explanatory sections carry the
-excess and `Implementing It` is the payload that survives. And update `**Time to read**` to match
-what you actually shipped: it is a number you type, so it is only true if you keep it true.
+When a band warning fires, fix it **in the section named**. A section over its cap is cut where it
+stands; a section under its floor is owed words back, not trimmed further. Do not move words
+between sections to satisfy a band — that is the move the old document-wide total rewarded, and it
+is what drained the two sections that tell a reader why the article applies to them. And update
+`**Time to read**` to match what you actually shipped: it is a number you type, so it is only true
+if you keep it true.
 
 Three content rules no linter can check, so check them by eye before you stop:
 
