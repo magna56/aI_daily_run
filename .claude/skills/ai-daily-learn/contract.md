@@ -16,7 +16,7 @@ build. **New sessions may not ship that way.** Do not stop after `topic.md`.
 ```
 YYYY-MM-DD/                 # or YYYY-MM-DD-s2 if today already has a session
   topic.md                  # required
-  visualize.html            # required — Visualize tab; see visualize.md
+  visualize.html            # required — inlined at [[visualize]]; see visualize.md
   diagram.excalidraw        # required — Diagram tab
   code_example.py           # required — Code tab
   articles.md               # required — Articles tab

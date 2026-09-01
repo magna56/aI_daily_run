@@ -106,7 +106,8 @@ on the legacy path"), and then say what it decides.
   not a nice-to-have), `diagram.excalidraw`, `code_example.py`, `articles.md`. Read
   [contract.md](contract.md) before writing. A folder that is only a write-up is not done.
 - **Visualizer**: read [visualize.md](visualize.md) and match the newest existing
-  `visualize.html` in this repo. The Visualize tab is empty without this file.
+  `visualize.html` in this repo. Without it there is no visualizer at all — no inline figure and
+  no tab.
 - **Journal**: `~/ai_learning/journal.md` tracks all sessions
 - **Code**: Pure Python only — no API keys, no external services. Self-contained demos.
 - **Excalidraw**: Open at excalidraw.com (drag & drop)
@@ -523,7 +524,7 @@ a spec dump lands and a simple topic is allowed to explain itself briefly.
 **No space filler.** Every section must carry something no other section has. These are the
 patterns that produce padding, and each one is a cut, not a rewrite:
 - The same point restated in `The Problem`, the mechanism section and `What to Do About It`.
-  Pick the one that owns it. The seven-section order exists to make this hard: the old eleven
+  Pick the one that owns it. The six-section order exists to make this hard: the old eleven
   explained the topic four times, so restating was the path of least resistance.
 - `The Problem` explaining *that* it matters rather than what it costs or enables.
 - A definition given twice — once inline where the term is used and again a screen later. Inline
@@ -1011,7 +1012,8 @@ If the script fails, generate the Excalidraw JSON directly using this element fo
 
 ### Step 8: Generate visualize.html (required)
 
-**Do not skip this step.** A session without `visualize.html` has no Visualize tab.
+**Do not skip this step.** A session without `visualize.html` has no visualizer — neither the
+inline figure at `[[visualize]]` nor a tab.
 
 Read [visualize.md](visualize.md) and open the newest existing `visualize.html` in this repo
 before writing. Then write `~/ai_learning/YYYY-MM-DD/visualize.html`: a custom interactive
@@ -1197,7 +1199,7 @@ unknown Category / Level / For / tag, no Hook, unrenderable diagram, **no
 `## Implementing It` section**, **no fenced code block in `topic.md`**. Do not present the
 summary until today's id is clean.
 
-The linter also now catches what used to be honour-system: the seven-section order (missing,
+The linter also now catches what used to be honour-system: the six-section order (missing,
 mis-ordered, or retired sections, and a mechanism/counter-case heading that does not name the
 topic), `code_example.py` over 150 lines, a visualizer missing its CSP / session-id marker /
 `ResizeObserver` height / Reset button, and `## The Problem` slipping into momentum reporting.

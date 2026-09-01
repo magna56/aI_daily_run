@@ -138,8 +138,15 @@ spec — read those before hand-writing or editing session content, rather than 
 format solely from `build.js`'s parser.
 
 The shape those skills enforce, worth knowing before touching a session: a session is written to
-leave the reader **able to build something**, so `topic.md` runs ELI5 → the problem →
-engineer-bridge → "What This Means for You" → technical depth → **`## Implementing It`**, which
+leave the reader **able to build something**, and it reads as one argument rather than parallel
+takes on a topic. From 2026-09-01 `topic.md` runs six sections — ELI5 → `The Problem` (which must
+name the fix before it ends) → `How <the fix> Works` (opening with the engineer anchor as a
+signposted sentence, "From a software engineering perspective, …") → `What to Do About It` →
+**`## Implementing It`** → `When <it> Is the Wrong Tool`. An article whose reader is curious
+rather than stuck may use the Explainer variant, adding `## By the End of This You Will` at
+position 2 and earning a later reveal. Every section has a word band with a floor as well as a
+cap, `[[visualize]]` splices the interactive artifact into the reading flow at the point of
+difficulty, and `## Implementing It`
 must be the longest section, must carry real fenced code in the write-up (not a pointer to
 `code_example.py`), must cover every role a change touches, and must include its **How you know
 it worked** and **When not to** parts. `code_example.py` is judged on whether an engineer can

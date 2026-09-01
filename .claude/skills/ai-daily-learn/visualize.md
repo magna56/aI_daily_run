@@ -1,4 +1,4 @@
-# visualize.html — required Visualize pane
+# visualize.html — the required interactive artifact
 
 **The test, same as every other artifact:** does the reader leave able to build something?
 A visualizer earns its place by building *intuition for a mechanism they are about to
@@ -8,7 +8,7 @@ merely restates the write-up fails this, however nice it looks.
 
 This is not optional and not a decorated summary. The reader lazy-loads this file in an
 iframe with `sandbox="allow-scripts"` (no same-origin, no popups, no forms, no storage).
-If the file is missing, the Visualize tab is gone.
+If the file is missing there is no visualizer at all — neither the inline figure nor the tab.
 
 **Before writing, open the newest `YYYY-MM-DD/visualize.html` in this repo and match that
 quality bar.** Recent gold: `2026-08-23/visualize.html` (RAG grid heatmap) and

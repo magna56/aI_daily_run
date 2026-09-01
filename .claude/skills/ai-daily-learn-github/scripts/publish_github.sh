@@ -70,10 +70,16 @@ content_gate() {
   [ -f build.js ] || return 0
   command -v node >/dev/null 2>&1 || { say "WARN: node not found — content gate skipped"; return 0; }
 
+  # Kept identical to ai-daily-learn-publish/scripts/publish.sh. When the article
+  # contract changes, BOTH gates need the new patterns -- on 2026-08-31 publish.sh
+  # was updated and this copy was not, which is the same silent-drift failure the
+  # update was fixing. Note 'words of prose \(cap' does NOT match the floor
+  # warnings; both directions are listed deliberately, and the floors are the
+  # load-bearing half.
   local blocking
   blocking=$(node build.js --check 2>&1 \
     | grep -F "$LINT_ID:" \
-    | grep -E 'Implementing It|fenced code block|visualize\.html|no topic\.md|-word paragraph \(cap|-word sentence \(cap|is a single block|words of prose \(cap' || true)
+    | grep -E 'Implementing It|fenced code block|visualize\.html|no topic\.md|-word paragraph \(cap|-word sentence \(cap|is a single block|words of prose \(cap|words of prose \(floor|section order is|is retired|engineer anchor|never places \[\[visualize\]\]|"Key insight"' || true)
 
   if [ -n "$blocking" ]; then
     printf '[publish-github] ERROR: content gate — %s does not meet contract.md:\n' "$SESSION" >&2

@@ -88,7 +88,8 @@ never fix it by loosening the spec. The blocking ones:
 - `no "## Implementing It" section` — the write-up never shows the code the reader has to write.
 - `no fenced code block` — the section exists but defers to `code_example.py`, which most readers
   never open and nobody reading on a phone will run.
-- anything about `visualize.html` — a session without a working visualizer has no Visualize tab.
+- anything about `visualize.html` — a session without a working visualizer has nothing to inline
+  at `[[visualize]]` and no tab either.
 - **the readability warnings** — a paragraph over 110 words, a sentence over 45, a single-block
   `The Problem`, or **any section outside its word band** (floors block as well as caps), plus the
   structural checks: section order, a retired section, a missing engineer anchor, an unplaced

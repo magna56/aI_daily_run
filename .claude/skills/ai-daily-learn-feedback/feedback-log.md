@@ -890,3 +890,27 @@ reached it for free — the real gap was that nothing *gated* the live push.
   missing engineer anchor each produce warnings the gate's regex matches.
 - **Standing lesson**: a contract change is not finished at `.claude/skills/ai-daily-learn/`.
   At least four other files consume it, and the gate's regex is the one that fails silently.
+
+## 2026-08-31 — full audit of every skill (follow-up to "all skills updated?")
+- **Note**: "all skills updated?"
+- **Verdict**: compliance gap, second pass. The first propagation fix was itself incomplete.
+- **Found and fixed**: `ai-daily-learn-github/scripts/publish_github.sh` carried a byte-identical
+  copy of the stale blocking regex. `publish.sh` had been updated an hour earlier and this twin
+  had not — the same silent-drift failure the earlier fix existed to correct, repeated inside the
+  fix itself. Both gates now carry the identical pattern and a comment saying they must stay that
+  way. Also corrected: two "seven-section order" references in `SKILL.md` that now describe six,
+  and every "no Visualize tab" phrasing, which stopped being the whole truth once the artifact
+  could be inlined at `[[visualize]]`.
+- **Changed**: `CLAUDE.md` — its one-paragraph description of the article shape still named the
+  old flow ("engineer-bridge → What This Means for You → technical depth"). It now states the
+  six-section spine, the Explainer variant, the bands with floors, and the inline figure marker.
+  This file is read at the start of every session in this repo, so a stale shape here outranks a
+  stale skill.
+- **Audited and clean**: `video.js` parses no named sections; `build.js` is the only root script
+  reading `topic.md`; all six Cursor twins are thin runners that link to the canonical files
+  rather than copying them, so they need no content edits when the contract moves.
+- **Standing lesson, strengthened**: the consumers of this contract are
+  `ai-daily-learn/{SKILL,contract,visualize,selection}.md`, **both** publish gates
+  (`publish.sh` and `publish_github.sh` — they are copies), the two publish SKILL.md prose
+  descriptions, `ai-daily-learn-video/SKILL.md`, and `CLAUDE.md`. The gates fail silently; the
+  rest merely go stale.
