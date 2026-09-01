@@ -227,7 +227,8 @@ const SECTION_BANDS = new Map([
   // widened: the mechanism section now opens with the engineer-anchor sentence
   ["mechanism",            [0, 370]],
   // one beat now (the decision and the graduated actions), not three labelled parts
-  ["What to Do About It",  [150, 260]],
+  ["For a Software Engineer", [120, 210]],
+  ["What This Means for You", [200, 300]],
   ["Implementing It",      [300, 460]],
   ["counter-case",         [150, 250]],
 ]);
@@ -272,31 +273,23 @@ const FIXED_SECTIONS = [
   "Implementing It",
 ];
 
-// The six-section order, from 2026-09-01. The seven-section shape above still had
-// two sections that re-entered the topic instead of advancing it: `For a Software
-// Engineer` was a second analogy arriving AFTER the mechanism (the first is
-// `Explain Like I'm 5`), and `What This Means for You` restated the problem in its
-// "When this matters" part before getting to the action. Reading 2026-08-30 end to
-// end, the spine was: problem stated, mechanism, analogy again, applicability
-// restated, and only then -- fifth -- the fix. The site's owner reported it as "no
-// clear soltuin to the proble we introdcues" and "doesnt seem a single flow".
+// The six-section experiment of 2026-08-31 was reverted the same day it landed.
+// It deleted `For a Software Engineer` and shrank `What This Means for You`, which
+// measured as the article's middle losing a section and 186 words -- and the middle
+// is the part the site's owner reads as the readable one. The lesson kept from it
+// is the opposite of what it did: an explanation is made readable by MORE small
+// units, each answering one question with a figure, never by merging sections.
+// Do not re-attempt the merge.
 //
-// The engineer anchor is not gone; it is demoted from a heading to one required
-// sentence opening the mechanism section. As a heading it invited re-explaining the
-// topic, which is what made it a digression rather than a bridge.
-const SIX_SECTION_SINCE = "2026-08-31";
-
+// What survived, each endorsed separately: per-section word bands instead of a
+// document-wide total, the `Key insight` lint, reader-question sub-headings, and
+// inline figures placed with [[visualize]].
 // The structural rules reach the Frontier track from its second session onward.
 // frontier/2026-08-25 was written in the old eleven-section shape and is a dated
 // log entry, not a backlog item -- the same reason every other rule here carries a
 // start date rather than being applied retroactively.
 const FRONTIER_STRUCTURE_SINCE = "2026-08-26";
 
-// The engineer anchor, demoted from a heading to the mechanism section's opening
-// sentence, must still ANNOUNCE itself. Without the old `## For a Software Engineer`
-// heading the reader loses the signal that this is the translate-it-into-something-
-// you-have-shipped move, which is the site's most distinctive beat -- so the
-// sentence carries the signpost instead, and the lint holds it to that.
 // Two shapes, one contract. A "Fix" article answers a reader who has a live
 // problem, so it names the fix in `The Problem`. An "Explainer" answers a reader
 // who is curious, so it builds the apparatus and earns the reveal -- and buys that
@@ -313,6 +306,9 @@ const CONTRACT_SECTION = "By the End of This You Will";
 // temperature?"), not a subject label. Answering the objection at the moment it
 // forms is what keeps a long explanation readable. Warned only when there are two
 // or more sub-headings, so a short mechanism section is not penalised.
+// Date-gated like every other rule here: the back catalog was written before this
+// existed and is a dated log, not a backlog.
+const READER_QUESTION_SINCE = "2026-08-31";
 const READER_QUESTION_RE = /\?\s*$|^(wait|hold on|hold up|but |so |why |what |how come|does |do |isn't|is it|can |should )/i;
 
 // A figure earns its place at the point of difficulty. `[[visualize]]` on its own
@@ -320,14 +316,6 @@ const READER_QUESTION_RE = /\?\s*$|^(wait|hold on|hold up|but |so |why |what |ho
 // and the reader drops the now-duplicate tab.
 const INLINE_FIGURE_SINCE = "2026-08-31";
 
-const ENGINEER_ANCHOR_RE =
-  /^\s*(?:\*\*)?From a software engineer(?:'s|ing)?\s+(?:perspective|standpoint|point of view)\b/i;
-const FIXED_SECTIONS_V6 = [
-  "Explain Like I'm 5",
-  "The Problem",
-  "What to Do About It",
-  "Implementing It",
-];
 const MECHANISM_RE = /^How\s+.+/;      // "How the Hook Matcher Decides"
 const COUNTERCASE_RE = /^When\s+.+/;   // "When a Hook Is the Wrong Tool"
 
@@ -957,9 +945,8 @@ function compile(id, journal, runner, opts) {
        heading can name the topic the way a reference article does, and no
        Glossary -- definitions are made at the moment of use instead. */
     if (date >= SECTION_ORDER_SINCE) {
-      const v6 = date >= SIX_SECTION_SINCE;
       const names = [...sections.keys()];
-      for (const want of (v6 ? FIXED_SECTIONS_V6 : FIXED_SECTIONS)) {
+      for (const want of FIXED_SECTIONS) {
         if (!sections.has(want)) warn(`${id}: topic.md has no "## ${want}" section — see contract.md.`);
       }
       const mech = names.find((n) => MECHANISM_RE.test(n));
@@ -967,22 +954,15 @@ function compile(id, journal, runner, opts) {
       if (!mech) {
         warn(`${id}: topic.md has no mechanism section — it must be named for the topic and `
           + `start with "How", e.g. "## How the Hook Matcher Decides".`);
-      } else if (v6) {
+      } else {
         const subs = (sections.get(mech) || "").split("\n")
           .filter((l) => /^###\s+/.test(l)).map((l) => l.replace(/^###\s+/, "").trim());
-        if (subs.length >= 2 && !subs.some((h) => READER_QUESTION_RE.test(h))) {
+        if (date >= READER_QUESTION_SINCE && subs.length >= 2
+            && !subs.some((h) => READER_QUESTION_RE.test(h))) {
           warn(`${id}: none of "${mech}"'s sub-headings is a reader's question — at least one `
             + `should be the objection forming in their head at that moment ("Why not just `
             + `split on spaces?", "Wait, what about temperature?"), not a subject label. `
             + `Answering the doubt where it arises is what keeps a long explanation readable.`);
-        }
-        const first = proseOnly(sections.get(mech) || "")
-          .split(/\n\s*\n/).map((x) => x.trim()).find(Boolean) || "";
-        if (!ENGINEER_ANCHOR_RE.test(first)) {
-          warn(`${id}: "${mech}" must open with the engineer anchor, and it has to say so — `
-            + `start it "From a software engineering perspective, …" and then name the thing `
-            + `the reader has already shipped. Without the old heading, the signpost is the `
-            + `only thing telling them this is the translation beat.`);
         }
       }
       if (!counter) {
@@ -992,7 +972,6 @@ function compile(id, journal, runner, opts) {
       }
       const retired = ["What It Is", "Key Technical Details", "Why It Matters",
                        "How It Connects to What You Know", "Try It Yourself", "Glossary"];
-      if (v6) retired.push("For a Software Engineer", "What This Means for You");
       for (const gone of retired) {
         if (sections.has(gone)) {
           warn(`${id}: "## ${gone}" is retired — see contract.md for where its content goes now.`);
@@ -1001,11 +980,10 @@ function compile(id, journal, runner, opts) {
       // Order matters as much as membership: the article is one argument, and each
       // section has to advance it rather than re-enter the topic from a new angle.
       const explainer = sections.has(CONTRACT_SECTION);
-      const spine = (v6
-        ? ["Explain Like I'm 5"].concat(explainer ? [CONTRACT_SECTION] : [],
-           ["The Problem", mech, "What to Do About It", "Implementing It", counter])
-        : ["Explain Like I'm 5", "The Problem", mech, "For a Software Engineer",
-           "What This Means for You", "Implementing It", counter]).filter(Boolean);
+      const spine = ["Explain Like I'm 5"].concat(
+        explainer ? [CONTRACT_SECTION] : [],
+        ["The Problem", mech, "For a Software Engineer",
+         "What This Means for You", "Implementing It", counter]).filter(Boolean);
       const seen = names.filter((n) => spine.includes(n));
       if (seen.join("|") !== spine.join("|")) {
         warn(`${id}: section order is ${seen.join(" → ")}; contract.md wants `
@@ -1175,11 +1153,6 @@ function compile(id, journal, runner, opts) {
   if (date >= INLINE_FIGURE_SINCE) {
     const marks = (topic.body.match(/^[ \t]*\[\[(visualize|diagram)\]\][ \t]*$/gm) || [])
       .map((m) => m.trim().slice(2, -2));
-    if (visualize && !marks.includes("visualize")) {
-      warn(`${id}: topic.md never places [[visualize]] — put it on its own line at the point of `
-        + `difficulty it resolves, so the reader meets it while the question is live rather `
-        + `than one tab away.`);
-    }
     if (marks.includes("visualize") && !visualize) {
       warn(`${id}: topic.md has a [[visualize]] marker but there is no visualize.html.`);
     }

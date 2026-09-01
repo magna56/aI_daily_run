@@ -22,7 +22,8 @@ you which answers were the shaky ones — and telling those apart was the only r
 A very common pattern in production looks like this: ask the model for an answer and a confidence
 score, then route anything under a threshold to a human, a bigger model, or a retry. It is cheap,
 it needs no special API access, and it feels principled. If you have a branch keyed on
-`confidence` anywhere, this is about that branch.
+`confidence` anywhere, this is about that branch — and about whether anyone ever confirmed the
+signal behind it moves.
 
 The question nobody checks is whether that spoken number has any relationship to the model's own
 internal uncertainty. Researchers at Dartmouth and Oakland measured exactly that across 30 models
@@ -41,11 +42,6 @@ something close to noise, and it fails silently: the pipeline still runs, the da
 looks sensible, and the escalations you receive are simply not the cases that needed escalating.
 
 ## How a Model Reports Confidence
-
-From a software engineering perspective, this is an unvalidated telemetry source, and you have
-shipped one of those. Think of a health check that returns 200 because the handler is reachable,
-not because the dependency is alive. Present, well-formed, cheap to read, load-bearing
-in your routing — and never once confirmed to move when the thing it measures moves.
 
 Two channels are at work, and the article turns on not confusing them.
 
@@ -85,22 +81,38 @@ The paper's phrase for this is a **lossy channel**: how much of the internal sig
 depends mostly on how spread out the reported numbers are. Prompting changes the spread, not the
 grounding — attitude cues move the numbers without improving alignment.
 
-## What to Do About It
+## For a Software Engineer
 
-Treat a spoken confidence score as an unvalidated signal until you have checked it, the same way
-you would not gate a deploy on a health check nobody has ever seen go red.
+This is an unvalidated telemetry source, and you have shipped one of those.
 
-Start today with the cheapest check, on data you already have: look at the *spread* of the
-confidence values in your logs. If 90% of them fall inside a ten-point band, stop there — a
-collapsed distribution cannot rank anything, and no threshold you pick will help. That is a
-five-minute query and it settles the question for most pipelines.
+It is the same shape as a health check that returns 200 because the handler is reachable, not
+because the dependency behind it is alive. The signal is present, well-formed, cheap to read, and
+load-bearing in your routing logic — and nobody ever confirmed it moves when the thing it
+supposedly measures moves. That is the whole failure, and it is a familiar one.
 
-If the spread is healthy, run the three-axis diagnostic below and read the axes as a set rather
-than averaging them into a score. High association with a large magnitude gap means the ranking is
-usable but the numbers are not probabilities — sort with it, never threshold on it.
+The number to hold onto: **r = 0.135 at the instance level, and r ≈ 0 for instruction-tuned
+models.** If you have a threshold branch keyed on `confidence`, that branch is close to a coin
+flip weighted by phrasing habits. New to this? Start at AI basics →
+[How Model Calibration Works](#learn/calibration).
 
-And if you have logprobs in the response at all, use those instead. The spoken number is a lossy
-copy of something you can read directly, and the whole problem disappears.
+## What This Means for You
+
+**When this matters.** You have a prompt that asks for a confidence score, and code somewhere that
+branches on it — escalate below 0.7, auto-approve above 0.9, retry in between. That covers most
+LLM-in-the-loop pipelines not built by someone with logits access.
+
+**How it affects you.** Your gate is probably sorting on something close to noise, and it fails
+silently: the pipeline still runs, the numbers still look sensible in a dashboard, and the
+escalations you receive are not the cases that needed escalating. Worse, the aggregate statistic
+you would naturally compute to check it (r = 0.483) looks fine, because averaging across tasks and
+models hides the instance-level collapse.
+
+**What to do about it.** Before touching the threshold, look at the *spread* of the confidence
+scores you already log. If 90% of them fall inside a ten-point band, stop — a collapsed
+distribution cannot rank anything, and no threshold will help. That is a five-minute query against
+data you have. Then run the three-axis diagnostic below, and read the axes as a set rather than
+averaging them into a score. If you have logprobs at all, use those instead: the spoken number is
+a lossy copy of something you can read directly.
 
 ## Implementing It
 

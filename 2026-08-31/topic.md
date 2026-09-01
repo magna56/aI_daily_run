@@ -26,8 +26,10 @@ something it was told on Tuesday, this is the machinery that failed.
 
 Almost everyone builds it the same way: write everything to a store, then retrieve by similarity.
 The improvements all go into the scoring — recency, whether the memory helped last time, which
-tier it lives in — with the weights learned from feedback. That is also the obvious next move when
-it starts failing, and it is the wrong one.
+tier it lives in — with the weights learned from feedback. If that sounds like tuning a query
+planner when the real problem is what got written to the table, hold that thought.
+
+That is also the obvious next move when memory starts failing, and it is the wrong one.
 
 MEMTIER, from Ben-Gurion University, built exactly that, then did what almost nobody does: it
 ablated its own design and published the table.
@@ -44,11 +46,6 @@ Retrieval then searches those, not the transcript.
 That one change was worth more than every scoring adjustment combined.
 
 ## How Memory Consolidation Works
-
-From a software engineering perspective, this is log compaction, and you have already shipped one.
-A write-ahead log that keeps every mutation forever is correct and useless; what makes it
-queryable is a compaction pass that collapses history into current state. We are building the log
-without the compactor, then blaming the query planner.
 
 Everything below is measured on LongMemEval-S: 500 questions whose answers sit in 53-session
 haystacks, with the conversations *not* in context at query time. A 7B model with no memory
@@ -90,22 +87,42 @@ The ceiling is the paper's most useful number. Inject the correct sessions by ha
 jumps from 0.350 to 0.550 — retrieval surfaces the right context only 39% of the time. A 284B
 reader does not help either.
 
-## What to Do About It
+## For a Software Engineer
 
-The ranking work will not pay. Three of five signals measured negative and learned weights moved
-nothing, because an unbounded lexical score swamps everything else in a linear combination. The
-step nearly everyone skips — deciding what is worth keeping at all — was worth more than every
-scoring change combined.
+This is log compaction, and you have already shipped it.
 
-Start with the cheapest version, today: at the end of a session, ask the model for the five things
-worth remembering and append *only those* to your notes file. That is consolidation done by hand,
-it needs no infrastructure, and it is most of the win.
+A write-ahead log that keeps every mutation forever is correct and useless; what makes it
+queryable is a compaction pass collapsing history into current state. Agent memory is the same
+shape, and we are building the log without the compactor — then blaming the query planner.
 
-When you are ready to automate it, run that as a background pass and retrieve against the facts
-rather than the transcript. Then measure: write twenty questions whose answers you know, and count
-how often the answer appears in what came back. If you already own a weighted scorer, set every
-non-lexical weight to zero for one run and see whether anything moves — on this evidence, nothing
-will.
+The signal-weighting work is the tell. Adding recency and usefulness to the score is adding index
+hints to a query that is scanning the wrong table. The hints are not wrong, just irrelevant next
+to what the scan is looking at.
+
+The number to hold onto: **3.1 facts beat 509**. If you have ever deleted two-thirds of a cache
+and watched the hit rate go up because the evictions were finally hitting the right entries, you
+already have the intuition. New to this? Start at AI basics →
+[How Retrieval Works](#learn/retrieval).
+
+## What This Means for You
+
+**When this matters.** Anything your agent is supposed to remember after the conversation ends: a
+chat assistant that should recall last week, a coding agent keeping notes across sessions, the
+`CLAUDE.md`-style file you top up by hand. If you have ever watched an agent confidently forget
+something it was told on Tuesday, this is the machinery that failed.
+
+**How it affects you.** The ranking work will not pay. Three of five signals measured negative and
+learned weights moved nothing, because an unbounded lexical score swamps everything else in a
+linear combination. The step nearly everyone skips — deciding what is worth keeping at all — was
+worth more than every scoring change combined.
+
+**What to do about it.** Start with the cheapest version, today: at the end of a session, ask the
+model for the five things worth remembering and append *only those* to your notes file. That is
+consolidation done by hand, it needs no infrastructure, and it is most of the win. When you are
+ready to automate it, run that as a background pass and retrieve against the facts rather than the
+transcript. Then measure: write twenty questions whose answers you know, and count how often the
+answer appears in what came back. If you already own a weighted scorer, set every non-lexical
+weight to zero for one run and see whether anything moves — on this evidence, nothing will.
 
 ## Implementing It
 

@@ -914,3 +914,36 @@ reached it for free — the real gap was that nothing *gated* the live push.
   (`publish.sh` and `publish_github.sh` — they are copies), the two publish SKILL.md prose
   descriptions, `ai-daily-learn-video/SKILL.md`, and `CLAUDE.md`. The gates fail silently; the
   rest merely go stale.
+
+## 2026-08-31 — spec-wide (the six-section order is reverted)
+- **Note**: "think again I feel the newstrcure is nota lot different from we have come up wchich
+  is easy to read espcial the middlw secions we had", then: "lets revert to waht we had before
+  just mellow the software enginer path in problem and make key insights easy to understand and
+  each idnfivual section limit rather than over all limit and for th rest lets revert".
+- **Verdict**: the six-section change is withdrawn. The user was right on both counts and the
+  measurement backs him.
+- **What was actually delivered, measured**: the "rearchitecture" was two edits — delete
+  `For a Software Engineer`, shrink `What This Means for You`. Everything else was identical. On
+  the article it was applied to, the middle went from **three sections and 710 words to two and
+  524**: 186 words and a heading removed from the part the owner reads as the readable one.
+- **Why the middle reads well**: it alternates modes. Mechanism, then the translation into
+  something the reader has already shipped, then what to do — three ways of thinking, three
+  headings, each scannable. Merging them produced one 358-word mechanism monolith followed by a
+  single action beat, and the alternation was gone.
+- **The direction was backwards.** Counted properly, the reference article that prompted this
+  carries ~5 top-level stages, 8 reader-question sub-headings and 7 inline figures across ~6,000
+  words. Its readability comes from **more small units, each answering one question with a
+  figure**. "Every section must advance the argument" was read as "merge sections" and went the
+  opposite way.
+- **Changed**: `build.js` — `SIX_SECTION_SINCE`, `FIXED_SECTIONS_V6` and `ENGINEER_ANCHOR_RE`
+  deleted; the spine is the seven-section order again; bands restored for `For a Software
+  Engineer` (120-210) and `What This Means for You` (200-300); the `[[visualize]]` marker is
+  supported but no longer required; the reader-question check is date-gated from 2026-08-31 so the
+  back catalog stays clean.
+- **Kept, each endorsed separately**: per-section word bands instead of a document total, the
+  `Key insight` lint, reader-question sub-headings, and inline figures. Also kept: the software
+  -engineering framing now appears **twice at two weights** — a light clause inside `The Problem`
+  that hints at the shape without spending the analogy, and the full comparison in its own section.
+- **Changed**: `contract.md`, `SKILL.md`, `CLAUDE.md` — all three now state the seven-section order
+  and record that the merge was tried and reverted, so it is not proposed again.
+- **Changed**: both 2026-08-31 sessions restored to seven sections and republished.

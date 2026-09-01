@@ -288,7 +288,7 @@ decision the reader makes this month.
 
 **Tier C — Frontier (~20%).** The credibility layer: proof this site reads primary sources
 rather than press releases. Keep it — but capped, and it still owes the reader a
-"What to Do About It" section like everything else.
+"What This Means for You" section like everything else.
 8. Applied Research — papers with working code, reproducible results, practical implications.
 9. AI Hardware for Engineers — **how to actually use the hardware you have or rent**: picking
    an instance type, quantization you can run today, inference-speed wins, memory limits,
@@ -354,17 +354,19 @@ Write `~/ai_learning/YYYY-MM-DD/topic.md`:
 [3-6 sentences. What breaks today, concretely, and what it costs — the significance argument
 lives here now. Open on the specific failure, never on a definition. See the rules below.]
 
-## How [the fix] Works
-[TOPIC-NAMED, must start with "How". OPENS with the engineer anchor as its first sentence,
-beginning literally "From a software engineering perspective, ..." and naming something the
-reader has already shipped — one or two sentences, comparing, never re-explaining. Then the
-mechanism, shallow to deep in ONE pass. Use ### sub-headings named for their subject
-(### Byte Pair Encoding), not for their function. Define every term in the sentence that first
+## How [the thing] Works
+[TOPIC-NAMED, must start with "How". The mechanism, shallow to deep in ONE pass. Prefer ###
+sub-headings phrased as the reader's own question at that moment (### Why not just split on
+spaces?), and put a figure where the difficulty is. Define every term in the sentence that first
 needs it; there is no Glossary.]
 
-## What to Do About It
-[ONE beat, not three labelled parts: the decision, then the graduated actions. The FIRST action
-must carry no precondition. REQUIRED on every session, including Tier C.]
+## For a Software Engineer
+[2-4 short paragraphs. ONE analogy to something they have already shipped, plus the number worth
+holding onto. It sits AFTER the mechanism so it can compare rather than re-explain.]
+
+## What This Means for You
+[Three labelled parts — When this matters / How it affects you / What to do about it. The FIRST
+action must carry no precondition. REQUIRED on every session, including Tier C.]
 
 ## Implementing It
 [REQUIRED, and the section with the most prose in the document. Two labelled parts: **The
@@ -380,20 +382,10 @@ before adopting it.]
 
 ```
 
-**Two shapes, chosen by the reader's state.** Default to **Fix**: the reader has a live problem,
-so `The Problem` names the fix before it ends. Use **Explainer** when the reader is curious rather
-than stuck ("what actually is a cached token") — add `## By the End of This You Will` right after
-the ELI5, two to four bullets promising what they will understand, and `The Problem` may then
-withhold the answer so the reveal is earned. The promise is what buys the deferral; without it,
-withhold nothing. Both shapes keep every artifact and the whole implementation payload.
-
-```markdown
-## By the End of This You Will
-
-- Know why exponential backoff spreads retries out without reducing them
-- Have built the intuition for why a ratio is self-limiting and a count is not
-- Be able to set a retry budget from your own measured traffic rather than a default
-```
+**An Explainer variant** may add `## By the End of This You Will` right after the ELI5 — two to
+four bullets promising what the reader will understand — when the reader is curious rather than
+stuck. That promise is what licenses withholding the answer until later. Everything else, every
+artifact and the whole implementation payload, is identical.
 
 **Sub-headings in the mechanism section are the reader's interruption, in their voice.** This is
 the single biggest flow win available and it is nearly free. At the moment a reader starts to
@@ -402,18 +394,17 @@ doubt, say the doubt out loud as the heading, then answer it.
 - ✓ `### Why not just cap retries per call?` · `### Wait, what happens when the budget runs out?`
 `--check` warns when a mechanism section has two or more sub-headings and none is a question.
 
-**Put the figure where the difficulty is.** A line reading exactly `[[visualize]]` splices the
+**Put the figure where the difficulty is** — encouraged, not required. A line reading exactly `[[visualize]]` splices the
 interactive artifact into the reading flow at that point, and `[[diagram]]` does the same for the
 diagram. Place the visualizer immediately after the paragraph that raises the question it answers
-— not at the end, and never in a tab the reader has to go looking for. `--check` warns if a
-session ships a visualizer and never places the marker.
+— not at the end, and never in a tab the reader has to go looking for.
 
-**Two more sections went on 2026-09-01**, and the reason is flow rather than length. `For a
-Software Engineer` was a *second* analogy landing after the mechanism, and `What This Means for
-You` restated the problem before reaching its action — so an article ran problem → mechanism →
-analogy again → applicability again → and only fifth, the fix. Both jobs survive: the engineer
-anchor as section 3's signposted opening sentence, and the action as `What to Do About It`, with
-"when this matters" moved into `The Problem` where the reader meets the failure.
+**The middle sections keep their headings.** A six-section variant that merged `For a Software
+Engineer` into the mechanism and collapsed `What This Means for You` was tried on 2026-08-31 and
+reverted the same day: it took the middle from three sections and 710 words to two and 524, and
+the middle is the part that reads well, because it alternates modes — mechanism, then the
+translation into something already shipped, then what to do. The lesson kept is the inverse:
+**readability comes from more small units with figures, never from merging sections.**
 
 **Three older sections are gone, and one line replaces them.** If this daily piece assumes
 a chapter (tokens, the agent loop, RAG, the harness), put a single sentence in `The Problem` or
@@ -510,8 +501,9 @@ specific articles with nothing left explaining why a reader outside the exact ca
 | --- | --- | --- |
 | `Explain Like I'm 5` | 60 | 120 |
 | `The Problem` | 190 | 320 |
-| `How <the fix> Works` | — | 370 |
-| `What to Do About It` | 150 | 260 |
+| `How <the thing> Works` | — | 370 |
+| `For a Software Engineer` | 120 | 210 |
+| `What This Means for You` | 200 | 300 |
 | `Implementing It` | 300 | 460 |
 | `When <the thing> Is the Wrong Tool` | 150 | 250 |
 
@@ -523,8 +515,8 @@ a spec dump lands and a simple topic is allowed to explain itself briefly.
 
 **No space filler.** Every section must carry something no other section has. These are the
 patterns that produce padding, and each one is a cut, not a rewrite:
-- The same point restated in `The Problem`, the mechanism section and `What to Do About It`.
-  Pick the one that owns it. The six-section order exists to make this hard: the old eleven
+- The same point restated in `The Problem`, the mechanism section and `What This Means for You`.
+  Pick the one that owns it. The seven-section order exists to make this hard: the old eleven
   explained the topic four times, so restating was the path of least resistance.
 - `The Problem` explaining *that* it matters rather than what it costs or enables.
 - A definition given twice — once inline where the term is used and again a screen later. Inline
@@ -675,7 +667,7 @@ for what someone would plausibly filter by, not to describe the article exhausti
 practically. Assume fluency in general software engineering — caching, padding, schedulers,
 quantization, compilers, batching, indexes, back-pressure. Do **not** assume fluency in AI
 internals, and do not assume they can decode an acronym from context. The framing sections
-(Problem, the engineer anchor, What to Do About It) exist because the deep sections
+(Problem, For a Software Engineer, What This Means for You) exist because the deep sections
 alone lose this reader.
 
 **`## Explain Like I'm 5`** — leads the document deliberately, because a reader who bounces off
@@ -789,33 +781,21 @@ two sections they explained the same thing twice at two depths.
   explained abstractly is not.
 - Depth is not the problem and never gets reduced. The entry to it was the problem.
 
-**The engineer anchor — section 3's first sentence, not a section.** This is the site's most
-distinctive move: no comparable publication translates AI topics into engineering the reader has
-already done. It stays, and it must **announce itself**, because without the old heading nothing
-else tells the reader this is the translation beat.
+**`## For a Software Engineer`** — the site's most distinctive section: no comparable publication
+translates AI topics into engineering the reader has already done. Keep it.
+- **One analogy, not three.** Name the thing they have shipped explicitly: "this is a configuration
+  precedence bug", "this is head-of-line blocking", "this is log compaction".
+- **It sits after the mechanism, so compare — never re-explain.** Aim for ~150-200 words.
+- **The framing appears twice, at two weights.** A light clause inside `The Problem` that hints at
+  the shape without spending the analogy, then the full comparison here where it has room.
+  - ✓ in `The Problem`: *"If that sounds like tuning a query planner when the real problem is what
+    got written to the table, hold that thought."*
+  - ✓ here: the full write-ahead-log-and-compaction comparison, with the number to hold onto.
 
-- **Begin it literally "From a software engineering perspective, …"** (or "From a software
-  engineer's perspective"). `--check` enforces the opener. The signpost is the point: it is what
-  the heading used to do.
-- **Then name the thing they have already shipped**, explicitly: "this is a configuration
-  precedence bug, and you have shipped one", "this is head-of-line blocking", "this is log
-  compaction". One anchor, not three.
-- **One or two sentences. It compares; it never re-explains.** As a heading this move ran to 220+
-  words and re-taught the topic before drawing the analogy, which is exactly what made it a
-  digression. The mechanism follows immediately after it.
-  - ✗ a paragraph explaining what subagents are, then the analogy
-  - ✓ *"From a software engineering perspective, this is a configuration precedence bug, and you
-    have shipped one — the same shape as a framework that reads `DATABASE_URL`, a config file and
-    a CLI flag, then reorders them in a minor release."*
+**`## What This Means for You`** — three labelled parts, **When this matters** / **How it affects
+you** / **What to do about it**, because the labels are what make it scannable.
 
-**`## What to Do About It`** — one beat, and the section that decides whether the article was
-worth the reader's time. Its old three-part shape ("When this matters" / "How it affects you" /
-"What to do about it") restated the problem twice before reaching the action; the first two parts
-now live in `The Problem`, where the reader actually meets the failure.
-
-- **Lead with the decision**, in the reader's terms: what they should conclude and why. One or two
-  sentences.
-- **Then graduated actions, and the first one must carry no precondition.** This is the rule that
+- **Graduated actions, and the first one must carry no precondition.** This is the rule that
   fixes the narrowness measured on 2026-08-31, where every recent article opened on a compound
   condition ("you maintain an MCP server *and* have a tool that exceeds your proxy timeout") and
   left everyone else with nothing. Give the thing anyone can do today first — a five-line config
@@ -1199,7 +1179,7 @@ unknown Category / Level / For / tag, no Hook, unrenderable diagram, **no
 `## Implementing It` section**, **no fenced code block in `topic.md`**. Do not present the
 summary until today's id is clean.
 
-The linter also now catches what used to be honour-system: the six-section order (missing,
+The linter also now catches what used to be honour-system: the seven-section order (missing,
 mis-ordered, or retired sections, and a mechanism/counter-case heading that does not name the
 topic), `code_example.py` over 150 lines, a visualizer missing its CSP / session-id marker /
 `ResizeObserver` height / Reset button, and `## The Problem` slipping into momentum reporting.
