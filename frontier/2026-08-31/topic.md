@@ -21,7 +21,8 @@ you which answers were the shaky ones — and telling those apart was the only r
 
 A very common pattern in production looks like this: ask the model for an answer and a confidence
 score, then route anything under a threshold to a human, a bigger model, or a retry. It is cheap,
-it needs no special API access, and it feels principled.
+it needs no special API access, and it feels principled. If you have a branch keyed on
+`confidence` anywhere, this is about that branch.
 
 The question nobody checks is whether that spoken number has any relationship to the model's own
 internal uncertainty. Researchers at Dartmouth and Oakland measured exactly that across 30 models
@@ -35,83 +36,71 @@ correlation is **r = 0.135**. And when the models are split by type, base models
 while **instruction-tuned models come in at r = −0.0048, with p = 0.961**: statistically
 indistinguishable from no relationship at all.
 
-Instruction-tuned models are the ones nearly everyone ships.
+Instruction-tuned models are the ones nearly everyone ships. So the gate is probably sorting on
+something close to noise, and it fails silently: the pipeline still runs, the dashboard still
+looks sensible, and the escalations you receive are simply not the cases that needed escalating.
 
 ## How a Model Reports Confidence
 
-There are two separate channels here and the article turns on not confusing them.
+From a software engineering perspective, this is an unvalidated telemetry source, and you have
+shipped one of those. Think of a health check that returns 200 because the handler is reachable,
+not because the dependency is alive. Present, well-formed, cheap to read, load-bearing
+in your routing — and never once confirmed to move when the thing it measures moves.
 
-**Internal confidence** is a quantity the machinery already computes. For a classification-shaped
-answer it is the softmax probability over the answer tokens. For free generation it is fuzzier,
-and the paper uses semantic entropy — sample several answers, group the ones that mean the same
-thing, and measure how spread out the meanings are. It requires access to logits or to repeated
-sampling.
+Two channels are at work, and the article turns on not confusing them.
 
-**Linguistic confidence** is text. You asked the model to say how sure it was, and it produced a
-number the way it produces any other token. Nothing in the architecture connects that number to
-the softmax distribution over the answer. Whether they agree is an empirical question, not a
-guarantee, and that is the whole finding.
+**Internal confidence** is already computed by the machinery: the softmax probability over the
+answer tokens, or for free generation, semantic entropy — sample several answers, group those that
+mean the same thing, measure the spread. It needs logits or repeated sampling.
+
+**Linguistic confidence** is text. You asked how sure it was, and it produced a number the way it
+produces any other token. Nothing in the architecture connects that number to the softmax over the
+answer. Whether they agree is an empirical question, not a guarantee.
 
 ### Three axes that are not interchangeable
 
-The paper's most useful contribution is refusing to collapse "is this confidence any good?" into
-one number. It measures three things separately.
+The paper refuses to collapse "is this any good?" into one number, and measures three things
+separately.
 
-**Association** asks whether the two move together across instances — does the model say a lower
-number on the questions where its internal probability is lower? **Magnitude agreement** asks
-whether the two are numerically close. **Calibration** asks whether a reported 80% is right about
-80% of the time.
+**Association** asks whether the two move together across instances. **Magnitude agreement** asks
+whether they are numerically close. **Calibration** asks whether a reported 80% is right about 80%
+of the time.
 
 These come apart in practice. A model can have strong association and still be systematically
-overconfident. It can sit close on average while carrying no instance-level information at all.
-Passing one axis tells you nothing about the other two.
+overconfident, or sit close on average while carrying no per-item information at all. Passing one
+axis tells you nothing about the other two.
 
-### Why instruction tuning makes it worse
+### Why does instruction tuning make this worse?
 
-The mechanism is distributional, and it is the part worth internalising.
+Because the damage is distributional.
 
-Instruction tuning pushes models toward confident, agreeable phrasing. Their reported confidence
-collapses into a narrow band near the top — lots of 90s, a few 85s. Their internal probabilities
-compress toward 1 as well. When almost every instance gets almost the same number, there is
-nothing left to correlate, because correlation is a statement about variation and the variation
-is gone.
+Instruction tuning pushes models toward confident, agreeable phrasing, so reported confidence
+collapses into a narrow band near the top — lots of 90s, a few 85s — while internal probabilities
+compress toward 1. When almost every instance gets the same number there is nothing left to
+correlate: correlation is a statement about variation, and the variation is gone.
 
-The paper's phrase for this is a **lossy channel**: linguistic confidence carries some of the
-internal signal, and how much survives depends mostly on how spread out the reported numbers are.
-Prompting changes the spread but not the grounding. Attitude cues — telling the model to be
-careful, or confident — move the numbers without improving alignment.
+[[visualize]]
 
-## For a Software Engineer
+The paper's phrase for this is a **lossy channel**: how much of the internal signal survives
+depends mostly on how spread out the reported numbers are. Prompting changes the spread, not the
+grounding — attitude cues move the numbers without improving alignment.
 
-This is an unvalidated telemetry source, and you have shipped one of those.
+## What to Do About It
 
-It is the same shape as a health-check endpoint that returns 200 because the handler is reachable,
-not because the dependency behind it is alive. The signal is present, well-formed, cheap to read,
-and load-bearing in your routing logic — and nobody ever confirmed it moves when the thing it
-supposedly measures moves.
+Treat a spoken confidence score as an unvalidated signal until you have checked it, the same way
+you would not gate a deploy on a health check nobody has ever seen go red.
 
-The number to hold onto: **r = 0.135 at the instance level, and r ≈ 0 for instruction-tuned
-models.** If you have a threshold branch keyed on `confidence`, that branch is close to a coin
-flip weighted by phrasing habits. New to this? Start at AI basics →
-[How Model Calibration Works](#learn/calibration).
+Start today with the cheapest check, on data you already have: look at the *spread* of the
+confidence values in your logs. If 90% of them fall inside a ten-point band, stop there — a
+collapsed distribution cannot rank anything, and no threshold you pick will help. That is a
+five-minute query and it settles the question for most pipelines.
 
-## What This Means for You
+If the spread is healthy, run the three-axis diagnostic below and read the axes as a set rather
+than averaging them into a score. High association with a large magnitude gap means the ranking is
+usable but the numbers are not probabilities — sort with it, never threshold on it.
 
-**When this matters.** You have a prompt that asks for a confidence score, and code somewhere that
-branches on it — escalate below 0.7, auto-approve above 0.9, retry in between. That covers most
-LLM-in-the-loop pipelines that were not built by someone with logits access.
-
-**How it affects you.** Your gate is probably sorting on something close to noise, and it fails
-silently: the pipeline still runs, the numbers still look sensible in a dashboard, and the
-escalations you receive are not the cases that needed escalating. Worse, the aggregate statistic
-you would naturally compute to check it (r = 0.48) looks fine, because averaging across tasks and
-models hides the instance-level collapse.
-
-**What to do about it.** Before touching the threshold, look at the *spread* of the confidence
-scores you are already logging. If 90% of them fall in a band of ten points, stop — a collapsed
-distribution cannot rank anything, and no threshold you pick will help. That is a five-minute
-query against data you already have. Then, if you have logprob access, run the three-axis
-diagnostic below; if you do not, use sampling agreement as the internal channel instead.
+And if you have logprobs in the response at all, use those instead. The spoken number is a lossy
+copy of something you can read directly, and the whole problem disappears.
 
 ## Implementing It
 

@@ -245,7 +245,7 @@ const SECTION_ORDER_SINCE = "2026-08-25";
 // articles written under the old total cap would every one of them warn (Problem
 // and What This Means for You below floor) -- that is the evidence the bands are
 // aimed at the right sections, not a backlog to go and fix.
-const SECTION_BANDS_SINCE = "2026-09-01";
+const SECTION_BANDS_SINCE = "2026-08-31";
 
 // `Key insight` renders in a highlighted box ABOVE `Explain Like I'm 5` -- it is the
 // first prose anyone reads, at the moment they have met none of the article's
@@ -259,7 +259,7 @@ const SECTION_BANDS_SINCE = "2026-09-01";
 // Only "one" is exempt from the number count: it is an article far more often than
 // it is a quantity ("one setting", "one of the"), and counting it would fire on
 // entries that read perfectly well.
-const KEY_INSIGHT_SINCE = "2026-09-01";
+const KEY_INSIGHT_SINCE = "2026-08-31";
 const KEY_INSIGHT_MAX_SENTENCES = 3;
 const KEY_INSIGHT_MAX_WORDS = 80;
 const KEY_INSIGHT_NUMBER_RE = /\b(two|three|four|five|six|seven|eight|nine|ten|dozen|hundred|thousand|million|\d+(?:[.,]\d+)?%?)\b/gi;
@@ -284,7 +284,13 @@ const FIXED_SECTIONS = [
 // The engineer anchor is not gone; it is demoted from a heading to one required
 // sentence opening the mechanism section. As a heading it invited re-explaining the
 // topic, which is what made it a digression rather than a bridge.
-const SIX_SECTION_SINCE = "2026-09-01";
+const SIX_SECTION_SINCE = "2026-08-31";
+
+// The structural rules reach the Frontier track from its second session onward.
+// frontier/2026-08-25 was written in the old eleven-section shape and is a dated
+// log entry, not a backlog item -- the same reason every other rule here carries a
+// start date rather than being applied retroactively.
+const FRONTIER_STRUCTURE_SINCE = "2026-08-26";
 
 // The engineer anchor, demoted from a heading to the mechanism section's opening
 // sentence, must still ANNOUNCE itself. Without the old `## For a Software Engineer`
@@ -312,7 +318,7 @@ const READER_QUESTION_RE = /\?\s*$|^(wait|hold on|hold up|but |so |why |what |ho
 // A figure earns its place at the point of difficulty. `[[visualize]]` on its own
 // line in topic.md splices the interactive artifact into the reading flow there,
 // and the reader drops the now-duplicate tab.
-const INLINE_FIGURE_SINCE = "2026-09-01";
+const INLINE_FIGURE_SINCE = "2026-08-31";
 
 const ENGINEER_ANCHOR_RE =
   /^\s*(?:\*\*)?From a software engineer(?:'s|ing)?\s+(?:perspective|standpoint|point of view)\b/i;
@@ -859,7 +865,15 @@ function compile(id, journal, runner, opts) {
     }
   }
 
-  if (kind === "daily" && date >= IMPLEMENT_SECTION_SINCE) {
+  /* Frontier is written to the SAME contract as a lab session -- contract.md says
+     so in its first paragraph -- but this block was gated to `kind === "daily"`,
+     so every structural rule (Implementing It, fenced code, section order, retired
+     sections, the engineer anchor) silently skipped the Frontier track. The bands
+     and the figure marker sit outside this block and did apply, which is what made
+     the gap visible on 2026-08-31: a Frontier session drew band warnings and no
+     structural ones. Learn sessions stay exempt; they are a different shape. */
+  const structuralSince = kind === "frontier" ? FRONTIER_STRUCTURE_SINCE : IMPLEMENT_SECTION_SINCE;
+  if ((kind === "daily" || kind === "frontier") && date >= structuralSince) {
     const sections = splitSections(topic.body);
     const impl = sections.get("Implementing It");
     if (impl === undefined) {
