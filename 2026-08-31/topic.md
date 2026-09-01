@@ -81,8 +81,6 @@ The scorer weights BM25 lexical match, time decay, the usefulness score and a ti
 them five- to tenfold and they only add noise. Five normalisation schemes produced *identical*
 accuracy: rescaling cannot reorder a ranking BM25 already dominates.
 
-[[visualize]]
-
 The ceiling is the paper's most useful number. Inject the correct sessions by hand and accuracy
 jumps from 0.350 to 0.550 — retrieval surfaces the right context only 39% of the time. A 284B
 reader does not help either.

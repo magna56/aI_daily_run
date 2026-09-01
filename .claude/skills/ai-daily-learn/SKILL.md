@@ -106,8 +106,7 @@ on the legacy path"), and then say what it decides.
   not a nice-to-have), `diagram.excalidraw`, `code_example.py`, `articles.md`. Read
   [contract.md](contract.md) before writing. A folder that is only a write-up is not done.
 - **Visualizer**: read [visualize.md](visualize.md) and match the newest existing
-  `visualize.html` in this repo. Without it there is no visualizer at all — no inline figure and
-  no tab.
+  `visualize.html` in this repo. The Visualize tab is empty without this file.
 - **Journal**: `~/ai_learning/journal.md` tracks all sessions
 - **Code**: Pure Python only — no API keys, no external services. Self-contained demos.
 - **Excalidraw**: Open at excalidraw.com (drag & drop)
@@ -357,7 +356,7 @@ lives here now. Open on the specific failure, never on a definition. See the rul
 ## How [the thing] Works
 [TOPIC-NAMED, must start with "How". The mechanism, shallow to deep in ONE pass. Prefer ###
 sub-headings phrased as the reader's own question at that moment (### Why not just split on
-spaces?), and put a figure where the difficulty is. Define every term in the sentence that first
+spaces?). Define every term in the sentence that first
 needs it; there is no Glossary.]
 
 ## For a Software Engineer
@@ -393,11 +392,6 @@ doubt, say the doubt out loud as the heading, then answer it.
 - ✗ `### Ratio versus count` · `### Budget exhaustion` · `### The chain that just inverted`
 - ✓ `### Why not just cap retries per call?` · `### Wait, what happens when the budget runs out?`
 `--check` warns when a mechanism section has two or more sub-headings and none is a question.
-
-**Put the figure where the difficulty is** — encouraged, not required. A line reading exactly `[[visualize]]` splices the
-interactive artifact into the reading flow at that point, and `[[diagram]]` does the same for the
-diagram. Place the visualizer immediately after the paragraph that raises the question it answers
-— not at the end, and never in a tab the reader has to go looking for.
 
 **The middle sections keep their headings.** A six-section variant that merged `For a Software
 Engineer` into the mechanism and collapsed `What This Means for You` was tried on 2026-08-31 and
@@ -992,8 +986,7 @@ If the script fails, generate the Excalidraw JSON directly using this element fo
 
 ### Step 8: Generate visualize.html (required)
 
-**Do not skip this step.** A session without `visualize.html` has no visualizer — neither the
-inline figure at `[[visualize]]` nor a tab.
+**Do not skip this step.** A session without `visualize.html` has no Visualize tab.
 
 Read [visualize.md](visualize.md) and open the newest existing `visualize.html` in this repo
 before writing. Then write `~/ai_learning/YYYY-MM-DD/visualize.html`: a custom interactive

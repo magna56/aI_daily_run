@@ -60,8 +60,6 @@ Take the parking space away and the surplus is forced onto tokens that *are* in 
 distorting every score that mattered. That is why sink-free windows fail so completely, and why
 four tokens fix it.
 
-[[visualize]]
-
 ### So is linear attention simply worse?
 
 No, and the paper is careful here. On BABILong at zero added context, LoLCATs scores 56% against

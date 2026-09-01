@@ -1,4 +1,4 @@
-# visualize.html — the required interactive artifact
+# visualize.html — required Visualize pane
 
 **The test, same as every other artifact:** does the reader leave able to build something?
 A visualizer earns its place by building *intuition for a mechanism they are about to
@@ -8,24 +8,12 @@ merely restates the write-up fails this, however nice it looks.
 
 This is not optional and not a decorated summary. The reader lazy-loads this file in an
 iframe with `sandbox="allow-scripts"` (no same-origin, no popups, no forms, no storage).
-If the file is missing there is no visualizer at all — neither the inline figure nor the tab.
+If the file is missing, the Visualize tab is gone.
 
 **Before writing, open the newest `YYYY-MM-DD/visualize.html` in this repo and match that
 quality bar.** Recent gold: `2026-08-23/visualize.html` (RAG grid heatmap) and
 `2026-08-23-s2/visualize.html` (memory-headroom lab). Both: one mechanism, live numbers
 from `code_example.py`, labelled controls, Reset, dark chrome, height postMessage.
-
-## Where it goes
-
-**In the reading flow, not in a tab.** From 2026-09-01, `topic.md` places a line reading exactly
-`[[visualize]]` at the point of difficulty the artifact resolves, and the reader splices it into
-the Overview prose there. When a session does that, the Visualize tab disappears — the artifact is
-identical, only where the reader meets it has changed.
-
-Put it immediately after the paragraph that raises the question it answers. A visualizer at the
-end of the article is a visualizer nobody opens; one sitting under the sentence that just confused
-someone is the thing that rescues them. `--check` warns when a session ships `visualize.html` and
-never places the marker.
 
 ## What it must do
 

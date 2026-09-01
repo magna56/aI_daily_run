@@ -91,17 +91,14 @@ never fix it by loosening the spec. The blocking ones:
 - `no "## Implementing It" section` — the write-up never shows the code the reader has to write.
 - `no fenced code block` — the section exists but defers to `code_example.py`, which most readers
   never open and nobody reading on a phone will run.
-- anything about `visualize.html` — a session without a working visualizer has nothing to inline
-  at `[[visualize]]` and no tab either.
+- anything about `visualize.html` — a session without a working visualizer has no Visualize tab.
 - **the readability warnings** — a paragraph over 110 words, a sentence over 45, a single-block
   `The Problem`, or **any section outside its word band**. Both directions block, and the floors
   matter most: the 2026-08-31 regression was sections being *drained* to pay for a document-wide
   total, so a gate that only caught overflow would have passed every article that caused the
   complaint. These block because they are the failure the reader actually experiences: on 2026-08-27 the site's own owner abandoned a
   published session partway through, and it had passed every check that existed at the time.
-- **the structural warnings** — a wrong section order, a retired section, a missing engineer
-  anchor ("From a software engineering perspective, …"), an unplaced `[[visualize]]`, or a bad
-  `Key insight`. The last blocks because it is the first prose a reader sees, above the ELI5.
+- **the structural warnings** — a wrong section order, a retired section, or a bad `Key insight`. The last blocks because it is the first prose a reader sees, above the ELI5.
   The reader's-question sub-heading check is advisory: it is a heuristic over heading phrasing
   and can reasonably be wrong about a given article.
   Fix by **cutting, never by redistributing** between sections, and correct `**Time to read**` to

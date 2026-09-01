@@ -58,8 +58,6 @@ The borrowed suite is different in kind. Those assertions were written by other 
 code, before your project existed. Nothing in them can have been shaped to match your agent's
 misreading.
 
-[[visualize]]
-
 ### So does every failure mean I have a bug?
 
 No, and this is where the judgement lives. A ported test fails for one of three reasons: your code

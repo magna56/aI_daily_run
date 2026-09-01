@@ -75,8 +75,6 @@ collapses into a narrow band near the top — lots of 90s, a few 85s — while i
 compress toward 1. When almost every instance gets the same number there is nothing left to
 correlate: correlation is a statement about variation, and the variation is gone.
 
-[[visualize]]
-
 The paper's phrase for this is a **lossy channel**: how much of the internal signal survives
 depends mostly on how spread out the reported numbers are. Prompting changes the spread, not the
 grounding — attitude cues move the numbers without improving alignment.

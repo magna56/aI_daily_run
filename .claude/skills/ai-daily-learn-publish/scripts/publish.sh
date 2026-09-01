@@ -96,15 +96,15 @@ content_gate() {
   # that caused the complaint. A pattern written as 'words of prose \(cap' silently
   # misses 'words of prose (floor ...)', which is exactly how this list went stale.
   #
-  # Structural breaks block too: wrong section order, a retired section, a missing
-  # engineer anchor, an unplaced [[visualize]], and a bad Key insight -- that last
-  # one because it is the first prose a reader sees, above the ELI5. The
+  # Structural breaks block too: wrong section order, a retired section, and a bad
+  # Key insight -- that last one because it is the first prose a reader sees,
+  # above the ELI5. The
   # reader's-question sub-heading check stays ADVISORY: it is a heuristic over
   # heading phrasing and can reasonably be wrong about a given article.
   local blocking
   blocking=$(node build.js --check 2>&1 \
     | grep -F "$LINT_ID:" \
-    | grep -E 'Implementing It|fenced code block|visualize\.html|no topic\.md|-word paragraph \(cap|-word sentence \(cap|is a single block|words of prose \(cap|words of prose \(floor|section order is|is retired|engineer anchor|never places \[\[visualize\]\]|"Key insight"' || true)
+    | grep -E 'Implementing It|fenced code block|visualize\.html|no topic\.md|-word paragraph \(cap|-word sentence \(cap|is a single block|words of prose \(cap|words of prose \(floor|section order is|is retired|"Key insight"' || true)
 
   if [ -n "$blocking" ]; then
     printf '[publish] ERROR: content gate — %s does not meet contract.md:\n' "$SESSION" >&2

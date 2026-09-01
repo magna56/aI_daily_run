@@ -282,8 +282,9 @@ const FIXED_SECTIONS = [
 // Do not re-attempt the merge.
 //
 // What survived, each endorsed separately: per-section word bands instead of a
-// document-wide total, the `Key insight` lint, reader-question sub-headings, and
-// inline figures placed with [[visualize]].
+// document-wide total, the `Key insight` lint, and reader-question sub-headings.
+// Inline figures were tried and reverted on 2026-09-01: the visualizer belongs in
+// its own tab, and the [[visualize]] marker no longer means anything.
 // The structural rules reach the Frontier track from its second session onward.
 // frontier/2026-08-25 was written in the old eleven-section shape and is a dated
 // log entry, not a backlog item -- the same reason every other rule here carries a
@@ -311,10 +312,6 @@ const CONTRACT_SECTION = "By the End of This You Will";
 const READER_QUESTION_SINCE = "2026-08-31";
 const READER_QUESTION_RE = /\?\s*$|^(wait|hold on|hold up|but |so |why |what |how come|does |do |isn't|is it|can |should )/i;
 
-// A figure earns its place at the point of difficulty. `[[visualize]]` on its own
-// line in topic.md splices the interactive artifact into the reading flow there,
-// and the reader drops the now-duplicate tab.
-const INLINE_FIGURE_SINCE = "2026-08-31";
 
 const MECHANISM_RE = /^How\s+.+/;      // "How the Hook Matcher Decides"
 const COUNTERCASE_RE = /^When\s+.+/;   // "When a Hook Is the Wrong Tool"
@@ -1147,19 +1144,6 @@ function compile(id, journal, runner, opts) {
 
   const source = firstLink(topic.meta.Source) ||
     (topic.meta.Source ? { label: topic.meta.Source, url: "" } : null);
-
-  /* An interactive artifact behind a tab is one click past the paragraph that
-     needed it. From INLINE_FIGURE_SINCE a session places it in the flow. */
-  if (date >= INLINE_FIGURE_SINCE) {
-    const marks = (topic.body.match(/^[ \t]*\[\[(visualize|diagram)\]\][ \t]*$/gm) || [])
-      .map((m) => m.trim().slice(2, -2));
-    if (marks.includes("visualize") && !visualize) {
-      warn(`${id}: topic.md has a [[visualize]] marker but there is no visualize.html.`);
-    }
-    if (marks.includes("diagram") && !diagram) {
-      warn(`${id}: topic.md has a [[diagram]] marker but there is no diagram.excalidraw.`);
-    }
-  }
 
   const payload = {
     id,

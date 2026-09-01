@@ -947,3 +947,27 @@ reached it for free — the real gap was that nothing *gated* the live push.
 - **Changed**: `contract.md`, `SKILL.md`, `CLAUDE.md` — all three now state the seven-section order
   and record that the merge was tried and reverted, so it is not proposed again.
 - **Changed**: both 2026-08-31 sessions restored to seven sections and republished.
+
+## 2026-09-01 — reader + spec (the visualizer goes back to its own tab)
+- **Note**: "can we move back visualizw to its own tab again update the skill as well"
+- **Verdict**: the inline-figure change is withdrawn. It shipped on 2026-08-31, borrowed from
+  ngrok's prompt-caching post, and lasted a day.
+- **Changed**: `index.html` — `overviewBody()`, `hasInlineFigure()`, `FIGURE_RE` and the
+  `.inline-fig` styles removed; Overview renders `md(p.topic)` again and the Visualize tab is
+  always available when the artifact exists. `visualizeShell()` stays, since it usefully separates
+  the markup from the pane.
+- **Changed**: `build.js` — `INLINE_FIGURE_SINCE` and the two marker lints deleted. A
+  `[[visualize]]` line now means nothing and would render as literal text, which is why the
+  markers had to come out of the sessions rather than just being ignored.
+- **Changed**: the four sessions that carried a marker — 2026-08-31, 2026-09-01 and both Frontier
+  pieces of the same dates — stripped and republished.
+- **Changed**: `contract.md`, `SKILL.md`, `visualize.md`, `CLAUDE.md` — the figure-placement rule
+  and every "no inline figure and no tab" phrasing reverted.
+- **Sibling skills, again**: both publish gates still blocked on `never places [[visualize]]` and
+  on the engineer anchor, a rule removed in the earlier six-section revert. Two dead patterns in a
+  regex that fails silently. Both gates and both SKILL.md prose descriptions cleaned, and the two
+  gates diffed to confirm they stayed identical. This is the third time this session that a
+  contract change had to be chased into `publish.sh` and `publish_github.sh`; they are the files
+  that never announce their own staleness.
+- **Kept**: per-section word bands, the `Key insight` lint, and reader-question sub-headings — the
+  three changes from the same batch that were not reverted.

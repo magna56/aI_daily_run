@@ -144,8 +144,7 @@ before it ends) → `How <the thing> Works` → `For a Software Engineer` → `W
 → **`## Implementing It`** → `When <it> Is the Wrong Tool`. A six-section merge of the middle was
 tried and reverted on 2026-08-31; do not re-attempt it. An article whose reader is curious rather
 than stuck may add `## By the End of This You Will` at position 2 and earn a later reveal. Every
-section has a word band with a floor as well as a cap, `[[visualize]]` may splice the interactive
-artifact into the reading flow at the point of difficulty, and `## Implementing It`
+section has a word band with a floor as well as a cap, and `## Implementing It`
 must be the longest section, must carry real fenced code in the write-up (not a pointer to
 `code_example.py`), must cover every role a change touches, and must include its **How you know
 it worked** and **When not to** parts. `code_example.py` is judged on whether an engineer can
