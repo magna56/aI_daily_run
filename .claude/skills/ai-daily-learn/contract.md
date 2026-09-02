@@ -45,11 +45,30 @@ Required `##` sections, in this order — **seven, five fixed and two named for 
 | --- | --- | --- |
 | 1 | `## Explain Like I'm 5` | fixed |
 | 2 | `## The Problem` | fixed |
-| 3 | `## How <the thing> Works` | **topic-named**, must start `How ` |
+| 3 | `## The Fix: <what to do>` | **topic-named**, must announce the solution |
 | 4 | `## For a Software Engineer` | fixed |
 | 5 | `## What This Means for You` | fixed |
 | 6 | `## Implementing It` | fixed |
 | 7 | `## When <the thing> Is the Wrong Tool` | **topic-named**, must start `When ` |
+
+**Section 3 announces the solution; it does not presume it.** It was `## How <the thing> Works`
+until 2026-09-01, and that form failed twice on different articles: scanned as a list the headings
+went `The Problem` → `How a Borrowed Test Suite Works` → `For a Software Engineer`, and nothing in
+that sequence tells the reader an answer has arrived. *How X Works* explains a mechanism to
+somebody who has not yet been told the mechanism is the point. Name it for the answer instead —
+`## The Fix: Borrow a Mature Project's Test Suite`, `## The Fix: Pin the First Four Tokens` — so
+that reading only the headings gives problem → fix → how it works → what to do. An Explainer-shape
+piece whose payoff is understanding rather than a change may use `## The Answer: …`. `--check`
+enforces this from 2026-09-01.
+
+**And state the fix, do not narrate it.** The sentence in `The Problem` that introduces the
+solution is an instruction, not a report of who discovered it. A description of what one engineer
+happened to do does not read as something the reader should go and do, even when the words are
+otherwise identical.
+- ✗ *"He took the test suites of well-known packages and had the AI rewrite them against his API."*
+- ✓ *"**Borrow your oracle: take the test suite of a mature project, have the agent port those
+  tests onto your API, and treat every failure as a question.** Dumpleton did this with packages
+  that lean on `unittest.mock`."*
 
 **The middle sections keep their own headings, and this has been tested.** On 2026-08-31 a
 six-section variant merged `For a Software Engineer` into the mechanism as a single sentence and

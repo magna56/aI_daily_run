@@ -34,12 +34,14 @@ tests and 150-plus pages of documentation, and by his own description "the AI wr
 tests and the prose. I set the direction, made the design calls, reviewed what came back, and sent
 plenty of it back."
 
-The interesting part is not that it worked. It is the check he used to know it had. He took the
-test suites of well-known packages that lean on `unittest.mock`, and had the AI rewrite those
-tests against his API instead. The oracle came from outside — from code he did not write and the
-agent could not have bent to match its own mistakes.
+The interesting part is not that it worked, but the check he used to know it had. **Borrow your
+oracle: take the test suite of a mature project that does something similar, have the agent port
+those tests onto your API, and treat every failure as a question to answer.** Dumpleton did this
+with packages that lean on `unittest.mock`. The assertions came from outside — written by other
+people, for other code, before his project existed, and so beyond anything his agent could have
+bent to match its own mistakes.
 
-## How a Borrowed Test Suite Works as an Oracle
+## The Fix: Borrow a Mature Project's Test Suite
 
 The technique has a name: **differential testing**. Run the same inputs through two independent
 implementations and treat any disagreement as a defect to explain. It is standard practice for

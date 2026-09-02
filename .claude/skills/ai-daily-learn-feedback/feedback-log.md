@@ -971,3 +971,31 @@ reached it for free — the real gap was that nothing *gated* the live push.
   that never announce their own staleness.
 - **Kept**: per-section word bands, the `Key insight` lint, and reader-question sub-headings — the
   three changes from the same batch that were not reverted.
+
+## 2026-09-01 — spec-wide (section 3 announces the solution)
+- **Note**: "in todays article the solution was not clear can we rearrgar section to sound like
+  what is solution and update the skil"
+- **Verdict**: standing rule. Second report of the same defect on a different article, so the
+  earlier prose-only fix was insufficient and needed to reach the headings.
+- **Diagnosis**: the earlier rule made `The Problem` name the fix before it ends, and 2026-09-01
+  obeyed it. The headings still told no story. Scanned as a list they read `The Problem` →
+  `How a Borrowed Test Suite Works as an Oracle` → `For a Software Engineer` → `What This Means
+  for You`, and nothing in that sequence announces that an answer has arrived. **A heading of the
+  form "How X Works" presumes the reader has already accepted X as the solution** — it explains a
+  mechanism to somebody who has not been told the mechanism is the point.
+- **Second, compounding fault**: where `The Problem` did name the fix, it *narrated* it — "He took
+  the test suites of well-known packages and had the AI rewrite them against his API." A report of
+  what one engineer happened to do does not read as an instruction, even with identical wording.
+- **Changed**: `build.js` — `MECHANISM_RE` now matches `The Fix …` / `The Answer …` as well as the
+  legacy `How …`, plus `SOLUTION_HEADING_SINCE = 2026-09-01` requiring the announcing form. Fires
+  on exactly the two sessions of that date and nothing in the back catalog.
+- **Changed**: `contract.md`, `SKILL.md`, `CLAUDE.md` — section 3 is `## The Fix: <what to do>`
+  (`## The Answer: …` for an Explainer), with a ✗/✓ pair for stating the fix rather than narrating
+  it, and the rule that reading only the headings must give problem → fix → how it works → what to
+  do.
+- **Changed**: both 2026-09-01 sessions renamed and their fix sentences restated as claims with
+  attribution following, not replacing, the instruction.
+- **Not changed**: the counter-case heading keeps its `When <the thing> Is the Wrong Tool` form,
+  which still pairs correctly, and the topic-named principle from 2026-08-25 is strengthened
+  rather than reversed — `The Fix: Pin the First Four Tokens` describes this article at least as
+  well as the form it replaces.

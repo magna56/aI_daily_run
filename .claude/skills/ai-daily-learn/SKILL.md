@@ -353,8 +353,10 @@ Write `~/ai_learning/YYYY-MM-DD/topic.md`:
 [3-6 sentences. What breaks today, concretely, and what it costs — the significance argument
 lives here now. Open on the specific failure, never on a definition. See the rules below.]
 
-## How [the thing] Works
-[TOPIC-NAMED, must start with "How". The mechanism, shallow to deep in ONE pass. Prefer ###
+## The Fix: [what to do]
+[TOPIC-NAMED, and it must ANNOUNCE the solution rather than presume it — "## The Fix: Borrow a
+Mature Project's Test Suite", not "## How a Borrowed Test Suite Works". Use "## The Answer: …" for
+an explainer whose payoff is understanding. Then the mechanism, shallow to deep in ONE pass. Prefer ###
 sub-headings phrased as the reader's own question at that moment (### Why not just split on
 spaces?). Define every term in the sentence that first
 needs it; there is no Glossary.]
@@ -495,7 +497,7 @@ specific articles with nothing left explaining why a reader outside the exact ca
 | --- | --- | --- |
 | `Explain Like I'm 5` | 60 | 120 |
 | `The Problem` | 190 | 320 |
-| `How <the thing> Works` | — | 370 |
+| `The Fix: <what to do>` | — | 370 |
 | `For a Software Engineer` | 120 | 210 |
 | `What This Means for You` | 200 | 300 |
 | `Implementing It` | 300 | 460 |
@@ -728,10 +730,11 @@ topic from feeling like showing off.
   then land it in a short paragraph of its own — two or three sentences, then one. `--check` warns
   on a single-block `The Problem` and on any paragraph over 110 words.
 
-**`## How <the thing> Works`** — the mechanism, and the one section whose heading names the
-topic instead of its own function. `## How the Hook Matcher Decides`, `## How Tokenization
-Splits Text`. This is `What It Is` and `Key Technical Details` merged into one pass, because as
-two sections they explained the same thing twice at two depths.
+**`## The Fix: <what to do>`** — the solution, named in the heading, then the mechanism behind it.
+`## The Fix: Pin the First Four Tokens`, `## The Fix: Borrow a Mature Project's Test Suite`. This
+is `What It Is` and `Key Technical Details` merged into one pass, because as two sections they
+explained the same thing twice at two depths — and it is now titled for the answer rather than for
+the mechanism, so a reader scanning the headings meets the fix instead of a description of one.
 
 - **One ladder, climbed once: what it is → how it works → the detail an implementer needs.** The
   old shape re-entered the topic four separate times; this one enters it once and keeps going.
@@ -774,6 +777,19 @@ two sections they explained the same thing twice at two depths.
   mechanism explained against a failure the reader recognises is remembered; the same mechanism
   explained abstractly is not.
 - Depth is not the problem and never gets reduced. The entry to it was the problem.
+
+**Section 3's heading is the solution, stated.** Reading only the headings must give
+problem → fix → how it works → what to do. The old `How <the thing> Works` form was reported as
+unclear twice, on different articles, because it explains a mechanism to a reader who has not been
+told the mechanism is the answer. `--check` enforces the `The Fix:` / `The Answer:` form.
+
+**State the fix in `The Problem`; do not narrate it.** The sentence that introduces the solution is
+an instruction, not a report of who found it.
+- ✗ *"He took the test suites of well-known packages and had the AI rewrite them against his API."*
+- ✓ *"**Borrow your oracle: take the test suite of a mature project, have the agent port those
+  tests onto your API, and treat every failure as a question.** Dumpleton did this with packages
+  that lean on `unittest.mock`."*
+Attribution follows the claim; it never replaces it.
 
 **`## For a Software Engineer`** — the site's most distinctive section: no comparable publication
 translates AI topics into engineering the reader has already done. Keep it.

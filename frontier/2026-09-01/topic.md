@@ -35,12 +35,12 @@ benchmarking a new cache against a baseline nobody bothered to configure properl
 thought.
 
 Because they compared against a **sink-free** sliding window, and it has been known since 2024 that
-this collapses catastrophically the moment the first few tokens scroll out of the window. Microsoft's
-Applied Sciences Group put those first four tokens back — attend to the last *w* tokens **and**
-always to the first four — and the simple baseline beats the retrained models, with zero
-post-training.
+this collapses catastrophically the moment the first few tokens scroll out. **Pin them: attend to
+the last *w* tokens and, always, to the first four.** That is the whole change, it is a mask
+applied at inference, and Microsoft's Applied Sciences Group found it beats the retrained models
+with zero post-training.
 
-## How Sliding Window Attention With Sinks Works
+## The Fix: Pin the First Four Tokens
 
 Write it as **SWA(w, s)**: each token attends to the *w* tokens before it, plus the first *s*
 tokens of the sequence, always. In the paper *w* ranges from 64 to 512 and *s* is fixed at 4. That

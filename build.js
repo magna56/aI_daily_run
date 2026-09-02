@@ -313,7 +313,16 @@ const READER_QUESTION_SINCE = "2026-08-31";
 const READER_QUESTION_RE = /\?\s*$|^(wait|hold on|hold up|but |so |why |what |how come|does |do |isn't|is it|can |should )/i;
 
 
-const MECHANISM_RE = /^How\s+.+/;      // "How the Hook Matcher Decides"
+// The solution section. It used to be named "How <the thing> Works", which
+// presumes the reader has already accepted the thing AS the answer -- scanned as a
+// list, the headings went problem, mechanism, analogy, and never announced a fix.
+// The site's owner reported the solution as unclear twice, on different articles,
+// after a prose rule requiring `The Problem` to name the fix had already landed.
+// The heading itself has to carry it. `The Answer:` is the Explainer-shape variant
+// for a piece whose payoff is understanding rather than a change to make.
+const MECHANISM_RE = /^(How\s+.+|The (?:Fix|Answer)\b.*)/;
+const SOLUTION_HEADING_SINCE = "2026-09-01";
+const SOLUTION_HEADING_RE = /^The (?:Fix|Answer)\b/;
 const COUNTERCASE_RE = /^When\s+.+/;   // "When a Hook Is the Wrong Tool"
 
 /* ---- audience mix ---------------------------------------------------------
@@ -961,6 +970,12 @@ function compile(id, journal, runner, opts) {
             + `split on spaces?", "Wait, what about temperature?"), not a subject label. `
             + `Answering the doubt where it arises is what keeps a long explanation readable.`);
         }
+      }
+      if (mech && date >= SOLUTION_HEADING_SINCE && !SOLUTION_HEADING_RE.test(mech)) {
+        warn(`${id}: "${mech}" does not announce the solution — name it `
+          + `"## The Fix: <what to do>" (or "## The Answer: …" for an explainer). A heading of `
+          + `the form "How X Works" presumes the reader already accepted X as the answer; scanned `
+          + `as a list the headings must read problem → fix → how it works → what to do.`);
       }
       if (!counter) {
         warn(`${id}: topic.md has no counter-case section — name it for the topic and start it `

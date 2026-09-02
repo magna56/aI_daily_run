@@ -140,7 +140,7 @@ format solely from `build.js`'s parser.
 The shape those skills enforce, worth knowing before touching a session: a session is written to
 leave the reader **able to build something**, and it reads as one argument rather than parallel
 takes on a topic. `topic.md` runs seven sections — ELI5 → `The Problem` (which must name the fix
-before it ends) → `How <the thing> Works` → `For a Software Engineer` → `What This Means for You`
+before it ends) → `The Fix: <what to do>` → `For a Software Engineer` → `What This Means for You`
 → **`## Implementing It`** → `When <it> Is the Wrong Tool`. A six-section merge of the middle was
 tried and reverted on 2026-08-31; do not re-attempt it. An article whose reader is curious rather
 than stuck may add `## By the End of This You Will` at position 2 and earn a later reveal. Every
