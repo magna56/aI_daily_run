@@ -1258,6 +1258,17 @@ function compile(id, journal, runner, opts) {
   const source = firstLink(topic.meta.Source) ||
     (topic.meta.Source ? { label: topic.meta.Source, url: "" } : null);
 
+  /* code_example.py implements the mechanism from scratch. Agent frameworks belong
+     in `## Implementing It` as one role's wiring (decided 2026-09-02): with no API
+     keys the framework example is stub nodes, and the Code pane's Pyodide ships
+     pydantic 1.10.7 without pydantic_core, so langchain-core cannot install and Run
+     would fail outright. */
+  if (code && code.source && /^\s*(?:from|import)\s+(langchain|langgraph|llama_index|crewai|autogen)\b/m.test(code.source)) {
+    warn(`${id}: code_example.py imports an agent framework — this file implements the mechanism `
+      + `from scratch in stdlib. Put the framework wiring in "## Implementing It" as one role's `
+      + `version instead; it also cannot run in the Code pane's Pyodide build.`);
+  }
+
   const payload = {
     id,
     title: topic.title,

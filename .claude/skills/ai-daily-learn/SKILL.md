@@ -855,6 +855,10 @@ lives with it. Required on every session.
     retry loop, the version probe and its fallback.
   - If one side genuinely has nothing to do, say so in a sentence. Silence reads as an omission,
     because it usually is one.
+- **The framework binding is a role.** When the topic is orchestration-shaped and readers are
+  plausibly on LangGraph or LangChain, show the equivalent wiring here as one of the roles — pinned
+  to a version, and next to the from-scratch version rather than instead of it. This is where
+  framework code lives; `code_example.py` stays stdlib.
 - **Name the file and the function, not the intention.** "Add a check" is not implementable;
   "in your client's `list_tools()`, key the cache on `(server_url, cacheScope)` and store
   `fetched_at + ttlMs`" is.
@@ -950,6 +954,14 @@ article because this file contains it all, the article has not done its.
   make that edit obvious and one line long.
 - **No API keys**, stdlib first — this runs in a browser sandbox. Include a docstring saying what
   it implements and how to run it.
+- **No agent frameworks in this file.** LangGraph, LangChain, LlamaIndex and friends belong in
+  `## Implementing It` as one role's wiring, never here — decided 2026-09-02. This file's job is
+  *understand the mechanism*, not *get started in my stack*, and the from-scratch implementation
+  is what the Code tab has that a framework tutorial does not. Two practical reasons reinforce it:
+  with no API keys allowed, a framework example is a state machine with stub nodes, teaching the
+  graph API rather than the idea; and the Code pane's Pyodide build ships `pydantic 1.10.7` with no
+  `pydantic_core`, so `langchain-core` cannot install and the Run button would simply fail.
+  `--check` warns if such an import appears.
 - **Under 150 lines**, and `build.js --check` warns above it. If it does not fit, the topic was
   too broad; cut the demo furthest from the one mechanism, do not raise the limit. The combined
   "and now all of it together" finale at the bottom is almost always the cut.

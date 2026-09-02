@@ -1071,3 +1071,29 @@ reached it for free — the real gap was that nothing *gated* the live push.
   in-page anchor to this reader does not reintroduce it.
 - **Re-verified** against the DOM shim: heading skipped, first body occurrence wrapped, `code`
   skipped, later occurrences untouched, and the produced element carries no href.
+
+## 2026-09-02 — where framework code lives (LangGraph / LangChain)
+- **Note**: "after the fix explore in the code sectionn can we use lang graph or langchain for
+  future section think and discuss with me on this", then: "Yes lets just do A for now".
+- **Verdict**: standing rule. `code_example.py` keeps implementing the mechanism from scratch in
+  stdlib; framework wiring goes in `## Implementing It` as one role's version.
+- **Checked before advising, not after**: `langgraph` and `langchain-core` ship pure-Python wheels,
+  but the chain reaches `pydantic-core`, which is compiled Rust. The Code pane runs **Pyodide
+  0.25.1**, which ships `pydantic 1.10.7` and **no `pydantic_core`** — so `langchain-core` cannot
+  install and the Run button would fail outright. Pyodide 0.26.4+ does ship a wasm `pydantic_core`,
+  so an upgrade would remove that blocker; the decision was made on editorial grounds anyway, and
+  an upgrade does not by itself reopen it.
+- **The editorial reasons, which are the load-bearing ones**: the from-scratch implementation is
+  what the Code tab has that a framework tutorial does not; with no API keys permitted a LangGraph
+  example is a state machine with stub nodes, teaching the graph API rather than the idea; and only
+  about three sessions in ten are orchestration-shaped, while LangChain's API churn ages badly
+  against a permanent dated log.
+- **Changed**: `SKILL.md` Step 6 — no agent frameworks in `code_example.py`, with the reasoning;
+  `SKILL.md` `Implementing It` — "the framework binding is a role", shown pinned to a version and
+  beside the from-scratch version rather than instead of it. `contract.md` notes it on the file
+  tree line.
+- **Changed**: `build.js` — warns when `code_example.py` imports langchain / langgraph /
+  llama_index / crewai / autogen. Placed **after** `code` is resolved: written above it first,
+  which would have been the same temporal-dead-zone crash as the `[[visualize]]` check on
+  2026-08-31, and caught this time before it shipped. Verified by adding the import and watching it
+  fire, unfiltered so a crash could not have presented as a pass.

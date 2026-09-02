@@ -18,7 +18,7 @@ YYYY-MM-DD/                 # or YYYY-MM-DD-s2 if today already has a session
   topic.md                  # required
   visualize.html            # required — Visualize tab; see visualize.md
   diagram.excalidraw        # required — Diagram tab
-  code_example.py           # required — Code tab
+  code_example.py           # required — Code tab; stdlib, no agent frameworks
   articles.md               # required — Articles tab
 ```
 
