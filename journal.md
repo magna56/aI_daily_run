@@ -169,6 +169,7 @@
 
 ## 2026-09-02 — How the Same Model Gives Two Different Answers
 - **Category**: AI in Production
-- **Key insight**: Two machines running identical weights at temperature zero can return different answers, and neither is broken. Addition on a computer depends on the order you do it in, and the order is set by things the checkpoint never records — the kernel, the batch shape, who else was in your batch.
+- **Engineer's view**: This is a cache key that does not include everything the result depends on. The inputs nobody hashed are the kernel, the batch shape and the parallelism layout — so the answer is right almost always, and inexplicably wrong occasionally.
+- **TLDR**: Two machines running identical weights at temperature zero can return different answers, and neither is broken. Addition on a computer depends on the order you do it in, and the order is not recorded in the checkpoint.
 - **Code**: `2026-09-02/code_example.py` — sums one 64-term dot product six ways and gets several different totals from the same numbers, then constructs two candidate tokens whose exact scores are equal and shows the argmax swinging between them on reduction order alone. Pure stdlib, no GPU, no randomness in the arithmetic.
 - **Articles**: 4 sources (the SkyRL IsoExec write-up as primary, its Apache-2.0 repo as the hands-on read, Horace He's batch-invariance essay for the mechanism, and this site's memory-limits session as the companion case)

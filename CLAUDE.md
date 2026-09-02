@@ -140,7 +140,7 @@ format solely from `build.js`'s parser.
 The shape those skills enforce, worth knowing before touching a session: a session is written to
 leave the reader **able to build something**, and it reads as one argument rather than parallel
 takes on a topic. `topic.md` runs seven sections — ELI5 → `The Problem` (which must name the fix
-before it ends) → `The Fix: <what to do>` → `For a Software Engineer` → `What This Means for You`
+before it ends) → `The Fix: <what to do>` → `What This Means for You`
 → **`## Implementing It`** → `When <it> Is the Wrong Tool`. A six-section merge of the middle was
 tried and reverted on 2026-08-31; do not re-attempt it. An article whose reader is curious rather
 than stuck may add `## By the End of This You Will` at position 2 and earn a later reveal. Every
@@ -161,6 +161,8 @@ When adding a session by hand: `topic.md` must start with `# Title` followed by 
 metadata lines (`Category` must be one of the 11 categories in `build.js`'s `CATEGORY_TIERS`
 map, from which `CATEGORIES` is derived so tier membership cannot drift from the list — that map
 is the validation source of truth; `Date` drives the grid;
+`Engineer's view` and `TLDR` render as two boxes above the ELI5 and replaced the retired
+`## For a Software Engineer` section on 2026-09-02;
 `Level` is `Start here` / `Building` / `Deeper`; `For` is `Using tools` / `Building agents` /
 `Shipping AI` / `How models work`; `Hook` is the one-line card blurb). A session dated on or
 after 2026-08-25 must also carry `## Implementing It` with the properties above; `make check`

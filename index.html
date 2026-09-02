@@ -555,6 +555,7 @@
   .article-end { margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--line); }
   .article-end .share { margin: 0 0 18px; }
   .insight { background: rgba(167,139,250,.07); border: 1px solid rgba(167,139,250,.22); border-left: 3px solid var(--accent); border-radius: 8px; padding: 16px 20px; margin-top: 18px; margin-bottom: 14px; color: #cfe6f2; font-size: 15.5px; line-height: 1.7; }
+  .insight.tldr { background: rgba(148,163,184,.06); border-color: rgba(148,163,184,.18); border-left-color: var(--dim); margin-top: 10px; }
   .insight .k { display: block; color: var(--accent2); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
   .pane { padding: 22px 0 0; }
   .visualize-shell { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #0a0d18; }
@@ -1483,6 +1484,24 @@
   // Markdown for a single run of prose — same rules, minus the block wrapper.
   function inline(src) { return md(src).replace(/^<p>/, "").replace(/<\/p>\s*$/, ""); }
 
+  /* The top of Overview. From 2026-09-02 a session leads with the engineering
+     translation and a two-line summary under it; before that it carried a single
+     "Key insight" box, and 30 published sessions still do. Both shapes render. */
+  function topBoxes(p) {
+    var strip = function (h) { return h.replace(/^<p>|<\/p>$/g, ""); };
+    if (p.engineerView) {
+      return '<div class="insight"><span class="k">For a software engineer</span>' +
+               strip(md(p.engineerView)) + "</div>" +
+             (p.tldr
+               ? '<div class="insight tldr"><span class="k">TL;DR</span>' +
+                   strip(md(p.tldr)) + "</div>"
+               : "");
+    }
+    return p.insight
+      ? '<div class="insight"><span class="k">Key insight</span>' + strip(md(p.insight)) + "</div>"
+      : "";
+  }
+
   /* ---- python highlighting -------------------------------------------- */
   // Tokenise the RAW source (so quotes are still quotes), escaping each piece
   // on the way out. Strings and comments come first in the alternation, which
@@ -1993,9 +2012,7 @@
     // tab is one click away and carries the same button in context.
     var meta =
       (pane === "overview" ? categoryDot : rmeta) +
-      (p.insight && pane === "overview"
-        ? '<div class="insight"><span class="k">Key insight</span>' + md(p.insight).replace(/^<p>|<\/p>$/g, "") + "</div>"
-        : "");
+      (pane === "overview" ? topBoxes(p) : "");
 
     // Rendered after the pane, not before it. The newsletter form is wired by a
     // delegated submit listener on document, so it keeps working wherever it lands.

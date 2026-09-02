@@ -46,10 +46,30 @@ Required `##` sections, in this order — **seven, five fixed and two named for 
 | 1 | `## Explain Like I'm 5` | fixed |
 | 2 | `## The Problem` | fixed |
 | 3 | `## The Fix: <what to do>` | **topic-named**, must announce the solution |
-| 4 | `## For a Software Engineer` | fixed |
-| 5 | `## What This Means for You` | fixed |
-| 6 | `## Implementing It` | fixed |
-| 7 | `## When <the thing> Is the Wrong Tool` | **topic-named**, must start `When ` |
+| 4 | `## What This Means for You` | fixed |
+| 5 | `## Implementing It` | fixed |
+| 6 | `## When <the thing> Is the Wrong Tool` | **topic-named**, must start `When ` |
+
+**The Overview opens with the engineering translation, not the article.** Two metadata fields
+render as boxes above `Explain Like I'm 5`:
+
+```
+**Engineer's view**: <the thing they have already shipped, named. Max 55 words.>
+**TLDR**: <two lines, plain language, at most one number.>
+```
+
+`Engineer's view` is the site's most distinctive move — no comparable publication translates AI
+topics into engineering the reader has already done — and until 2026-09-02 it was a section at
+position four, which is late for the most distinctive thing an article does. It is now the first
+thing anybody reads. `--check` enforces both fields and applies the old `Key insight` checks
+(sentences, words, one number, no identifiers) to `TLDR`.
+
+**`## For a Software Engineer` is retired**, because the box replaces it and keeping both is the
+duplication the anti-filler rule forbids. Note carefully that a *superficially identical* change
+was reverted on 2026-08-31: that one **buried** the analogy as an unlabelled sentence inside the
+mechanism section and the middle of the article thinned. This one **promotes** it above everything
+else. Removing the section is only correct while the box exists; if the box ever goes, the section
+comes back.
 
 **Section 3 announces the solution; it does not presume it.** It was `## How <the thing> Works`
 until 2026-09-01, and that form failed twice on different articles: scanned as a list the headings
@@ -83,9 +103,9 @@ readable by more small units, each answering one question and each backed by a f
 merging sections.** If the mechanism section is a wall, split it and put a figure in each part.
 Do not propose merging the middle again.
 
-**The software-engineering framing appears twice, at two weights.** A light touch inside
-`The Problem` — one clause that hints at the shape of the thing without spending the analogy —
-and then the full comparison in `## For a Software Engineer`, where it has room.
+**The software-engineering framing appears twice, at two weights.** The named analogy goes in the
+`Engineer's view` box at the very top — "this is loop interchange", "this is a cache key missing an
+input" — and a light clause inside `The Problem` echoes its shape without spending it again.
 
 An **Explainer** variant may add `## By the End of This You Will` at position 2, promising in two
 to four bullets what the reader will understand; that promise is what licenses withholding the
@@ -101,8 +121,8 @@ already see); `Glossary`.
 
 **Per-section word bands**, fenced code excluded, warned by `--check`:
 `Explain Like I'm 5` 60-120 · `The Problem` 190-320 · mechanism section cap 370 (no floor) ·
-`For a Software Engineer` 120-210 · `What This Means for You` 200-300 · `Implementing It` 300-460 ·
-counter-case 150-250.
+`What This Means for You` 200-300 · `Implementing It` 300-460 · counter-case 150-250.
+`Engineer's view` caps at 55 words.
 `Implementing It` keeps its longest-section rule on top of its band.
 
 These replace a single 1,300-word document total that ran 2026-08-27 to 2026-08-31. The total was

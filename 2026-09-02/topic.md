@@ -78,26 +78,16 @@ The measured version: on Qwen3.5-35B-A3B the mean absolute logprob difference be
 engines was 0.014, and the worst single step was **5.073** — not a rounding artefact by then, an
 entirely different distribution.
 
-## For a Software Engineer
-
-This is a cache key that does not include everything the result depends on.
-
-You have shipped that bug. The value is correct for the inputs you hashed and wrong for an input
-you forgot to hash, so it is right almost always and inexplicably wrong occasionally — the hardest
-shape of defect to chase, because reproducing it requires recreating the thing you did not know
-mattered. Here the un-hashed inputs are the kernel, the batch shape and the parallelism layout.
-
-The number worth holding onto: **45% of tokens discarded** from a disagreement of 0.013. The gap
-was small; the consequence was not, because a threshold sat downstream of it and thresholds turn
-small numeric differences into large behavioural ones.
-
 ## What This Means for You
 
 **When this matters.** You compare model outputs across two environments and expect them to match:
 an eval that runs locally and in CI, a prod-versus-staging A/B, a regression test asserting on a
 model's answer, or a benchmark you are trying to reproduce from someone else's write-up.
 
-**How it affects you.** Those comparisons carry a noise floor nobody wrote down, and it is not
+**How it affects you.** The gap was small and the consequence was not: a train-inference
+disagreement of 0.013 was enough for clipping to discard 45% of tokens, because a threshold sat
+downstream of it and thresholds turn small numeric differences into large behavioural ones. Those
+comparisons carry a noise floor nobody wrote down, and it is not
 uniform — it grows with batch size, parallelism and any change of serving stack. A test asserting
 exact output equality across two runtimes is not strict, it is *flaky*, and it will fail on the day
 your traffic pattern changes rather than the day your code does. Meanwhile a real regression

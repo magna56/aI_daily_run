@@ -98,7 +98,8 @@ never fix it by loosening the spec. The blocking ones:
   total, so a gate that only caught overflow would have passed every article that caused the
   complaint. These block because they are the failure the reader actually experiences: on 2026-08-27 the site's own owner abandoned a
   published session partway through, and it had passed every check that existed at the time.
-- **the structural warnings** — a wrong section order, a retired section, or a bad `Key insight`. The last blocks because it is the first prose a reader sees, above the ELI5.
+- **the structural warnings** — a wrong section order, a retired section, a bad `Key insight` / `TLDR`, or a missing `Engineer's view` — the last two are the
+  first prose on the page, above the ELI5. The last blocks because it is the first prose a reader sees, above the ELI5.
   The reader's-question sub-heading check is advisory: it is a heuristic over heading phrasing
   and can reasonably be wrong about a given article.
   Fix by **cutting, never by redistributing** between sections, and correct `**Time to read**` to

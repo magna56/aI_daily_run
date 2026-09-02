@@ -6,6 +6,8 @@
 **Level**: Deeper
 **For**: How models work
 **Hook**: Reusing a model's layers has always lost to simply making the model bigger. Changing the order the layers are reused in flips the result, and the reason is memory rather than maths.
+**Engineer's view**: This is loop interchange. Swap the order of two nested loops so a layer's reuses sit next to each other, and the same arithmetic runs faster — except here the win is memory, which is then spent on throughput.
+**TLDR**: Looping a model has always lost to just making it bigger at the same cost. Running each layer twice in place, rather than the whole stack twice, flips the result.
 **Time to read**: ~11 minutes
 
 ## Explain Like I'm 5
@@ -74,30 +76,15 @@ The ablation is the cleanest evidence. Take Loopie-6B-A0.6B, keep the looped com
 identical, and remove only the layer-loop ordering: the version that keeps it reaches the same
 downstream average **2.14× faster**. Ordering alone, nothing else changed.
 
-## For a Software Engineer
-
-This is loop interchange, and you have shipped it.
-
-Every performance engineer has taken a nested loop, swapped the order of iteration so the reused
-data stays in cache, and watched the same arithmetic run several times faster. Nothing about the
-computation changed — only the distance between a value's uses, and therefore whether it was still
-resident when it was needed again.
-
-Model-loop has a reuse distance of the whole stack; layer-loop has a reuse distance of one. In a
-pipeline-parallel setup that difference is starker still, because model-loop routes the last
-stage's output back to the first at every loop boundary, creating exactly the cyclic dependency
-that fills a pipeline with bubbles.
-
-The number worth holding onto: **2.14× from reordering alone**. Not a better optimiser, not more
-parameters — the same operations, executed in a different sequence.
-
 ## What This Means for You
 
 **When this matters.** You are choosing an architecture under a fixed training budget, or reading
 claims that one model beats another "at the same compute" and trying to work out whether that
 comparison means anything.
 
-**How it affects you.** Mostly it changes what you should ask of a benchmark. "Compute-matched"
+**How it affects you.** The headline number is 2.14× from reordering alone — not a better
+optimiser, not more parameters, the same operations in a different sequence. Mostly, though, it
+changes what you should ask of a benchmark. "Compute-matched"
 has two very different meanings here — theoretical FLOPs, or measured wall-clock — and Loopie
 wins on the second while explicitly losing on the first. That is a legitimate choice, because
 wall-clock is what you pay for, but a comparison that does not say which one it used is not

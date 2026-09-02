@@ -344,6 +344,8 @@ Write `~/ai_learning/YYYY-MM-DD/topic.md`:
 **Level**: [Start here | Building | Deeper]
 **For**: [Using tools | Building agents | Shipping AI | How models work]
 **Hook**: [one plain sentence for the homepage card — no acronyms]
+**Engineer's view**: [the thing they have already shipped, named. Renders as the FIRST box on the page, above the ELI5. Max 55 words.]
+**TLDR**: [two lines, plain language, at most one number. Renders directly under it.]
 **Time to read**: ~10 minutes
 
 ## Explain Like I'm 5
@@ -360,10 +362,6 @@ an explainer whose payoff is understanding. Then the mechanism, shallow to deep 
 sub-headings phrased as the reader's own question at that moment (### Why not just split on
 spaces?). Define every term in the sentence that first
 needs it; there is no Glossary.]
-
-## For a Software Engineer
-[2-4 short paragraphs. ONE analogy to something they have already shipped, plus the number worth
-holding onto. It sits AFTER the mechanism so it can compare rather than re-explain.]
 
 ## What This Means for You
 [Three labelled parts — When this matters / How it affects you / What to do about it. The FIRST
@@ -498,7 +496,6 @@ specific articles with nothing left explaining why a reader outside the exact ca
 | `Explain Like I'm 5` | 60 | 120 |
 | `The Problem` | 190 | 320 |
 | `The Fix: <what to do>` | — | 370 |
-| `For a Software Engineer` | 120 | 210 |
 | `What This Means for You` | 200 | 300 |
 | `Implementing It` | 300 | 460 |
 | `When <the thing> Is the Wrong Tool` | 150 | 250 |
@@ -663,7 +660,7 @@ for what someone would plausibly filter by, not to describe the article exhausti
 practically. Assume fluency in general software engineering — caching, padding, schedulers,
 quantization, compilers, batching, indexes, back-pressure. Do **not** assume fluency in AI
 internals, and do not assume they can decode an acronym from context. The framing sections
-(Problem, For a Software Engineer, What This Means for You) exist because the deep sections
+(the Engineer's view box, Problem, What This Means for You) exist because the deep sections
 alone lose this reader.
 
 **`## Explain Like I'm 5`** — leads the document deliberately, because a reader who bounces off
@@ -791,16 +788,19 @@ an instruction, not a report of who found it.
   that lean on `unittest.mock`."*
 Attribution follows the claim; it never replaces it.
 
-**`## For a Software Engineer`** — the site's most distinctive section: no comparable publication
-translates AI topics into engineering the reader has already done. Keep it.
-- **One analogy, not three.** Name the thing they have shipped explicitly: "this is a configuration
-  precedence bug", "this is head-of-line blocking", "this is log compaction".
-- **It sits after the mechanism, so compare — never re-explain.** Aim for ~150-200 words.
-- **The framing appears twice, at two weights.** A light clause inside `The Problem` that hints at
-  the shape without spending the analogy, then the full comparison here where it has room.
-  - ✓ in `The Problem`: *"If that sounds like tuning a query planner when the real problem is what
-    got written to the table, hold that thought."*
-  - ✓ here: the full write-ahead-log-and-compaction comparison, with the number to hold onto.
+**`**Engineer's view**`** — the first thing on the page, and the site's most distinctive move: no
+comparable publication translates AI topics into engineering the reader has already done. It was a
+section at position four until 2026-09-02, which was late for it.
+- **Name the thing they have shipped, explicitly.** "This is a configuration precedence bug." "This
+  is head-of-line blocking." "This is loop interchange." "This is a cache key that does not include
+  everything the result depends on."
+- **One analogy, 55 words, and stop.** It is the hook, not the essay. The consequence belongs in
+  `What This Means for You`, and the number worth holding onto goes there too.
+- **`## For a Software Engineer` is retired** — the box replaces it. Do not write both.
+
+**`**TLDR**`** — two lines under the box, plain language, at most one number. It inherits the old
+`Key insight` rules: three sentences at most, no acronyms or config identifiers, and sentence two
+continues sentence one rather than starting the evidence.
 
 **`## What This Means for You`** — three labelled parts, **When this matters** / **How it affects
 you** / **What to do about it**, because the labels are what make it scannable.

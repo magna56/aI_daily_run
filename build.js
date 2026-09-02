@@ -227,7 +227,6 @@ const SECTION_BANDS = new Map([
   // widened: the mechanism section now opens with the engineer-anchor sentence
   ["mechanism",            [0, 370]],
   // one beat now (the decision and the graduated actions), not three labelled parts
-  ["For a Software Engineer", [120, 210]],
   ["What This Means for You", [200, 300]],
   ["Implementing It",      [300, 460]],
   ["counter-case",         [150, 250]],
@@ -261,17 +260,33 @@ const SECTION_BANDS_SINCE = "2026-08-31";
 // it is a quantity ("one setting", "one of the"), and counting it would fire on
 // entries that read perfectly well.
 const KEY_INSIGHT_SINCE = "2026-08-31";
+
+// From 2026-09-02 the Overview opens with the engineering translation rather than
+// a plain-language insight: `Engineer's view` names the thing the reader has
+// already shipped, and `TLDR` carries the two-line summary underneath it. The
+// engineer anchor was the site's most distinctive move and it was buried at
+// section four; this promotes a one-sentence version of it to the first thing
+// anybody reads, with the full analogy still in its own section.
+const ENGINEER_VIEW_SINCE = "2026-09-02";
+const ENGINEER_VIEW_MAX_WORDS = 55;
 const KEY_INSIGHT_MAX_SENTENCES = 3;
 const KEY_INSIGHT_MAX_WORDS = 80;
 const KEY_INSIGHT_NUMBER_RE = /\b(two|three|four|five|six|seven|eight|nine|ten|dozen|hundred|thousand|million|\d+(?:[.,]\d+)?%?)\b/gi;
 const KEY_INSIGHT_JARGON_RE = /`[^`]+`|\b[a-z]+_[a-z_]+\b|\b[a-z]+[A-Z][A-Za-z]*\b/;
+// `For a Software Engineer` was retired on 2026-09-02, and the reason matters
+// because a superficially identical change was reverted the day before. That one
+// BURIED the analogy as an unlabelled sentence inside the mechanism section, and
+// the middle of the article thinned. This one PROMOTES it: the Overview opens
+// with a labelled "For a software engineer" box carrying the engineering
+// translation, above everything else including the ELI5. Keeping both the box and
+// the section would be the duplication the anti-filler rule forbids.
 const FIXED_SECTIONS = [
   "Explain Like I'm 5",
   "The Problem",
-  "For a Software Engineer",
   "What This Means for You",
   "Implementing It",
 ];
+const RETIRED_SE_SINCE = "2026-09-02";
 
 // The six-section experiment of 2026-08-31 was reverted the same day it landed.
 // It deleted `For a Software Engineer` and shrank `What This Means for You`, which
@@ -807,28 +822,43 @@ function compile(id, journal, runner, opts) {
      The caps below are the honour-system rules made enforceable; the rule these
      cannot check -- that sentence two continues sentence one rather than starting
      the evidence -- lives in SKILL.md Step 10. */
-  if (kind === "daily" && date >= KEY_INSIGHT_SINCE) {
-    const insight = String(j["Key insight"] || "").trim();
+  if ((kind === "daily" || kind === "frontier") && date >= KEY_INSIGHT_SINCE) {
+    const tldrField = topic.meta["TLDR"] || j["TLDR"];
+    const insight = String(tldrField || j["Key insight"] || "").trim();
+    const label = tldrField ? "TLDR" : "Key insight";
     if (insight) {
       const sentences = insight.split(/(?<=[.!?])\s+/).filter(Boolean);
       const words = (insight.match(/\S+/g) || []).length;
       const numbers = insight.match(KEY_INSIGHT_NUMBER_RE) || [];
       if (sentences.length > KEY_INSIGHT_MAX_SENTENCES) {
-        warn(`${id}: "Key insight" is ${sentences.length} sentences (cap `
+        warn(`${id}: "${label}" is ${sentences.length} sentences (cap `
           + `${KEY_INSIGHT_MAX_SENTENCES}) — it is a hook, not a summary.`);
       }
       if (words > KEY_INSIGHT_MAX_WORDS) {
-        warn(`${id}: "Key insight" is ${words} words (cap ${KEY_INSIGHT_MAX_WORDS}) — it sits `
+        warn(`${id}: "${label}" is ${words} words (cap ${KEY_INSIGHT_MAX_WORDS}) — it sits `
           + `above "Explain Like I'm 5", so a dense one cancels every on-ramp below it.`);
       }
       if (numbers.length > 1) {
-        warn(`${id}: "Key insight" carries ${numbers.length} numbers (${numbers.join(", ")}) — `
+        warn(`${id}: "${label}" carries ${numbers.length} numbers (${numbers.join(", ")}) — `
           + `keep one, chosen for how surprising it is. Stacked quantities are what makes the `
           + `second sentence unreadable; the rest belong in the write-up.`);
       }
+      const ev = String(topic.meta["Engineer's view"] || j["Engineer's view"] || "").trim();
+      if (ev) {
+        const evWords = (ev.match(/\S+/g) || []).length;
+        if (evWords > ENGINEER_VIEW_MAX_WORDS) {
+          warn(`${id}: "Engineer's view" is ${evWords} words (cap ${ENGINEER_VIEW_MAX_WORDS}) — `
+            + `it is the hook for the full analogy in "## For a Software Engineer", not a `
+            + `replacement for it. Name the thing they have already shipped and stop.`);
+        }
+      } else if (date >= ENGINEER_VIEW_SINCE) {
+        warn(`${id}: no "Engineer's view" in journal.md — the top of the Overview pane opens `
+          + `with the engineering translation from 2026-09-02. Add a bullet naming the thing `
+          + `the reader has already shipped.`);
+      }
       const jargon = insight.match(KEY_INSIGHT_JARGON_RE);
       if (jargon) {
-        warn(`${id}: "Key insight" contains the identifier "${jargon[0]}" — this box is read `
+        warn(`${id}: "${label}" contains the identifier "${jargon[0]}" — this box is read `
           + `before the reader has met any of the article's vocabulary. Say what it does.`);
       }
     }
@@ -952,7 +982,10 @@ function compile(id, journal, runner, opts) {
        Glossary -- definitions are made at the moment of use instead. */
     if (date >= SECTION_ORDER_SINCE) {
       const names = [...sections.keys()];
-      for (const want of FIXED_SECTIONS) {
+      const required = date >= RETIRED_SE_SINCE
+        ? FIXED_SECTIONS
+        : FIXED_SECTIONS.concat(["For a Software Engineer"]);
+      for (const want of required) {
         if (!sections.has(want)) warn(`${id}: topic.md has no "## ${want}" section — see contract.md.`);
       }
       const mech = names.find((n) => MECHANISM_RE.test(n));
@@ -984,6 +1017,7 @@ function compile(id, journal, runner, opts) {
       }
       const retired = ["What It Is", "Key Technical Details", "Why It Matters",
                        "How It Connects to What You Know", "Try It Yourself", "Glossary"];
+      if (date >= RETIRED_SE_SINCE) retired.push("For a Software Engineer");
       for (const gone of retired) {
         if (sections.has(gone)) {
           warn(`${id}: "## ${gone}" is retired — see contract.md for where its content goes now.`);
@@ -992,10 +1026,11 @@ function compile(id, journal, runner, opts) {
       // Order matters as much as membership: the article is one argument, and each
       // section has to advance it rather than re-enter the topic from a new angle.
       const explainer = sections.has(CONTRACT_SECTION);
+      const seRetired = date >= RETIRED_SE_SINCE;
       const spine = ["Explain Like I'm 5"].concat(
         explainer ? [CONTRACT_SECTION] : [],
-        ["The Problem", mech, "For a Software Engineer",
-         "What This Means for You", "Implementing It", counter]).filter(Boolean);
+        ["The Problem", mech], seRetired ? [] : ["For a Software Engineer"],
+        ["What This Means for You", "Implementing It", counter]).filter(Boolean);
       const seen = names.filter((n) => spine.includes(n));
       if (seen.join("|") !== spine.join("|")) {
         warn(`${id}: section order is ${seen.join(" → ")}; contract.md wants `
@@ -1168,7 +1203,14 @@ function compile(id, journal, runner, opts) {
     date,
     meta: topic.meta,
     source,
-    insight: j["Key insight"] || (kind === "learn" || kind === "frontier" ? hook : ""),
+    /* Two boxes at the top of Overview from 2026-09-02: the engineering
+       translation first, then a two-line plain-language summary. `insight` is
+       kept because 30 published sessions carry it, and because the card blurb,
+       the search index and the markdown export all read it. */
+    engineerView: topic.meta["Engineer's view"] || j["Engineer's view"] || "",
+    tldr: topic.meta["TLDR"] || j["TLDR"] || "",
+    insight: topic.meta["TLDR"] || j["TLDR"] || j["Key insight"]
+      || (kind === "learn" || kind === "frontier" ? hook : ""),
     hook,
     level,
     job,

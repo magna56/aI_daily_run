@@ -999,3 +999,30 @@ reached it for free — the real gap was that nothing *gated* the live push.
   which still pairs correctly, and the topic-named principle from 2026-08-25 is strengthened
   rather than reversed — `The Fix: Pin the First Four Tokens` describes this article at least as
   well as the form it replaces.
+
+## 2026-09-02 — reader + spec (the engineer view moves to the top of the page)
+- **Note**: "O'm thinking of using key insigh section for software enginners perpsecvtive and qucik
+  2 lime tldr after Key insight … tjis gets replaced by software engineer prespective and the text
+  gets tightened up and shows after", then: "no dupe we add it there and remove ## For a Software
+  Engineer?"
+- **Verdict**: standing change. The engineer anchor is promoted from a mid-article section to the
+  first thing on the page, and the section is retired because keeping both would duplicate.
+- **Read the history before repeating this.** A superficially identical change — removing
+  `## For a Software Engineer` — was made and **reverted** on 2026-08-31. The difference is the
+  whole justification. That version *buried* the analogy as an unlabelled sentence inside the
+  mechanism section, and the middle of the article thinned by a section and 186 words. This one
+  *promotes* it: a labelled box above everything, including the ELI5. Removing the section is only
+  correct while the box exists. If the box ever goes, the section comes back.
+- **Changed**: `build.js` — `Engineer's view` and `TLDR` read from `topic.md` metadata first, then
+  `journal.md`. Metadata-first is deliberate: Frontier has no journal block, so journal-only fields
+  would have left that track on the old shape. `RETIRED_SE_SINCE = 2026-09-02` drops the section
+  from the required set and the spine and adds it to the retired list; its word band is gone;
+  `ENGINEER_VIEW_MAX_WORDS = 55` keeps the box a hook rather than a second essay. The old
+  `Key insight` checks now apply to `TLDR`, with the warning text naming whichever field it read.
+- **Changed**: `index.html` — `topBoxes()` renders "For a software engineer" then "TL;DR" when the
+  fields exist, and falls back to the single `Key insight` box otherwise. 54 published sessions
+  are untouched; `insight` still feeds the card blurb, the search index and the markdown export,
+  whose "TL;DR:" label is now actually accurate.
+- **Changed**: `contract.md`, `SKILL.md`, `CLAUDE.md`, and both 2026-09-02 sessions. The number
+  that lived in the removed section — 45% of tokens clipped; 2.14x from reordering — was moved
+  into `What This Means for You` rather than dropped.
