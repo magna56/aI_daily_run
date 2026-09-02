@@ -1,0 +1,157 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Loop Interchange</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#141821;--line:#303747;--text:#f4f6fb;--muted:#929db1;--bad:#f97316;--ok:#34d399;--acc:#818cf8;--warn:#facc15}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111827,var(--bg) 48%);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:24px}
+.kicker{font:800 .75rem ui-monospace;color:var(--warn);letter-spacing:.13em}
+h1{font-size:clamp(1.6rem,4.2vw,2.6rem);line-height:1.1;margin:.4rem 0}
+.lede{max-width:840px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.panel h2{margin:0 0 12px;font-size:1rem}
+label{display:block;font:700 .78rem ui-monospace;color:var(--muted);margin-bottom:8px}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.val{color:var(--text);font-weight:700}
+.chooser{display:flex;flex-wrap:wrap;gap:8px}
+.chooser button{background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:99px;padding:9px 15px;font:600 .84rem system-ui;cursor:pointer}
+.chooser button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#0a0d18}
+.strip{display:flex;flex-wrap:wrap;gap:3px;margin-top:10px}
+.blk{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font:700 .62rem ui-monospace;background:#1c2130;color:var(--muted);border:1px solid #262c3a}
+.blk.hi{background:var(--acc);color:#0a0d18;border-color:var(--acc)}
+.blk.hi2{background:var(--warn);color:#0a0d18;border-color:var(--warn)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+@media(max-width:760px){.grid3{grid-template-columns:1fr}}
+.stat{background:#0c1018;border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font:900 1.4rem ui-monospace;line-height:1.2}
+.stat small{color:var(--muted);font-size:.73rem;display:block;margin-top:3px}
+.stat.good b{color:var(--ok)} .stat.bad b{color:var(--bad)} .stat.warn b{color:var(--warn)}
+.verdict{margin-top:14px;padding:14px;border-radius:12px;border:1px solid var(--line);background:#0c1018}
+.verdict b{display:block;font:900 1rem ui-monospace}
+.verdict.good b{color:var(--ok)} .verdict.bad b{color:var(--bad)}
+.verdict p{margin:.4rem 0 0;color:var(--muted);font-size:.87rem}
+code{font-family:ui-monospace,monospace;color:var(--warn)}
+#reset{width:100%;margin-top:16px;background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:11px;cursor:pointer;font-weight:700}
+#reset:hover{border-color:var(--acc)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main class="wrap" data-visualizer="frontier-2026-09-02">
+<header>
+<div class="kicker">LOOPED TRANSFORMERS &middot; SAME WORK, DIFFERENT ORDER</div>
+<h1>Two schedules, identical arithmetic</h1>
+<p class="lede">Every block below is one layer application. Both schedules run exactly the same ones — the only difference is the order, and therefore how far apart a layer's two uses sit. Hover a layer to trace its repeats.</p>
+</header>
+
+<section class="panel">
+<h2>1. The schedule</h2>
+<div class="chooser" id="sched" role="group" aria-label="Loop schedule">
+  <button data-v="model" aria-pressed="false">model-loop &mdash; run the whole stack, twice</button>
+  <button data-v="layer" aria-pressed="true">layer-loop &mdash; run each layer twice, in place</button>
+</div>
+<label for="n" style="margin-top:16px">Stored layers <span class="val" id="nV">12</span></label>
+<input type="range" id="n" min="3" max="24" step="1" value="12">
+<label for="trace" style="margin-top:14px">Trace layer <span class="val" id="traceV">2</span></label>
+<input type="range" id="trace" min="0" max="11" step="1" value="2">
+<div class="strip" id="strip"></div>
+</section>
+
+<section class="panel">
+<h2>2. What the order costs</h2>
+<div class="grid3">
+  <div class="stat" id="sDist"><b>&mdash;</b><small>mean reuse distance</small></div>
+  <div class="stat" id="sUnit"><b>&mdash;</b><small>repeats inside one checkpoint unit</small></div>
+  <div class="stat" id="sBound"><b>&mdash;</b><small>pipeline loop boundaries</small></div>
+</div>
+<div class="verdict" id="verdict"><b>&mdash;</b><p></p></div>
+<button id="reset">Reset</button>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var el = function(id){ return document.getElementById(id); };
+  var sched = "layer", STEPS = 2;
+
+  function order(n){
+    var out = [], i, s;
+    if (sched === "model"){
+      for (s = 0; s < STEPS; s++) for (i = 0; i < n; i++) out.push(i);
+    } else {
+      for (i = 0; i < n; i++) for (s = 0; s < STEPS; s++) out.push(i);
+    }
+    return out;
+  }
+  function meanReuse(seq){
+    var last = {}, gaps = [], i;
+    for (i = 0; i < seq.length; i++){
+      if (seq[i] in last) gaps.push(i - last[seq[i]]);
+      last[seq[i]] = i;
+    }
+    return gaps.length ? gaps.reduce(function(a,b){return a+b;},0) / gaps.length : 0;
+  }
+
+  function render(){
+    var n = Number(el("n").value);
+    el("nV").textContent = n;
+    var tr = el("trace");
+    tr.max = n - 1;
+    if (Number(tr.value) > n - 1) tr.value = n - 1;
+    var traced = Number(tr.value);
+    el("traceV").textContent = traced;
+
+    var seq = order(n);
+    var host = el("strip"); host.textContent = "";
+    seq.forEach(function(layer){
+      var d = document.createElement("div");
+      d.className = "blk" + (layer === traced ? " hi" : "");
+      d.textContent = layer;
+      host.appendChild(d);
+    });
+
+    var dist = meanReuse(seq);
+    el("sDist").querySelector("b").textContent = dist.toFixed(1);
+    el("sDist").className = "stat " + (dist <= 1.5 ? "good" : "bad");
+    el("sUnit").querySelector("b").textContent = sched === "layer" ? String(STEPS) : "1";
+    el("sUnit").className = "stat " + (sched === "layer" ? "good" : "bad");
+    el("sBound").querySelector("b").textContent = sched === "layer" ? "0" : String(STEPS - 1);
+    el("sBound").className = "stat " + (sched === "layer" ? "good" : "bad");
+
+    var v = el("verdict"), b = v.querySelector("b"), p = v.querySelector("p");
+    if (sched === "layer"){
+      v.className = "verdict good"; b.textContent = "Both repeats sit inside one checkpoint unit";
+      p.textContent = "Activation memory then scales with STORED depth, not executed depth — halve the stored layers and the memory halves, which is the headroom the recipe converts into a doubled microbatch. Every repeat also stays inside one pipeline stage.";
+    } else {
+      v.className = "verdict bad"; b.textContent = "Each repeat is a separate traversal";
+      p.textContent = "The same layer is used again " + n + " applications later, so its two uses fall in different checkpoint units and different pipeline stages. Each loop boundary sends the last stage's output back to the first — a cyclic dependency that fills the pipeline with bubbles.";
+    }
+    reportHeight();
+  }
+
+  Array.prototype.forEach.call(el("sched").querySelectorAll("button"), function(btn){
+    btn.addEventListener("click", function(){
+      sched = btn.dataset.v;
+      Array.prototype.forEach.call(el("sched").querySelectorAll("button"), function(o){
+        o.setAttribute("aria-pressed", String(o === btn)); });
+      render();
+    });
+  });
+  el("n").addEventListener("input", render);
+  el("trace").addEventListener("input", render);
+  el("reset").addEventListener("click", function(){
+    sched = "layer"; el("n").value = 12; el("trace").value = 2;
+    Array.prototype.forEach.call(el("sched").querySelectorAll("button"), function(o){
+      o.setAttribute("aria-pressed", String(o.dataset.v === "layer")); });
+    render();
+  });
+
+  function reportHeight(){
+    parent.postMessage({type:"adl-visualize-height",
+      height:document.documentElement.scrollHeight}, "*");
+  }
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+  render();
+})();
+</script>
+</body></html>
