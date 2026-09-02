@@ -1496,15 +1496,50 @@
   function inline(src) { return md(src).replace(/^<p>/, "").replace(/<\/p>\s*$/, ""); }
 
   /* ---- glossary -------------------------------------------------------
-     The section renders at the foot of Overview, and the FIRST appearance of
-     each term in the body becomes a link to its entry. Done on the rendered DOM
-     rather than on the markdown, because md() escapes < and > and would turn any
-     anchor we injected into visible text.
+     `## Glossary` in topic.md is the source parseGlossary() reads; it is NOT
+     also rendered as markdown. Overview strips that heading and paints one
+     <dl> at the foot via glossaryHtml(), and the FIRST appearance of each
+     term in the remaining body becomes a button that scrolls to its <dt>.
+     Rendering both was the duplicate the 2026-09-02 article showed.
+
+     Done on the rendered DOM rather than on the markdown, because md()
+     escapes < and > and would turn any anchor we injected into visible text.
 
      Text nodes only, and never inside code, pre, headings, or the glossary list
      itself — linking a term inside its own definition, or inside a code sample
-     where it is an identifier rather than a word, is worse than not linking. */
+     where it is an identifier rather than a word, is worse than not linking.
+
+     Sessions before 2026-09-02 keep their markdown Glossary (often a long
+     appendix) and do not get the lookup <dl>, so stripping them would throw
+     the long definitions away. */
   var GLOSS_SKIP = { CODE: 1, PRE: 1, A: 1, H1: 1, H2: 1, H3: 1, H4: 1 };
+  var GLOSSARY_SINCE = "2026-09-02";
+
+  function glossaryDate(p) {
+    var m = String(p && p.date || "").match(/\d{4}-\d{2}-\d{2}/);
+    return m ? m[0] : "";
+  }
+
+  function linkedGlossary(p) {
+    return p && p.kind !== "learn" && glossaryDate(p) >= GLOSSARY_SINCE
+      && p.glossary && p.glossary.length ? p.glossary : null;
+  }
+
+  /* Drop `## Glossary` and everything after it. Mirrors build.js splitSections:
+     ignore a heading inside a fence, and Glossary is always the last section. */
+  function stripGlossarySection(src) {
+    var lines = String(src || "").split("\n");
+    var out = [];
+    var fenced = false;
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (/^```/.test(line)) fenced = !fenced;
+      if (!fenced && /^##\s+Glossary\s*$/.test(line)) break;
+      out.push(line);
+    }
+    while (out.length && !out[out.length - 1].trim()) out.pop();
+    return out.join("\n");
+  }
 
   function glossSlug(term) {
     return "g-" + String(term).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -2154,8 +2189,10 @@
   function renderPane(p, pane) {
     var el = $("pane");
     if (pane === "overview") {
-      el.innerHTML = '<div class="prose">' + md(p.topic) + "</div>" + glossaryHtml(p.glossary);
-      linkGlossary(el.querySelector(".prose"), p.glossary);
+      var gloss = linkedGlossary(p);
+      var body = gloss ? stripGlossarySection(p.topic) : p.topic;
+      el.innerHTML = '<div class="prose">' + md(body) + "</div>" + glossaryHtml(gloss);
+      linkGlossary(el.querySelector(".prose"), gloss);
       return;
     }
     if (pane === "visualize") { renderVisualize(el, p); return; }
