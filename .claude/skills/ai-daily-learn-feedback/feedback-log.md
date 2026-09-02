@@ -1053,3 +1053,21 @@ reached it for free — the real gap was that nothing *gated* the live push.
   to match the prose, which is the correct direction.
 - **Not in the publish gate, deliberately.** The entry-count band is advisory: five or six is the
   norm, and an article that genuinely needs a seventh term should be nudged, not blocked.
+
+## 2026-09-02 — bug: glossary links navigated out of the article
+- **Note**: "when I click on workds we underlines the works in glosaary takes me out of the article
+  and says no session found"
+- **Verdict**: a bug introduced by the glossary feature earlier the same day, not a content rule.
+- **Cause**: the glossary links were `<a href="#g-<term>">`. The reader is a **hash-routed SPA** —
+  clicking wrote `location.hash`, `parseHash()` handed the router an id it could not match, and
+  line ~2691 toasted `No session g-<term>` and bounced to the index. In-page fragment anchors and
+  a hash router cannot coexist in this reader.
+- **Fixed**: `index.html` — the linked term is now a `<button type="button">` styled as inline
+  text, with a click handler that calls `revealGlossary()` to `scrollIntoView` the definition and
+  flash it briefly. No `href`, so the route is never written. A button is also keyboard-focusable
+  by default, which the anchor-without-href alternative would not have been, and it carries an
+  `aria-label` of "term: definition".
+- **Comment left at the call site** naming the hash-router collision, so the next person adding an
+  in-page anchor to this reader does not reintroduce it.
+- **Re-verified** against the DOM shim: heading skipped, first body occurrence wrapped, `code`
+  skipped, later occurrences untouched, and the produced element carries no href.
