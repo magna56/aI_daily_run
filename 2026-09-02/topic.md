@@ -7,6 +7,8 @@
 **For**: Shipping AI
 **Hook**: Identical weights, identical input, temperature zero — and two machines disagree. The cause is that addition on a computer depends on the order you do it in.
 **Time to read**: ~10 minutes
+**Engineer's view**: This is a flaky test under load — a hash that depends on which thread finished first. An exact-string assert across two runtimes fails the day the batch shape changes, not the day your code does.
+**TLDR**: Temperature zero is not bitwise across machines. Measure the noise floor on your two runtimes and assert on that, or pin the execution order.
 
 ## Explain Like I'm 5
 
