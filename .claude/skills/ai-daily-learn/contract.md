@@ -49,6 +49,7 @@ Required `##` sections, in this order — **seven, five fixed and two named for 
 | 4 | `## What This Means for You` | fixed |
 | 5 | `## Implementing It` | fixed |
 | 6 | `## When <the thing> Is the Wrong Tool` | **topic-named**, must start `When ` |
+| 7 | `## Glossary` | fixed, last |
 
 **The Overview opens with the engineering translation, not the article.** Two metadata fields
 render as boxes above `Explain Like I'm 5`:
@@ -111,6 +112,21 @@ An **Explainer** variant may add `## By the End of This You Will` at position 2,
 to four bullets what the reader will understand; that promise is what licenses withholding the
 answer until later. Everything else is identical.
 
+**`## Glossary` returned on 2026-09-02, in a different form.** It is a **lookup**, not an appendix:
+the first appearance of each term in the article body renders as a link to its entry, so a reader
+who gets stuck can jump there and back. Entries are `- **Term** — definition`, and the term must
+be written exactly as the prose uses it — `--check` warns when a term never appears in the body,
+because nothing then links to it and no reader will ever arrive at the entry.
+
+**Five or six entries is the norm**, definitions capped at 20 words. Gloss the terms a reader could
+stall on, not every noun. Going past six is allowed when the article genuinely needs it; that
+warning is advisory and is deliberately not in the publish gate.
+
+**This does not replace defining terms inline.** A term is still explained in the sentence that
+first needs it, and the glossary entry is a terse pointer back to that. The version retired earlier
+was an unlinked wall of definitions that repeated the prose at length — the caps and the
+define-inline rule together are what stop it growing back into one.
+
 **Retired**, and warned on for sessions from 2026-08-26: `What It Is` and `Key Technical Details`
 (merged into section 3, which now runs shallow to deep in one pass instead of explaining the
 topic twice); `Why It Matters` (its significance argument belongs in `The Problem`, and the
@@ -147,10 +163,13 @@ reader will never touch — is cut no matter how central it was to the paper. Bo
 pieces the article actually uses and link the rest. A term defined once and never used again should
 never have been defined.
 
-**No Glossary section. Define every term at the moment it is first used**, in the sentence that
-needs it, the way the reference publications do. A term that cannot be defined in a clause
-without derailing the sentence is a term the article should not be using yet. This replaces a
-305-word appendix that competed with the code for attention.
+**Define every term at the moment it is first used**, in the sentence that needs it, the way the
+reference publications do. A term that cannot be defined in a clause without derailing the
+sentence is a term the article should not be using yet. This rule survived the Glossary's
+retirement and still binds now that the section is back: the glossary is a pointer a stuck reader
+can jump to, never the place a term is first explained. The 305-word appendix that competed with
+the code for attention was an *unlinked* wall of re-explanations, which the entry caps and this
+rule together prevent.
 
 The old eleven-section order stands in the back catalog and is not warned on. It is not the
 shape to copy: it explained the topic four times and named the object in the fifth section.

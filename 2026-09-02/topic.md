@@ -24,7 +24,7 @@ You have probably met this and filed it as a mystery. The same prompt, the same 
 set to zero — and the answer on the GPU box is not the answer you got on your laptop. Or an eval
 scores two points lower after a serving upgrade that changed nothing about the weights.
 
-The cause is not a bug in either system. **Floating-point addition is not associative**: `(a + b) +
+The cause is not a bug in either system. **Floating-point addition is non-associative**: `(a + b) +
 c` and `a + (b + c)` can give different results, because each step rounds. Every kernel, every
 batch shape and every parallelism layout sums its partial results in a different order, so two
 runtimes holding byte-identical weights produce genuinely different probabilities. If that sounds
@@ -177,3 +177,11 @@ Three questions before chasing bitwise equality. Do I have evidence of a real fa
 reward collapse, an eval that moved without a code change — or only an aesthetic discomfort? Would
 a measured tolerance solve the same problem for free? And can I afford a quarter of my throughput
 against a hypothesis I have not yet tested?
+
+## Glossary
+
+- **non-associative** — `(a+b)+c` and `a+(b+c)` can differ, because each step rounds.
+- **Reduction order** — the sequence in which a kernel sums its partial results.
+- **Split-K** — chopping one dot product into several partial sums computed in parallel.
+- **batch-invariant** — a kernel whose result for your row does not depend on the batch it rode in with.
+- **Noise floor** — the spread between two runtimes on identical input; the resolution limit of any comparison.

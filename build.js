@@ -288,6 +288,29 @@ const FIXED_SECTIONS = [
 ];
 const RETIRED_SE_SINCE = "2026-09-02";
 
+// `## Glossary` returns on 2026-09-02, as the last section. It is a LOOKUP, not an
+// appendix: the reader still meets each term defined inline where it is first
+// used, and the glossary entry is a terse pointer they can jump to from that first
+// appearance. Capped in count and length so it cannot grow back into the 305-word
+// wall that got it retired the first time.
+const GLOSSARY_SINCE = "2026-09-02";
+// Five or six is the norm. The band is advisory and deliberately NOT in the
+// publish gate: an article that genuinely needs a seventh term should not be
+// blocked over it, but nothing should drift back toward a wall of definitions.
+const GLOSSARY_MIN_ENTRIES = 4;
+const GLOSSARY_MAX_ENTRIES = 6;
+const GLOSSARY_MAX_DEF_WORDS = 20;
+
+/** `- **Term** — definition` lines under `## Glossary`. */
+function parseGlossary(body) {
+  const out = [];
+  for (const line of String(body || "").split("\n")) {
+    const m = line.match(/^-\s+\*\*([^*]+)\*\*\s*[—–-]\s*(.+)$/);
+    if (m) out.push({ term: m[1].trim(), definition: m[2].trim() });
+  }
+  return out;
+}
+
 // The six-section experiment of 2026-08-31 was reverted the same day it landed.
 // It deleted `For a Software Engineer` and shrank `What This Means for You`, which
 // measured as the article's middle losing a section and 186 words -- and the middle
@@ -864,6 +887,41 @@ function compile(id, journal, runner, opts) {
     }
   }
 
+  if (kind !== "learn" && date >= GLOSSARY_SINCE) {
+    const gloss = splitSections(topic.body).get("Glossary");
+    if (gloss === undefined) {
+      warn(`${id}: topic.md has no "## Glossary" — it is the last section, and each term's `
+        + `first appearance in the body links to its entry.`);
+    } else {
+      const entries = parseGlossary(gloss);
+      if (entries.length < GLOSSARY_MIN_ENTRIES || entries.length > GLOSSARY_MAX_ENTRIES) {
+        warn(`${id}: "Glossary" has ${entries.length} entries — five or six is the norm, `
+          + `written as "- **Term** — definition". Gloss the terms a reader could get stuck `
+          + `on, not every noun in the article. Go past six only when the article genuinely `
+          + `needs it; this one is advisory and does not block a publish.`);
+      }
+      /* A term the body never uses cannot be linked from a first appearance, so
+         it is an entry no reader will ever arrive at. Check against prose only —
+         a term that occurs solely inside a code block is not linked either. */
+      const prose = [...splitSections(topic.body)]
+        .filter(([n]) => n !== "Glossary")
+        .map(([, b]) => proseOnly(b)).join("\n");
+      for (const e of entries) {
+        const re = new RegExp("\\b" + e.term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i");
+        if (!re.test(prose)) {
+          warn(`${id}: glossary term "${e.term}" never appears in the article prose, so nothing `
+            + `links to it. Either use the term in the body or drop the entry.`);
+        }
+        const n = (e.definition.match(/\S+/g) || []).length;
+        if (n > GLOSSARY_MAX_DEF_WORDS) {
+          warn(`${id}: glossary entry "${e.term}" is ${n} words (cap ${GLOSSARY_MAX_DEF_WORDS}) — `
+            + `the term is still explained inline where it is first used; this is a pointer back `
+            + `to that, not a second explanation.`);
+        }
+      }
+    }
+  }
+
   /* Per-section prose budgets. Deliberately NOT nested inside the reading-rhythm
      gate above: this is a separate rule with its own start date, and nesting it
      would silently retire it if that gate ever moved. A floor is as load-bearing
@@ -1016,7 +1074,11 @@ function compile(id, journal, runner, opts) {
           + `downside reads as marketing.`);
       }
       const retired = ["What It Is", "Key Technical Details", "Why It Matters",
-                       "How It Connects to What You Know", "Try It Yourself", "Glossary"];
+                       "How It Connects to What You Know", "Try It Yourself"];
+      // The Glossary returned on 2026-09-02, auto-linked from each term's first
+      // appearance in the body. The old retirement was of an UNLINKED appendix
+      // that repeated the prose; a linked lookup is a different artifact.
+      if (date < GLOSSARY_SINCE) retired.push("Glossary");
       if (date >= RETIRED_SE_SINCE) retired.push("For a Software Engineer");
       for (const gone of retired) {
         if (sections.has(gone)) {
@@ -1030,7 +1092,8 @@ function compile(id, journal, runner, opts) {
       const spine = ["Explain Like I'm 5"].concat(
         explainer ? [CONTRACT_SECTION] : [],
         ["The Problem", mech], seRetired ? [] : ["For a Software Engineer"],
-        ["What This Means for You", "Implementing It", counter]).filter(Boolean);
+        ["What This Means for You", "Implementing It", counter],
+        sections.has("Glossary") ? ["Glossary"] : []).filter(Boolean);
       const seen = names.filter((n) => spine.includes(n));
       if (seen.join("|") !== spine.join("|")) {
         warn(`${id}: section order is ${seen.join(" → ")}; contract.md wants `
@@ -1207,6 +1270,7 @@ function compile(id, journal, runner, opts) {
        translation first, then a two-line plain-language summary. `insight` is
        kept because 30 published sessions carry it, and because the card blurb,
        the search index and the markdown export all read it. */
+    glossary: parseGlossary(splitSections(topic.body).get("Glossary")),
     engineerView: topic.meta["Engineer's view"] || j["Engineer's view"] || "",
     tldr: topic.meta["TLDR"] || j["TLDR"] || "",
     insight: topic.meta["TLDR"] || j["TLDR"] || j["Key insight"]

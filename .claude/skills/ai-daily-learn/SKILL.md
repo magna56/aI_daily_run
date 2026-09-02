@@ -898,7 +898,17 @@ second heading named for the topic: `## When a Hook Is the Wrong Tool`, `## When
 - It is a section, not an appendix. It earns a heading because it is the part readers most need
   and the part that was most easily buried at the end of `Implementing It`.
 
-**No Glossary.** Terms are defined where they are used — see the mechanism-section rules above.
+**`## Glossary`** — the last section, returned on 2026-09-02 as a linked lookup rather than the
+unlinked appendix that got it retired. Entries are `- **Term** — definition`.
+- **Write the term exactly as the prose uses it.** The reader links in from its first appearance,
+  so `batch-invariant` matches an article that says "a batch-invariant kernel" and `Batch
+  invariance` does not. `--check` warns on a term the body never uses.
+- **Five or six entries.** Definitions of 20 words at most. Gloss what a reader could stall on, not
+  every noun; go past six only when the article genuinely needs it.
+- **It does not replace defining terms inline.** The term is still explained in the sentence that
+  first needs it; the entry is a terse pointer back to that, never a second explanation.
+
+Terms are still defined where they are used — see the mechanism-section rules above.
 A 305-word appendix competing with the code for attention was the thing this replaces; the
 discipline it enforced (every acronym and domain term gets explained, including the ones that
 feel obvious — token, prefill, KV cache, patch, DPI) is unchanged, it just happens inline. For

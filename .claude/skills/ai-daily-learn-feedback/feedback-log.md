@@ -1026,3 +1026,30 @@ reached it for free — the real gap was that nothing *gated* the live push.
 - **Changed**: `contract.md`, `SKILL.md`, `CLAUDE.md`, and both 2026-09-02 sessions. The number
   that lived in the removed section — 45% of tokens clipped; 2.14x from reordering — was moved
   into `What This Means for You` rather than dropped.
+
+## 2026-09-02 — the Glossary returns, auto-linked from first use
+- **Note**: "lets add back the glossbart section at the bottom with the link on the text when thr
+  word in gloassry apprears in the article the first time", then: "keep it short to few items like
+  5 to 6 usually more ONLY of there's need".
+- **Verdict**: standing change, and a deliberate reversal of the earlier retirement — but of a
+  different artifact. The old `## Glossary` was an unlinked 305-word appendix that repeated the
+  prose. This is a **lookup**: each term's first appearance in the body links to its entry, so a
+  stuck reader jumps there and back and everyone else never notices it.
+- **Changed**: `build.js` — `parseGlossary()`, `GLOSSARY_SINCE = 2026-09-02`, the section removed
+  from the retired list from that date and added to the end of the spine. Entry band 4-6 with
+  definitions capped at 20 words.
+- **Changed**: `index.html` — `glossaryHtml()` renders a `<dl>` at the foot of Overview, and
+  `linkGlossary()` walks the rendered text nodes wrapping the first match of each term. Done on
+  the DOM rather than the markdown because `md()` escapes `<` and `>` and would print any injected
+  anchor as visible text. Longest terms are matched first so "KV cache" wins over "cache", and
+  headings, `code`, `pre` and existing links are skipped.
+- **Verified against a minimal DOM shim** rather than assumed: a term in a heading is not linked,
+  the first body occurrence is, an occurrence inside `<code>` is not, and later occurrences are
+  left alone.
+- **New check that immediately paid for itself**: a glossary term the body never uses cannot be
+  linked, so nobody reaches the entry. It fired on three of the first ten entries written —
+  "Non-associativity" where the prose said "not associative", "Batch invariance" against
+  "batch-invariant kernel", and "Looped Transformer" against the plural. The terms were rewritten
+  to match the prose, which is the correct direction.
+- **Not in the publish gate, deliberately.** The entry-count band is advisory: five or six is the
+  norm, and an article that genuinely needs a seventh term should be nudged, not blocked.

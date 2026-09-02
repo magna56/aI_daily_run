@@ -188,3 +188,11 @@ Three questions before taking this as settled. Is my training run long enough to
 crossover, or would I only ever see the losing half of the curve? Does my checkpointing actually
 enclose recurrent applications in one unit, without which the memory argument evaporates? And when
 someone tells me two models were compute-matched, which of the two definitions did they use?
+
+## Glossary
+
+- **Looped Transformers** — store fewer layers and run each of them more than once.
+- **model-loop** — run the whole stack, then run it again. The prior pattern.
+- **layer-loop** — run each layer twice in place before moving on. Loopie's pattern.
+- **Activation memory** — what a training step holds for the backward pass; scales with stored depth.
+- **Compute-matched** — same training cost. Here it means measured step time, not theoretical FLOPs.
