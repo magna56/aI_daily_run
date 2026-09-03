@@ -841,8 +841,14 @@ function compile(id, journal, runner, opts) {
     // shipped live on 2026-09-02 from the diagram caption and a print() string in
     // code_example.py, both of which the reader reads, while topic.md was clean.
     const all = [
+      // The title is parsed out of the body, so it needs naming explicitly -- it is
+      // the most visible string on the site (card, tab, OG image, RSS, newsletter
+      // subject) and was the one place a British spelling passed silently.
+      topic.title,
       proseOnly(topic.body),
       topic.meta["Engineer's view"], topic.meta["TLDR"], topic.meta["Hook"],
+      // journal.md supplies the card blurb when the metadata fields are absent
+      j["Key insight"], j["TLDR"], j["Hook"],
       readIfExists(path.join(dir, "articles.md")) || "",
       readIfExists(path.join(dir, "code_example.py")) || "",
       // scene JSON: only the text the diagram actually renders. readIfExists

@@ -1220,3 +1220,14 @@ reached it for free — the real gap was that nothing *gated* the live push.
   `""` behavior rather than verifying it. **A date-gated check must be run with the gate opened,
   and the run must be read in full rather than grepped**: grepping for the new warning text showed
   nothing and looked like "no hits", when the process was actually dying before it printed.
+- **Third scope gap, found by the owner asking "does this apply to the title as well?"**: it did
+  not. Section headings were covered because they sit inside `topic.body`, but the `# Title` is
+  parsed out of the body before the check sees it, so a British spelling in the single most visible
+  string on the site — card, browser tab, OG image, RSS entry, newsletter subject line — passed
+  silently. Verified by injecting `Behaviour` into a title and watching nothing fire, then again
+  after the fix and watching it catch. `journal.md`'s `Key insight` / `TLDR` / `Hook` were added at
+  the same time, since they supply the card blurb whenever the metadata fields are absent.
+- **The pattern across all three gaps**: each time, the check covered the file being edited rather
+  than everything the reader sees. When adding a prose rule, enumerate the reader's surfaces first
+  — write-up, metadata boxes, title, card blurb, diagram captions, code comments and printed
+  strings, article summaries — and check the rule against that list, not against `topic.md`.
