@@ -837,9 +837,20 @@ function compile(id, journal, runner, opts) {
   /* Plain American English, across the whole write-up and the metadata lines --
      the engineer's view is one of those, and it is the line that was named. */
   if (date >= AMERICAN_ENGLISH_SINCE) {
-    const all = proseOnly(topic.body) + "\n"
-      + [topic.meta["Engineer's view"], topic.meta["TLDR"], topic.meta["Hook"]]
-        .filter(Boolean).join("\n");
+    // Every artifact the reader can see, not just topic.md. A British spelling
+    // shipped live on 2026-09-02 from the diagram caption and a print() string in
+    // code_example.py, both of which the reader reads, while topic.md was clean.
+    const all = [
+      proseOnly(topic.body),
+      topic.meta["Engineer's view"], topic.meta["TLDR"], topic.meta["Hook"],
+      readIfExists(path.join(dir, "articles.md")) || "",
+      readIfExists(path.join(dir, "code_example.py")) || "",
+      // scene JSON: only the text the diagram actually renders. readIfExists
+      // returns NULL, not "", when the optional file is absent -- assuming "" here
+      // crashed every session without a diagram, and the date gate hid it.
+      ((readIfExists(path.join(dir, "diagram.excalidraw")) || "")
+        .match(/"text":\s*"[^"]*"/g) || []).join(" "),
+    ].filter(Boolean).join("\n");
     for (const [re, fix] of BRITISHISMS) {
       const hit = all.match(re);
       if (hit) {

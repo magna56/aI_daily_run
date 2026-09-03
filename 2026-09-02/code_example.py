@@ -115,7 +115,7 @@ def main():
 
     print("\n  Same numbers, same model, temperature zero. The winner changes with")
     print("  the reduction order alone.")
-    print("\nTemperature zero was honoured in both cases. Greedy decoding is")
+    print("\nTemperature zero was honored in both cases. Greedy decoding is")
     print("deterministic GIVEN a reduction order, and the order is set by your")
     print("kernel, your batch shape and your parallelism layout — none of which")
     print("live in the checkpoint. That is the whole bug, and everything after")

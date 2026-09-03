@@ -1205,3 +1205,18 @@ reached it for free — the real gap was that nothing *gated* the live push.
   corrected `Engineer's view` template. `contract.md` matters because `ai-daily-learn-pick` reads
   it directly when the Skill tool is unavailable.
 - **Changed**: `CLAUDE.md` — both rules, so a hand-written session follows them too.
+- **Shipped-then-caught, same day**: after the rewrite went live, `behavioural` was still on
+  theaicommit.com. `topic.md` was clean; the word was in a `diagram.excalidraw` caption and a
+  `print()` string in `code_example.py`, and `neighbours` was in a second diagram caption. The
+  lint read only `topic.md`, but the reader reads all five artifacts.
+- **Changed**: `build.js` — the American-English check now scans `articles.md`, `code_example.py`
+  and the rendered `"text"` values of `diagram.excalidraw` alongside the write-up and metadata.
+  Catalog hits went from 9 to 23, which is the measure of how much the old scope was missing.
+- **Second temporal-dead-zone-class miss in one day, and the more instructive one.** The first
+  draft of the widened check assumed `readIfExists` returns `""` for a missing file. It returns
+  **null**, so every session without a diagram crashed the build — and with the date gate at
+  2026-09-03 no session reached the code, so `--check` printed "Lint passed" over a build that
+  would throw the moment a session was dated into range. The comment above the code asserted the
+  `""` behavior rather than verifying it. **A date-gated check must be run with the gate opened,
+  and the run must be read in full rather than grepped**: grepping for the new warning text showed
+  nothing and looked like "no hits", when the process was actually dying before it printed.
