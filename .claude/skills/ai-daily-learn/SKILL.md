@@ -712,6 +712,30 @@ topic from feeling like showing off.
 - This is the pain the paper/release exists to fix — not a restatement of the ELI5 analogy.
   If you can't state the problem in plain terms, you don't understand the topic well enough
   to write the rest of the session yet — go back to Step 3.
+- **Narrate it from the reader's side of the fence, not the paper's.** This is the site's USP and
+  it is the rule the whole section exists to serve: the owner's words on 2026-09-02 were "having a
+  software engineer perspective and explaining the problem from its perspective is our USP." It is
+  not enough to put an engineer's analogy in the box at the top and then explain the problem in the
+  source's vocabulary. **Open on a bug the reader has already shipped and already debugged**, in a
+  system that had nothing to do with AI, then show the topic as that same bug at a different scale.
+  The source's own terminology arrives afterwards, in `The Fix`, once there is something to attach
+  it to.
+  - ✗ *"You have probably met this and filed it as a mystery. The same prompt, the same model,
+    temperature set to zero — and the answer on the GPU box is not the answer you got on your
+    laptop. The cause is not a bug in either system. **Floating-point addition is
+    non-associative**: `(a + b) + c` and `a + (b + c)` can give different results…"* — the reader
+    meets the domain's machinery before anything connects to work they have done.
+  - ✓ *"You have shipped this bug before, in a system that had nothing to do with AI. A test passes
+    on your laptop and fails in CI. Nobody touched the code. After an hour you find it: the two
+    machines added the same list of floats in a different order… A model is that bug with a much
+    bigger list."* — same facts, same fix, same length; `non-associative` moves to `The Fix`.
+  - The rewrite that produced that pair also dropped the section's mean sentence from 17.8 to 12.7
+    words **without being edited for length**. Narrating a bug someone has debugged does not need
+    stacked clauses; explaining a paper does. If a section is hard to write in short sentences,
+    check whose point of view it is being told from before you start splitting them.
+  - Two earlier attempts to fix a "confusing and verbose" complaint about this section — by moving
+    evidence out of it, and by converting its opening to a bullet list — were both rejected by the
+    owner as indistinguishable from the original. Point of view was the variable that mattered.
 - **Open on the specific failure, not on a definition.** *"The main problem with standard RAG
   isn't the retrieval or the generation. It's that nothing sits in the middle deciding whether
   the retrieval was actually good enough."* That sentence names the gap before naming the

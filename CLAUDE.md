@@ -123,7 +123,11 @@ is Cloudflare Pages' native SPA-fallback. GitHub Pages ignores this file; it use
 (`fa0d5d4b-8907-420f-956f-8fbbd8a854f2`) as `DB`. Schema is `db/schema.sql`
 (`subscribers`, `issues`). Pages Functions: `POST /api/subscribe`, `GET /api/confirm`,
 `GET /api/unsubscribe`, `POST /api/newsletter` and `GET /api/stats` (Bearer
-`NEWSLETTER_SECRET`). A signup also emails `NEWSLETTER_NOTIFY` (default
+`NEWSLETTER_SECRET`). Signup is **single opt-in**: `/api/subscribe` marks the row
+`active` straight away and sends a welcome email — there is no confirmation step, and
+`/api/newsletter` mails everyone whose status is not `unsubscribed`, so `pending` rows
+left over from the old double opt-in flow are included. `/api/confirm` is kept only so
+old confirm links still resolve. A signup also emails `NEWSLETTER_NOTIFY` (default
 `theaicommit@gmail.com`) with the address and running counts. Mail goes
 through Resend (`RESEND_API_KEY`, optional `NEWSLETTER_FROM` / `PUBLIC_URL`). Without
 the Resend key, signups are still stored and marked active so an unset secret never
@@ -156,6 +160,14 @@ rules exists; read it before reversing one. `/ai-daily-learn` writes locally onl
 additionally commits and pushes straight to `main` on the GitHub remote (no branches, no PRs —
 this is a personal notes repo). Both skills, by design, never touch this repo's own git state
 except through those two explicit publish paths.
+
+All session prose is **plain American English** — American spelling, and sentences carrying one
+idea each; `make check` warns on a British spelling anywhere in the write-up or the metadata boxes
+and on a mean sentence above 18 words, for sessions dated 2026-09-03 or later. `## The Problem` is
+narrated from the reader's side — it opens on a bug the engineer has already shipped in a system
+unrelated to AI, then shows the topic as that same bug at a different scale, leaving the source's
+own vocabulary for `## The Fix`. That translation is the site's differentiator, so the
+`Engineer's view` box supplements it rather than replacing it.
 
 When adding a session by hand: `topic.md` must start with `# Title` followed by `**Key**: value`
 metadata lines (`Category` must be one of the 11 categories in `build.js`'s `CATEGORY_TIERS`

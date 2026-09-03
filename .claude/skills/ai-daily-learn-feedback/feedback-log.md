@@ -1192,3 +1192,16 @@ reached it for free — the real gap was that nothing *gated* the live push.
 - **Not automated**: "explains rather than alludes" is not lintable, and a proxy (metaphor counting,
   banned words) would fire on correct boxes. This one is reviewed by eye, like the `Implementing It`
   pair.
+- **Gap caught on review, same day**: the engineer-perspective rule was applied to `2026-09-02` and
+  named in the commit message, but **never written into any spec file**. The article was correct
+  and the generator would have reverted to the old shape on the next run. Found only because the
+  owner asked whether the skills had been updated. **Applying a rule to today's article is not the
+  same as shipping it**; the spec edit is the deliverable, the article is the demonstration.
+- **Changed**: `SKILL.md` `## The Problem` — "Narrate it from the reader's side of the fence, not
+  the paper's", with the before/after pair from 2026-09-02 and the note that the rewrite dropped
+  that section's mean sentence from 17.8 to 12.7 words with no edit for length. Point of view, not
+  sentence surgery, is what made the prose short.
+- **Changed**: `contract.md` — the same rule, plus the plain-American-English paragraph and the
+  corrected `Engineer's view` template. `contract.md` matters because `ai-daily-learn-pick` reads
+  it directly when the Skill tool is unavailable.
+- **Changed**: `CLAUDE.md` — both rules, so a hand-written session follows them too.

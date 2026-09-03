@@ -55,7 +55,8 @@ Required `##` sections, in this order — **seven, five fixed and two named for 
 render as boxes above `Explain Like I'm 5`:
 
 ```
-**Engineer's view**: <the thing they have already shipped, named. Max 55 words.>
+**Engineer's view**: <name the thing they have already shipped, explain the mapping in one plain
+sentence, then say what it costs them. Max 55 words. It must explain, not allude.>
 **TLDR**: <two lines, plain language, at most one number.>
 ```
 
@@ -81,6 +82,17 @@ somebody who has not yet been told the mechanism is the point. Name it for the a
 that reading only the headings gives problem → fix → how it works → what to do. An Explainer-shape
 piece whose payoff is understanding rather than a change may use `## The Answer: …`. `--check`
 enforces this from 2026-09-01.
+
+**`The Problem` is told from the reader's side, and this is the site's USP.** Open on a bug the
+engineer has already shipped and debugged in a system unrelated to AI, then show the topic as that
+same bug at a different scale. The source paper's vocabulary waits for `The Fix`. An `Engineer's
+view` box at the top does not discharge this: the perspective is how the problem gets explained,
+not a label attached to the page.
+
+**Write plain American English.** American spelling (`behavior`, `honor`, `artifact`, `normalize`,
+`analyze`, `distill`, `$` not `£`), and sentences that carry one idea each. `--check` warns on any
+British spelling in the write-up or the `Engineer's view` / `TLDR` / `Hook` lines, and on a **mean
+sentence above 18 words** across the whole article, from 2026-09-03.
 
 **And state the fix, do not narrate it.** The sentence in `The Problem` that introduces the
 solution is an instruction, not a report of who discovered it. A description of what one engineer
