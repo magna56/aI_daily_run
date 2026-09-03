@@ -180,9 +180,11 @@ the machine.
 
 ## Newsletter
 
-The homepage form collects an email into Cloudflare D1 (`subscribers`). Confirm and
-unsubscribe are token links. After each successful Cloudflare deploy, `deploy.sh`
-sends at most one email for the newest daily session (`issues` prevents repeats).
+The homepage form collects an email into Cloudflare D1 (`subscribers`) and activates
+it immediately — single opt-in, no confirmation step; the new address just gets a
+welcome email. Sends go to every subscriber who has not unsubscribed. Unsubscribe is a
+token link. After each successful Cloudflare deploy, `deploy.sh` sends at most one
+email for the newest daily session (`issues` prevents repeats).
 
 Mail needs two Pages secrets (`npx wrangler pages secret put … --project-name=theaicommit`)
 and the send secret in Keychain so deploy can call the API:

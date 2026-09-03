@@ -76,16 +76,15 @@
   <p>If you subscribe, we store the email address you typed so we can send you one email
   when a new daily session ships. That's the only reason we keep it.</p>
   <ul>
-    <li><strong>What we store</strong> — your email, whether the subscription is pending /
-    active / unsubscribed, confirmation and unsubscribe tokens, and timestamps for those
-    events. Nothing else: no name, no job title, no tracking pixel, no open or click
-    analytics.</li>
+    <li><strong>What we store</strong> — your email, whether the subscription is active or
+    unsubscribed, an unsubscribe token, and timestamps for those events. Nothing else:
+    no name, no job title, no tracking pixel, no open or click analytics.</li>
     <li><strong>Where it lives</strong> — a Cloudflare D1 database in our Cloudflare
     account, reached only by the signup / confirm / unsubscribe / send Functions on
     theaicommit.com. The GitHub Pages mirror has no server of its own; a signup from
     that mirror is posted to theaicommit.com.</li>
-    <li><strong>Who else sees it</strong> — if mail is configured, the confirmation,
-    welcome, and session emails are sent through
+    <li><strong>Who else sees it</strong> — if mail is configured, the welcome and
+    session emails are sent through
     <a href="https://resend.com/" target="_blank" rel="noopener">Resend</a>, who process
     the address solely to deliver those messages. We don't sell, rent, or share the list.</li>
     <li><strong>How to leave</strong> — every newsletter includes an unsubscribe link that

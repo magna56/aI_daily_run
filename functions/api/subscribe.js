@@ -1,10 +1,11 @@
 // POST /api/subscribe  { email }
-// Collects an address into D1. If Resend is configured, the row stays
-// pending until they hit /api/confirm; otherwise they go active immediately
-// so a missing API key never silently drops a signup.
+// Collects an address into D1 and activates it immediately — single opt-in,
+// no confirmation step. If Resend is configured the address gets a welcome
+// email; if it isn't, the row is still stored active so a missing API key
+// never silently drops a signup.
 
 import { json, options, isEmail, newToken, nowIso, siteUrl, subscriberCounts } from "../_lib/http.js";
-import { mailConfigured, sendEmail, confirmEmail, ownerInbox, ownerSignupEmail } from "../_lib/mail.js";
+import { mailConfigured, sendEmail, welcomeEmail, ownerInbox, ownerSignupEmail } from "../_lib/mail.js";
 
 export async function onRequestOptions(context) {
   return options(context.request);
@@ -23,7 +24,7 @@ export async function onRequestPost(context) {
 
   // Honeypot: bots fill hidden fields. Pretend success.
   if (body && (body.website || body.company)) {
-    return json(request, { ok: true, message: "Check your email to confirm." });
+    return json(request, { ok: true, message: "You're on the list." });
   }
 
   const email = body && typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
@@ -33,37 +34,33 @@ export async function onRequestPost(context) {
     "SELECT email, status, confirm_token, unsub_token FROM subscribers WHERE email = ?"
   ).bind(email).first();
 
-  const confirm = newToken();
-  const unsub = newToken();
   const now = nowIso();
-  const needConfirm = mailConfigured(env);
-  const status = needConfirm ? "pending" : "active";
 
   if (existing && existing.status === "active") {
     return json(request, { ok: true, already: true, message: "You're already on the list." });
   }
 
+  // confirm_token is kept only because the column is NOT NULL UNIQUE; nothing
+  // reads it any more now that signup is single opt-in.
+  const confirm = newToken();
+  const unsub = (existing && existing.unsub_token) || newToken();
+
   if (existing) {
     await env.DB.prepare(
-      "UPDATE subscribers SET status = ?, confirm_token = ?, unsub_token = ?, confirmed_at = ?, unsubscribed_at = NULL WHERE email = ?"
-    ).bind(status, confirm, unsub, needConfirm ? null : now, email).run();
+      "UPDATE subscribers SET status = 'active', confirm_token = ?, unsub_token = ?, confirmed_at = ?, unsubscribed_at = NULL WHERE email = ?"
+    ).bind(confirm, unsub, now, email).run();
   } else {
     await env.DB.prepare(
-      "INSERT INTO subscribers (email, status, confirm_token, unsub_token, created_at, confirmed_at) VALUES (?, ?, ?, ?, ?, ?)"
-    ).bind(email, status, confirm, unsub, now, needConfirm ? null : now).run();
+      "INSERT INTO subscribers (email, status, confirm_token, unsub_token, created_at, confirmed_at) VALUES (?, 'active', ?, ?, ?, ?)"
+    ).bind(email, confirm, unsub, now, now).run();
   }
 
-  if (needConfirm) {
-    const mail = confirmEmail({ site: siteUrl(env), token: confirm });
-    const sent = await sendEmail(env, { to: email, ...mail });
-    if (!sent.ok && !sent.skipped) {
-      return json(request, { error: "mail_failed" }, 502);
-    }
-    await notifyOwner(env, email, status);
-    return json(request, { ok: true, message: "Check your email to confirm." });
+  if (mailConfigured(env)) {
+    const mail = welcomeEmail({ site: siteUrl(env), unsub });
+    await sendEmail(env, { to: email, ...mail });
   }
 
-  await notifyOwner(env, email, status);
+  await notifyOwner(env, email, "active");
   return json(request, { ok: true, message: "You're on the list. We'll email when a new daily session ships." });
 }
 

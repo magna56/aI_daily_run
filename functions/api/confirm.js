@@ -1,3 +1,8 @@
+// GET /api/confirm?t=<token>
+// Legacy double opt-in endpoint. Signup is single opt-in now, so nothing
+// sends these links any more — it stays so confirm links already in people's
+// inboxes still land somewhere sensible.
+
 import { page, siteUrl } from "../_lib/http.js";
 import { mailConfigured, sendEmail, welcomeEmail } from "../_lib/mail.js";
 

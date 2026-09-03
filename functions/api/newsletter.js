@@ -1,8 +1,9 @@
 // POST /api/newsletter
-// Secret-protected send of one daily-session issue to every active
-// subscriber. deploy.sh calls this after a Cloudflare publish. The issues
-// table is the idempotency key — republishing the same session does not
-// mail again.
+// Secret-protected send of one daily-session issue to every subscriber who
+// has not unsubscribed — signup is single opt-in, so unconfirmed ("pending")
+// rows left over from the old double opt-in flow are mailed too. deploy.sh
+// calls this after a Cloudflare publish. The issues table is the idempotency
+// key — republishing the same session does not mail again.
 
 import { json, options, siteUrl } from "../_lib/http.js";
 import { mailConfigured, sendEmail, issueEmail } from "../_lib/mail.js";
@@ -44,7 +45,7 @@ export async function onRequestPost(context) {
   }
 
   const rows = await env.DB.prepare(
-    "SELECT email, unsub_token FROM subscribers WHERE status = 'active'"
+    "SELECT email, unsub_token FROM subscribers WHERE status <> 'unsubscribed'"
   ).all();
   const list = (rows && rows.results) || [];
   const site = siteUrl(env);
