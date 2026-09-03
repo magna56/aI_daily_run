@@ -1097,3 +1097,98 @@ reached it for free — the real gap was that nothing *gated* the live push.
   which would have been the same temporal-dead-zone crash as the `[[visualize]]` check on
   2026-08-31, and caught this time before it shipped. Verified by adding the import and watching it
   fire, unfiltered so a crash could not have presented as a pass.
+
+---
+
+## 2026-09-02 — `The Problem` reads confusing and verbose (open, unresolved)
+
+- **Note**: "thats the thing our problem section I always find it confusing and verbose"
+- **Verdict**: **no spec change.** The complaint is real and standing — it was volunteered about
+  the section as a *class*, not about one session — but two attempted fixes were built, published
+  to the gh-pages mirror, and read by the owner beside the live original, and he could not see a
+  difference either time. Nothing here is a rule yet. This entry exists so the next session knows
+  the problem is open and does not re-run the two experiments below.
+- **What the complaint is not**: word count. Four sessions were diffed. The two he reads as clear
+  (`2026-08-30` subagent model precedence, `2026-08-28` Assistants API sunset) are **not** the
+  shorter ones. Both do two jobs — name the reader's situation, then say what silently breaks —
+  while the two he reads as confusing (`2026-09-02`, `2026-08-31`) also explain the full mechanism
+  and stage an escalation on a named lab's benchmark result. That analysis was never refuted; it
+  just did not lead anywhere the owner could perceive.
+- **Attempt 1 — prose hygiene. Rejected: "they read the same."** `2026-09-02`'s `The Problem` was
+  rewritten with the paper's apparatus moved to `The Fix` (dropped `GLM-5.2`, the `0.013`
+  measurement, the clipping chain), the deferral *"you have the right instinct"* deleted, and the
+  freed budget spent on one more reader symptom. 232 → 234 words. **Lesson: changing which nouns
+  appear is invisible at reading speed.**
+- **Attempt 2 — visible structure. Rejected: "I cant see the difference yet."** The same section
+  re-cut to open on three bolded-lead symptom bullets, then two paragraphs plus the fix — four
+  prose paragraphs down to two. 226 words, still above the 190 floor, so **the floor was never the
+  obstacle**. This also rules out the cheap explanation that the section just needed the
+  bulleted form of the owner's other AI blog pipeline grafted onto it.
+- **Ruled out, so do not retry**: trimming for length; swapping citations out of position two;
+  deleting deferrals; converting the opening to a bullet list. All four were tried at the article
+  level and none registered.
+- **What has not been tried**, for whoever picks this up: the complaint may not be about
+  `The Problem` in isolation at all. It sits at position two, directly under the `Engineer's view`
+  / `TLDR` boxes and the ELI5, and by the time a reader reaches it they have already been told what
+  the article is about three times. The next experiment should be about that redundancy across the
+  opening — not another rewrite inside the section's own boundaries.
+- **Reverted**: `2026-09-02/topic.md` and `SKILL.md` are back to their committed state at the
+  owner's instruction ("lets keep what we have in the website"). The mirror was redeployed to match.
+
+---
+
+## 2026-09-02 — the sentences are hard to read, across the whole article
+
+- **Note**: "also i notices the setenses are hard to read and look confusing seciclly the software
+  enginners perspective and I see this trend in the entire article we want to write american
+  english wich is easy to understand"
+- **Verdict**: standing rule, and it supersedes the entry above it. That entry records two failed
+  attempts to fix a "confusing and verbose" complaint by restructuring `The Problem`; this note
+  arrived immediately after the second was rejected and is the better explanation of both
+  rejections. **Restructuring a section whose sentences are still hard to read does not change how
+  it reads.** Check the sentences before reaching for structure next time.
+- **Measured on the session that drew it** (`2026-09-02`): mean sentence **21.0 words**, 23
+  sentences over 25 words, 17 over 30 — against an existing cap of 45 that it passed cleanly. The
+  named worst case was the `Engineer's view` metadata line, which is prose the reader meets above
+  the ELI5. British spellings across the repo: `behaviour` ×15, `distil` ×10, `optimis` ×8,
+  `recognis` ×6, `normalis` ×6, `honour` ×5, plus `£` in the 2026-09-02 ELI5.
+- **Why nothing caught it**: every prose rule was per-outlier, and the file says so in its own
+  comment — "deliberately generous: they do not enforce good prose". An outlier cap cannot see a
+  mean. The complaint was about uniformly dense prose, which is invisible to a max.
+- **Changed**: `build.js` — `AMERICAN_ENGLISH_SINCE = "2026-09-03"` gating two new checks, both
+  covering the **whole write-up** rather than the on-ramp three sections, because "the entire
+  article" is what was reported. (1) `BRITISHISMS`, a list of forms whose American spelling is
+  unambiguous, checked against the body *and* the `Engineer's view` / `TLDR` / `Hook` metadata
+  lines; words identical in both spellings (`analysis`, `distillation`, `distilled`) are
+  deliberately excluded so the lint cannot cry wolf. (2) `MEAN_SENTENCE_WORDS = 18`.
+- **Changed**: `SKILL.md` — "Write plain American English", with the spelling list and, more
+  importantly, the sentence rule: the defect is clause-stacking, em-dash asides and `not X, but Y`
+  inversions, not vocabulary. Carries before/after pairs from this session's own worst sentences.
+  Notes that the mean is not a target to hit by shortening everything — vary the rhythm.
+- **Changed**: `ai-daily-learn-publish` and `ai-daily-learn-github` — a British spelling or a mean
+  sentence over 18 words now joins the blocking readability warnings.
+- **Verification**: the gate was temporarily opened to `2000-01-01` and `--check` re-run unfiltered
+  to prove both checks fire rather than silently passing — 10 warnings became 72. This was done
+  because the first draft of the check referenced `engineerView` and `tldr`, which are not in scope
+  at that point in `compile()`; with the date gate closed the block never ran, so the lint reported
+  a clean pass over code that would have thrown. Same temporal-dead-zone shape as the `[[visualize]]`
+  check on 2026-08-31 and the framework-import check before it. **Always open the gate and watch a
+  new check fail before trusting it.**
+- **Back catalog untouched**: 62 of the 72 warnings are old sessions. The gate is set to
+  2026-09-03 so only new articles are held to it.
+- **Same day, follow-up note**: "make software engineers perspective little explanative, the
+  current one confuses me more than it explains."
+- **Cause, which was a rule and not a slip**: the `Engineer's view` spec said *"One analogy, 55
+  words, and stop. It is the hook, not the essay."* That optimized for compression and never
+  required the analogy to be unpacked, so the box was free to assert a resemblance and leave the
+  reader to reconstruct it. 2026-09-02 stacked a second metaphor on the first — "a flaky test under
+  load — a hash that depends on which thread finished first" — and gave no mechanism at all.
+- **Changed**: `SKILL.md` `Engineer's view` — the box must **teach, not allude**, in three moves:
+  name the familiar thing, say what maps to what in the topic's own mechanism, then say what it
+  costs the reader in their terms. Plus a ban on stacking a second metaphor on the first: every
+  noun in the box is either something the reader has shipped or something the article is about.
+  The 55-word cap survives — the corrected example is the same length as the one it replaces, so
+  this costs clarity nothing.
+- **Not automated**: "explains rather than alludes" is not lintable, and a proxy (metaphor counting,
+  banned words) would fire on correct boxes. This one is reviewed by eye, like the `Implementing It`
+  pair.

@@ -344,7 +344,7 @@ Write `~/ai_learning/YYYY-MM-DD/topic.md`:
 **Level**: [Start here | Building | Deeper]
 **For**: [Using tools | Building agents | Shipping AI | How models work]
 **Hook**: [one plain sentence for the homepage card — no acronyms]
-**Engineer's view**: [the thing they have already shipped, named. Renders as the FIRST box on the page, above the ELI5. Max 55 words.]
+**Engineer's view**: [name the thing they have already shipped, then explain the mapping in one plain sentence, then say what it costs them. Renders as the FIRST box on the page, above the ELI5. Max 55 words. It must explain, not allude.]
 **TLDR**: [two lines, plain language, at most one number. Renders directly under it.]
 **Time to read**: ~10 minutes
 
@@ -482,6 +482,38 @@ in `Implementing It` at 30 lines**, and if a block is a verbatim slab of `code_e
 of the two is redundant. Both are `--check` warnings. The reader should finish the article
 knowing exactly what to type, and open the Code tab to get the finished thing, not to get the
 same thing again.
+
+**Write plain American English.** This is a house rule, reported by the site's owner on
+2026-09-02 about the articles as a whole — "the sentences are hard to read and look confusing,
+especially the software engineer's perspective, and I see this trend in the entire article."
+Two separate things are meant by it, and the second is the one that matters.
+
+- **Spelling and idiom are American.** `behavior`, `honor`, `artifact`, `normalize`, `analyze`,
+  `modeling`, `distill`, `while` (not `whilst`), `among` (not `amongst`), `$` (not `£` — the
+  2026-09-02 ELI5 priced a receipt in pounds). `build.js --check` carries the list and warns on
+  the whole write-up plus the `Engineer's view`, `TLDR` and `Hook` metadata lines, because those
+  are prose the reader meets first. Words spelled the same in both — `analysis`, `distillation`,
+  `distilled` — are deliberately absent from the list; a lint that cries wolf gets switched off.
+- **Sentences are short and carry one idea each.** The defect is not vocabulary. It is stacking:
+  subordinate clauses, em-dash asides, and `not X, but Y` inversions, strung into a sentence that
+  is grammatical and exhausting. Put the subject near the front, make the claim, stop. The old
+  45-word cap catches none of this — it is a per-outlier rule, and the article that drew the
+  complaint had a **mean of 21.0 words with 23 sentences over 25**, while passing it. `--check`
+  now warns above a **mean of 18 words** across the whole write-up.
+  - ✗ *"An exact-string assert across two runtimes fails the day the batch shape changes, not the
+    day your code does."* — one sentence, two inversions, and the reader has to hold the negation
+    to the end.
+  - ✓ *"You assert that two runtimes return the same string. One day it fails, and you did not
+    touch the code. The batch shape changed instead."*
+  - ✗ *"Run identical prompts through both runtimes and keep the distribution, not the mean — the
+    mean was 0.014 in the paper's run while the worst step was 5.073, and it is the tail that
+    breaks things."* (57 words)
+  - ✓ *"Run the same prompts through both runtimes. Keep the whole distribution, not the mean. In
+    the paper's run the mean gap was 0.014, but the worst single step was 5.073. The tail is what
+    breaks you."*
+- A mean is not a target to hit by shortening everything. Vary the rhythm: a long sentence is
+  fine when the short ones around it carry the argument. The mean is what catches prose that is
+  *uniformly* dense, which is the thing that was reported.
 
 **Every section has a word band — a floor and a cap, fenced code excluded**, both warned by
 `--check`. There is no document-wide total any more, and the reason it went is worth knowing
@@ -794,8 +826,33 @@ section at position four until 2026-09-02, which was late for it.
 - **Name the thing they have shipped, explicitly.** "This is a configuration precedence bug." "This
   is head-of-line blocking." "This is loop interchange." "This is a cache key that does not include
   everything the result depends on."
-- **One analogy, 55 words, and stop.** It is the hook, not the essay. The consequence belongs in
-  `What This Means for You`, and the number worth holding onto goes there too.
+- **Then explain the mapping. The box must teach, not allude.** This is the correction made on
+  2026-09-02, when the site's owner said the box "confuses me more than it explains". The old rule
+  here — *one analogy, 55 words, and stop* — optimized for compression and never required the
+  analogy to be unpacked, so the box asserted a resemblance and left the reader to reconstruct why.
+  Three moves, in this order, in plain sentences:
+  1. **Name the familiar thing.** One short sentence.
+  2. **Say what maps to what**, in the topic's own mechanism, plainly. This is the sentence the old
+     rule was missing and it is the one doing the work.
+  3. **Say what it costs the reader**, in their terms. Their test, their bill, their pager.
+- **Never stack a second metaphor on the first.** A reader who did not follow the analogy cannot
+  follow a figure of speech built on top of it. Every noun in the box should be either something
+  the reader has shipped or something this article is about — nothing in between.
+  - ✗ *"This is a flaky test under load — a hash that depends on which thread finished first. An
+    exact-string assert across two runtimes fails the day the batch shape changes, not the day your
+    code does."* Two metaphors deep before any mechanism is given; the reader is told the topic
+    resembles a hash without being told why, and the payload arrives as a `not X, but Y` inversion.
+  - ✓ *"This is a flaky test, and the flake is in the hardware. Your GPU adds numbers in whatever
+    order the batch shape happens to produce, and a different order gives a slightly different
+    total. So an exact-match assert on model output can pass all week, then fail on a day you
+    changed nothing."* Same length. Names the familiar thing, explains the mapping, lands on the
+    reader's own test.
+- **55 words, and it is still not the essay.** Explaining the mapping costs a sentence, not a
+  paragraph; the depth belongs in `The Fix` and the actions in `What This Means for You`. If the
+  mapping cannot be explained in one plain sentence, the analogy is wrong — find a closer one
+  rather than spending more words defending this one.
+- Write it under the plain-American-English rule above; this box is the most compressed prose on
+  the site and therefore the easiest place to write something clever and unreadable.
 - **`## For a Software Engineer` is retired** — the box replaces it. Do not write both.
 
 **`**TLDR**`** — two lines under the box, plain language, at most one number. It inherits the old

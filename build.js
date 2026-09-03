@@ -197,6 +197,42 @@ const READING_RHYTHM_SINCE = "2026-08-28";
 const MAX_PARAGRAPH_WORDS = 110;
 const MAX_SENTENCE_WORDS = 45;
 
+// Plain American English. The caps above are per-outlier and, as the comment says,
+// deliberately generous -- a 44-word sentence passes. That is why they never caught
+// what the site's owner actually reports: on 2026-09-02 he said the sentences are
+// hard to read across the WHOLE article and named the engineer's view as the worst
+// case, on a session whose mean sentence ran 21.0 words with 23 sentences over 25.
+// An outlier cap cannot see a mean. These two checks can, and unlike the length
+// rules they cover the whole write-up rather than the on-ramp, because "I see this
+// trend in the entire article" is what was reported.
+const AMERICAN_ENGLISH_SINCE = "2026-09-03";
+const MEAN_SENTENCE_WORDS = 18;
+// Only forms whose American spelling is unambiguous. Deliberately omits words that
+// are identical in both ("analysis", "distillation", "distilled") -- a lint that
+// cries wolf gets switched off.
+const BRITISHISMS = [
+  [/\bbehaviour(s|al)?\b/i, "behavior"], [/\bartefact(s)?\b/i, "artifact"],
+  [/\bhonour(s|ed|ing)?\b/i, "honor"], [/\bcolour(s|ed|ing)?\b/i, "color"],
+  [/\bfavour(s|ed|ing|ite)?\b/i, "favor"], [/\blabour\b/i, "labor"],
+  [/\bneighbour(s|ing)?\b/i, "neighbor"], [/\bdefence\b/i, "defense"],
+  [/\boffence\b/i, "offense"], [/\bprogramme(s)?\b/i, "program"],
+  [/\bcentre(s|d)?\b/i, "center"], [/\bdistils?\b/i, "distill"],
+  [/\bnormalis(e|es|ed|ing|ation)\b/i, "normaliz-"],
+  [/\boptimis(e|es|ed|ing|ation)\b/i, "optimiz-"],
+  [/\brecognis(e|es|ed|ing)\b/i, "recogniz-"],
+  [/\bsummaris(e|es|ed|ing)\b/i, "summariz-"],
+  [/\banalys(e|es|ed|ing)\b/i, "analyz-"],
+  [/\borganis(e|es|ed|ing|ation)\b/i, "organiz-"],
+  [/\bprioritis(e|es|ed|ing)\b/i, "prioritiz-"],
+  [/\bstandardis(e|es|ed|ing)\b/i, "standardiz-"],
+  [/\bminimis(e|es|ed|ing)\b/i, "minimiz-"],
+  [/\bmaximis(e|es|ed|ing)\b/i, "maximiz-"],
+  [/\butilis(e|es|ed|ing)\b/i, "utiliz-"],
+  [/\bmodelling\b/i, "modeling"], [/\blabelled\b/i, "labeled"],
+  [/\bcancelled\b/i, "canceled"], [/\blearnt\b/i, "learned"],
+  [/\bwhilst\b/i, "while"], [/\bamongst\b/i, "among"], [/£/, "$"],
+];
+
 // Per-section prose budgets, replacing the single 1,300-word document total that
 // ran from 2026-08-27 to 2026-08-31. The total was the right diagnosis and the
 // wrong instrument. Because the spec told the author to "cut, do not redistribute
@@ -797,6 +833,39 @@ function compile(id, journal, runner, opts) {
   if (!job) warn(`${id}: no For in topic.md (${JOBS.join(" / ")}).`);
   else if (!JOBS.includes(job)) warn(`${id}: For "${job}" is not one of ${JOBS.join(", ")}.`);
   if (!hook) warn(`${id}: no Hook in topic.md — the card will fall back to the journal insight.`);
+
+  /* Plain American English, across the whole write-up and the metadata lines --
+     the engineer's view is one of those, and it is the line that was named. */
+  if (date >= AMERICAN_ENGLISH_SINCE) {
+    const all = proseOnly(topic.body) + "\n"
+      + [topic.meta["Engineer's view"], topic.meta["TLDR"], topic.meta["Hook"]]
+        .filter(Boolean).join("\n");
+    for (const [re, fix] of BRITISHISMS) {
+      const hit = all.match(re);
+      if (hit) {
+        warn(`${id}: "${hit[0]}" is British spelling — use "${fix}". The site is written `
+          + `in American English.`);
+        break;
+      }
+    }
+    const sents = proseOnly(topic.body)
+      .split(/\n\s*\n/).map((x) => x.trim())
+      .filter((x) => x && !/^[|#>]/.test(x))
+      .join(" ")
+      .split(/(?<=[.!?])\s+/)
+      .map((x) => (x.match(/\S+/g) || []).length)
+      .filter((n) => n > 3);
+    if (sents.length) {
+      const mean = sents.reduce((a, b) => a + b, 0) / sents.length;
+      if (mean > MEAN_SENTENCE_WORDS) {
+        const long = sents.filter((n) => n > 25).length;
+        warn(`${id}: mean sentence is ${mean.toFixed(1)} words (cap ${MEAN_SENTENCE_WORDS}), `
+          + `with ${long} over 25. The ${MAX_SENTENCE_WORDS}-word cap only catches outliers; `
+          + `this is the one that catches prose that is uniformly hard to read. Split the `
+          + `clause-stacking sentences — one idea each, subject near the front.`);
+      }
+    }
+  }
 
   /* Reading rhythm: the paragraph and the sentence, not the section, are what a
      reader gives up inside. Checked on the three sections a reader meets before

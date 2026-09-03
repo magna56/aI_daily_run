@@ -93,7 +93,7 @@ never fix it by loosening the spec. The blocking ones:
   never open and nobody reading on a phone will run.
 - anything about `visualize.html` — a session without a working visualizer has no Visualize tab.
 - **the readability warnings** — a paragraph over 110 words, a sentence over 45, a single-block
-  `The Problem`, or **any section outside its word band**. Both directions block, and the floors
+  `The Problem`, **a British spelling**, **a mean sentence over 18 words**, or **any section outside its word band**. Both directions block, and the floors
   matter most: the 2026-08-31 regression was sections being *drained* to pay for a document-wide
   total, so a gate that only caught overflow would have passed every article that caused the
   complaint. These block because they are the failure the reader actually experiences: on 2026-08-27 the site's own owner abandoned a

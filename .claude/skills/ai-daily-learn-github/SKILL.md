@@ -90,7 +90,7 @@ never fix it by loosening the spec. The blocking ones:
   never open and nobody reading on a phone will run.
 - anything about `visualize.html` — a session without a working visualizer has no Visualize tab.
 - **the readability warnings** — a paragraph over 110 words, a sentence over 45, a single-block
-  `The Problem`, or **any section outside its word band** (floors block as well as caps), plus the
+  `The Problem`, **a British spelling**, **a mean sentence over 18 words**, or **any section outside its word band** (floors block as well as caps), plus the
   structural checks: section order, a retired section, a bad `TLDR`, a missing `Engineer's view`. Landing an unreadable session on
   `main` is worse than it sounds: it becomes the example every future session is written against.
   Fix **in the section named** — over its cap, cut it there; under its floor, it is owed words
