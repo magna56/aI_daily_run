@@ -104,7 +104,7 @@ content_gate() {
   local blocking
   blocking=$(node build.js --check 2>&1 \
     | grep -F "$LINT_ID:" \
-    | grep -E 'Implementing It|fenced code block|visualize\.html|no topic\.md|-word paragraph \(cap|-word sentence \(cap|is a single block|words of prose \(cap|words of prose \(floor|section order is|is retired|"Key insight"|"TLDR"|Engineer.s view' || true)
+    | grep -E 'Implementing It|fenced code block|visualize\.html|no topic\.md|-word paragraph \(cap|-word sentence \(cap|is a single block|words of prose \(cap|words of prose \(floor|section order is|is retired|"Key insight"|"TLDR"|Engineer.s view|is British spelling|mean sentence is' || true)
 
   if [ -n "$blocking" ]; then
     printf '[publish] ERROR: content gate — %s does not meet contract.md:\n' "$SESSION" >&2

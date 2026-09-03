@@ -1231,3 +1231,16 @@ reached it for free — the real gap was that nothing *gated* the live push.
   than everything the reader sees. When adding a prose rule, enumerate the reader's surfaces first
   — write-up, metadata boxes, title, card blurb, diagram captions, code comments and printed
   strings, article summaries — and check the rule against that list, not against `topic.md`.
+- **The gate is the script, not the prose.** The blocking-warning lists in `ai-daily-learn-publish`
+  and `ai-daily-learn-github` SKILL.md were updated with the two new warnings, but the gate that
+  actually stops a publish is a hard-coded `grep -E` in `scripts/publish.sh` and
+  `scripts/publish_github.sh`. Neither pattern list included them, so a British spelling — in a
+  title or anywhere else — would have warned and published anyway. Both regexes now carry
+  `is British spelling` and `mean sentence is`, and each was tested against the literal warning
+  text `build.js` emits rather than assumed to match. This is the second time this exact file has
+  been the missing link in a contract change; check it by default.
+- **Also brought in line**: `frontier/2026-09-02` — the Frontier track is written to the same
+  contract, so it got the same treatment. Mean sentence 20.5 → 13.4, `optimiser`,
+  `synchronisation` and `maths` corrected, the "you have the right instinct" deferral deleted, and
+  `The Problem` reopened on swapping two nested loops over a matrix — an optimization the reader
+  has already made — before introducing looped Transformers as the same trick one level up.
