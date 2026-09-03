@@ -1244,3 +1244,19 @@ reached it for free — the real gap was that nothing *gated* the live push.
   `synchronisation` and `maths` corrected, the "you have the right instinct" deferral deleted, and
   `The Problem` reopened on swapping two nested loops over a matrix — an optimization the reader
   has already made — before introducing looped Transformers as the same trick one level up.
+- **Full re-audit of the session's changes, at the owner's request.** Every rule agreed today was
+  checked against every file that consumes it. Two stale references surfaced, both in the video
+  pipeline and both predating today: `CLAUDE.md` still described the video's engineer beat as
+  coming from `## For a Software Engineer`, a section retired on 2026-09-02, and
+  `ai-daily-learn-video/SKILL.md` sourced that beat from "the mechanism section's opening sentence,
+  which begins 'From a software engineering perspective, …'" — a sentence shape that no longer
+  exists — while dating the retirement to 2026-09-01. Both now point at the `Engineer's view` box,
+  which is purpose-built for exactly this and is written to explain the mapping rather than allude
+  to it. `CLAUDE.md` also gained the explain-not-allude rule, the only file of the three that was
+  missing it.
+- **Confirmed absent, deliberately**: the two reverted `The Problem` rules (evidence relocation and
+  the scannable-bullets opening) are not in `SKILL.md`, which is correct — they were rejected. Note
+  the tension for whoever reads this later: the deferral ban was reverted with them, yet deferrals
+  were removed by hand from both 2026-09-02 articles because they read badly in context. Removing
+  one is a fine editorial call; it is not a rule, and it should not be reinstated as one without
+  fresh evidence.

@@ -38,8 +38,8 @@ force-pushes it to the `gh-pages` branch (GitHub Pages, kept as a mirror).
 (slides, optional Playwright capture of `visualize.html`, OpenAI TTS, burned-in
 captions). Scratch output is `videos/<id>/` (gitignored). Committable copies live
 in `media/videos/`. Run via `/ai-daily-learn-video` (Claude) or the Cursor skill
-of the same name; first-draft lock is `tts-1-hd` / `alloy`, with `## For a Software
-Engineer` as one extra beat — see `.claude/skills/ai-daily-learn-video/SKILL.md`.
+of the same name; first-draft lock is `tts-1-hd` / `alloy`, with the
+`Engineer's view` box as one extra beat — see `.claude/skills/ai-daily-learn-video/SKILL.md`.
 Voiceover uses `OPENAI_API_KEY` or macOS Keychain `openai-api-key-theaicommit`.
 
 ## Commands
@@ -174,7 +174,8 @@ metadata lines (`Category` must be one of the 11 categories in `build.js`'s `CAT
 map, from which `CATEGORIES` is derived so tier membership cannot drift from the list — that map
 is the validation source of truth; `Date` drives the grid;
 `Engineer's view` and `TLDR` render as two boxes above the ELI5 and replaced the retired
-`## For a Software Engineer` section on 2026-09-02;
+`## For a Software Engineer` section on 2026-09-02 — the box must explain the mapping to something
+the reader has shipped, not merely allude to it;
 `Level` is `Start here` / `Building` / `Deeper`; `For` is `Using tools` / `Building agents` /
 `Shipping AI` / `How models work`; `Hook` is the one-line card blurb). A session dated on or
 after 2026-08-25 must also carry `## Implementing It` with the properties above; `make check`
