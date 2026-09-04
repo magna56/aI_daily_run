@@ -1453,6 +1453,16 @@
     return out.join("\n");
   }
 
+  /* Source prose in topic.md is hard-wrapped at ~100 columns for readable diffs.
+     Markdown says a single newline inside a paragraph is a SPACE, not a break —
+     rendering it as <br> is what made every article read as ragged half-lines.
+     An explicit hard break (two or more trailing spaces, per markdown) is kept.
+     build.js's own mdToHtml already joins with a space; this brings the reader
+     into line with it, so the SPA and the crawlable index agree. */
+  function softWrap(t) {
+    return t.replace(/ {2,}\n/g, "<br>").replace(/\s*\n\s*/g, " ");
+  }
+
   function md(src) {
     if (!src) return "";
     var blocks = [];
@@ -1467,15 +1477,22 @@
              .replace(/^## (.*)$/gm, "<h2>$1</h2>")
              .replace(/^# (.*)$/gm, "<h2>$1</h2>");
     src = src.replace(/(?:^|\n)((?:&gt; .*(?:\n|$))+)/g, function (_, q) {
-      return "\n<blockquote>" + q.replace(/^&gt; ?/gm, "").trim().replace(/\n/g, "<br>") + "</blockquote>";
+      return "\n<blockquote>" + softWrap(q.replace(/^&gt; ?/gm, "").trim()) + "</blockquote>";
+    });
+    /* Fold a hard-wrapped list item back onto one line before the list regexes
+       run. They match only lines that START with a marker, so an indented
+       continuation used to fall out of the <ul>/<ol> as loose text and split the
+       list in two — visible on any item longer than one source line. */
+    src = src.replace(/^(?:[*-]|\d+\.)[ \t]+.*(?:\n[ \t]+\S.*)+/gm, function (item) {
+      return item.replace(/\n[ \t]+/g, " ");
     });
     src = src.replace(/(?:^|\n)((?:\d+\. .*(?:\n|$))+)/g, function (_, items) {
       var lis = items.trim().split("\n").map(function (l) { return "<li>" + l.replace(/^\d+\. /, "") + "</li>"; }).join("");
-      return "\n<ol>" + lis + "</ol>";
+      return "\n<ol>" + lis + "</ol>\n\n";
     });
     src = src.replace(/(?:^|\n)((?:[*-] .*(?:\n|$))+)/g, function (_, items) {
       var lis = items.trim().split("\n").map(function (l) { return "<li>" + l.replace(/^[*-] /, "") + "</li>"; }).join("");
-      return "\n<ul>" + lis + "</ul>";
+      return "\n<ul>" + lis + "</ul>\n\n";
     });
     src = src.replace(/`([^`]+)`/g, "<code>$1</code>");
     src = src.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
@@ -1485,7 +1502,7 @@
       var t = ch.trim();
       if (!t) return "";
       if (/^<(h\d|ul|ol|pre|table|blockquote)/.test(t)) return t;
-      return "<p>" + t.replace(/\n/g, "<br>") + "</p>";
+      return "<p>" + softWrap(t) + "</p>";
     }).join("\n");
     return src.replace(/%%CB(\d+)%%/g, function (_, i) {
       return blocks[i] != null ? "<pre><code>" + e(blocks[i].replace(/^\n/, "")) + "</code></pre>" : "";
