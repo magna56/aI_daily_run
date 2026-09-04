@@ -1,4 +1,4 @@
-# Why GPT-6 Astra Scores 63% and 99% on One Benchmark
+# Why GPT-6 Astra Has Two Scores on ARC-AGI-3: 63% and 99%
 
 **Category**: Evals & Reliability
 **Tags**: benchmarks, context-engineering, cost
