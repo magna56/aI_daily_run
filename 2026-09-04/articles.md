@@ -1,4 +1,4 @@
-# Further Reading: Why GPT-6 Astra's Benchmark Score Depends on Who Runs It
+# Further Reading: Why GPT-6 Astra Scores 63% and 99% on One Benchmark
 
 ## Articles
 

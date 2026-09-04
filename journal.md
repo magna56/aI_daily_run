@@ -180,7 +180,7 @@
 - **Code**: `2026-09-03/code_example.py` — implements the server-side prefix cache from scratch: blocks matched from the front, the first mismatch ending the read, and the model plus effort level sitting in the cache key. Prices one 300,000-token context both ways ($0.15 replayed against $3.00 rebuilt, 20x), then runs a 40-turn session and charges $1.45 for one mid-session `/model`. A gap sweep shows the five-minute cache winning below five minutes and losing eight-to-one above it ($40.88 against $6.12).
 - **Articles**: 5 sources (the Claude Code prompt-caching page as primary, the Claude Code team's own design write-up, the underlying API mechanism for direct callers, the costs page for the `/usage` readout, and this site's subagent-model session as the precedence companion)
 
-## 2026-09-04 — Why GPT-6 Astra's Benchmark Score Depends on Who Runs It
+## 2026-09-04 — Why GPT-6 Astra Scores 63% and 99% on One Benchmark
 - **Category**: Evals & Reliability
 - **Key insight**: One model ran the same benchmark twice and the two scores came out thirty-seven points apart. The weights never changed, and what did change was the code around the model that decides what it remembers between steps. So a published score describes a setup as much as it describes a model.
 - **Code**: `2026-09-04/code_example.py` — holds one agent fixed and swaps only how many past observations survive to the next step, on a combination-lock task that carries state. Reproduces both published effects: 97.3 points of spread across reasoning-effort settings on the bounded harness against 0.0 on the unbounded one, and an effort knob that runs backwards (low scores 2.7% where off scores 100%) on the bounded harness only. Raise the note budget and the two converge.
