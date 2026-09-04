@@ -1,0 +1,266 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>The Admission Gate</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#141821;--line:#303747;--text:#f4f6fb;--muted:#929db1;--bad:#f97316;--ok:#34d399;--acc:#818cf8;--warn:#facc15;--dead:#e11d48}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111827,var(--bg) 48%);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:24px}
+.kicker{font:800 .75rem ui-monospace;color:var(--warn);letter-spacing:.13em}
+h1{font-size:clamp(1.6rem,4.2vw,2.6rem);line-height:1.1;margin:.4rem 0}
+.lede{max-width:840px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.panel h2{margin:0 0 12px;font-size:1rem}
+label{display:block;font:700 .78rem ui-monospace;color:var(--muted);margin-bottom:8px}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.val{color:var(--text);font-weight:700}
+.chooser{display:flex;flex-wrap:wrap;gap:8px}
+.chooser button{background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:99px;padding:8px 14px;font:600 .82rem system-ui;cursor:pointer}
+.chooser button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#0a0d18}
+.chooser button:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
+@media(max-width:760px){.two{grid-template-columns:1fr}.grid4{grid-template-columns:repeat(2,1fr)}}
+.stat{background:#0c1018;border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font:900 1.25rem ui-monospace;line-height:1.2;word-break:break-word}
+.stat small{color:var(--muted);font-size:.72rem;display:block;margin-top:3px}
+.stat.good b{color:var(--ok)} .stat.bad b{color:var(--bad)} .stat.warn b{color:var(--warn)} .stat.dead b{color:var(--dead)}
+.shelf{display:flex;flex-wrap:wrap;gap:3px;margin-top:10px}
+.chip{width:13px;height:13px;border-radius:3px;background:#1c2130}
+.chip.ok{background:#166f4d} .chip.fix{background:#3d4bb5} .chip.ref{background:#242a38}
+.chip.rot{background:var(--dead)}
+.key{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font:600 .72rem ui-monospace;color:var(--muted)}
+.key i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;font-style:normal}
+.verdict{margin-top:14px;padding:14px;border-radius:12px;border:1px solid var(--line);background:#0c1018}
+.verdict b{display:block;font:900 1rem ui-monospace}
+.verdict.good b{color:var(--ok)} .verdict.bad b{color:var(--bad)} .verdict.warn b{color:var(--warn)}
+.verdict p{margin:.4rem 0 0;color:var(--muted);font-size:.87rem}
+code{font-family:ui-monospace,monospace;color:var(--warn)}
+#reset{width:100%;margin-top:16px;background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:11px;cursor:pointer;font-weight:700}
+#reset:hover{border-color:var(--acc)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main class="wrap" data-visualizer="frontier-2026-09-03">
+<header>
+<div class="kicker">SKILL LIBRARIES &middot; ADMISSION BY EXECUTION</div>
+<h1>What reaches the shelf?</h1>
+<p class="lede">Every square is one candidate skill distilled from a repository. Choose what the gate actually checks and watch how many broken skills end up in the library your agent loads from. The arithmetic matches <code>code_example.py</code>; the seeded population is deterministic, so the same settings always give the same shelf.</p>
+</header>
+
+<section class="panel">
+<h2>1. The candidates</h2>
+<div class="two">
+  <div>
+    <label for="n">Candidate skills distilled: <span class="val" id="nV">200</span></label>
+    <input type="range" id="n" min="20" max="500" step="10" value="200">
+    <label for="stale" style="margin-top:14px">Name a command that moved upstream: <span class="val" id="staleV">25%</span></label>
+    <input type="range" id="stale" min="0" max="60" step="5" value="25">
+  </div>
+  <div>
+    <label for="wrong">Carry an assertion the source contradicts: <span class="val" id="wrongV">15%</span></label>
+    <input type="range" id="wrong" min="0" max="60" step="5" value="15">
+    <label for="rename" style="margin-top:14px">Of the moved commands, share with a known rename: <span class="val" id="renameV">60%</span></label>
+    <input type="range" id="rename" min="0" max="100" step="10" value="60">
+  </div>
+</div>
+</section>
+
+<section class="panel">
+<h2>2. What the gate checks before admission</h2>
+<div class="chooser" id="modeGrp" role="group" aria-label="Gate mode">
+  <button data-v="full" aria-pressed="true">commands and assertions</button>
+  <button data-v="cmd" aria-pressed="false">commands only</button>
+  <button data-v="assert" aria-pressed="false">assertions only</button>
+  <button data-v="none" aria-pressed="false">no gate</button>
+</div>
+<div class="chooser" id="repGrp" role="group" aria-label="Repair pass" style="margin-top:10px">
+  <button data-v="on" aria-pressed="true">one repair pass</button>
+  <button data-v="off" aria-pressed="false">no repair</button>
+</div>
+</section>
+
+<section class="panel">
+<h2>3. The shelf</h2>
+<div class="shelf" id="shelf"></div>
+<div class="key">
+  <span><i style="background:#166f4d"></i>admitted, sound</span>
+  <span><i style="background:#3d4bb5"></i>repaired, then admitted</span>
+  <span><i style="background:#242a38"></i>refused, gap recorded</span>
+  <span><i style="background:#e11d48"></i>admitted and broken</span>
+</div>
+<div class="grid4">
+  <div class="stat" id="sAdm"><b>&mdash;</b><small>skills on the shelf</small></div>
+  <div class="stat" id="sRef"><b>&mdash;</b><small>refused at the gate</small></div>
+  <div class="stat" id="sRot"><b>&mdash;</b><small>broken, and shelved anyway</small></div>
+  <div class="stat" id="sFail"><b>&mdash;</b><small>chance a task opens a broken one</small></div>
+</div>
+<div class="verdict" id="verdict"><b>&mdash;</b><p></p></div>
+</section>
+
+<section class="panel">
+<h2>4. What one task actually reads</h2>
+<div class="grid4">
+  <div class="stat" id="sLib"><b>&mdash;</b><small>whole library, in tokens</small></div>
+  <div class="stat" id="sRead"><b>&mdash;</b><small>read for one task (router + 2 bodies)</small></div>
+  <div class="stat" id="sShare"><b>&mdash;</b><small>share of the library opened</small></div>
+  <div class="stat" id="sRouter"><b>&mdash;</b><small>the router index alone</small></div>
+</div>
+<button id="reset">Reset</button>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var el = function(id){ return document.getElementById(id); };
+
+  var ROUTER_TOKENS = 18, BODY_TOKENS = 3000, OPENED = 2;
+  var st = { n:200, stale:25, wrong:15, rename:60, mode:"full", repair:"on" };
+
+  function lcg(s){ var x = s >>> 0; return function(){ x = (x * 1664525 + 1013904223) >>> 0; return x / 4294967296; }; }
+
+  // One deterministic population, then the gate applied to it.
+  function simulate(o){
+    var rng = lcg(20260903), i;
+    var checksCmd = (o.mode === "full" || o.mode === "cmd");
+    var checksAssert = (o.mode === "full" || o.mode === "assert");
+    var out = { admitted:0, refused:0, rotten:0, repaired:0, chips:[] };
+
+    for (i = 0; i < o.n; i++){
+      var stale = rng() < o.stale / 100;
+      var wrong = rng() < o.wrong / 100;
+      var renamable = rng() < o.rename / 100;
+
+      // A repair can only fix what the gate detected in the first place.
+      var wasRepaired = false;
+      if (stale && checksCmd && o.repair === "on" && renamable){
+        stale = false;
+        out.repaired++;
+        wasRepaired = true;
+      }
+      var caught = (checksCmd && stale) || (checksAssert && wrong);
+      var broken = stale || wrong;
+
+      if (caught){ out.refused++; out.chips.push("ref"); }
+      else if (broken){ out.admitted++; out.rotten++; out.chips.push("rot"); }
+      else { out.admitted++; out.chips.push(wasRepaired ? "fix" : "ok"); }
+    }
+
+    var p = out.admitted ? out.rotten / out.admitted : 0;
+    out.taskFail = 1 - Math.pow(1 - p, OPENED);
+    out.libTokens = out.admitted * BODY_TOKENS;
+    out.routerTokens = out.admitted * ROUTER_TOKENS;
+    out.readTokens = out.routerTokens + Math.min(OPENED, out.admitted) * BODY_TOKENS;
+    return out;
+  }
+
+  function fmt(n){
+    if (n >= 1000000) return (n / 1000000).toFixed(2) + "M";
+    if (n >= 1000) return Math.round(n / 1000) + "k";
+    return String(n);
+  }
+
+  function render(){
+    el("nV").textContent = st.n;
+    el("staleV").textContent = st.stale + "%";
+    el("wrongV").textContent = st.wrong + "%";
+    el("renameV").textContent = st.rename + "%";
+
+    var r = simulate(st);
+
+    var shelf = el("shelf");
+    while (shelf.firstChild) shelf.removeChild(shelf.firstChild);
+    var titles = { ok:"admitted, sound", fix:"repaired, then admitted",
+                   ref:"refused, gap recorded", rot:"admitted and broken" };
+    for (var i = 0; i < r.chips.length; i++){
+      var d = document.createElement("div");
+      d.className = "chip " + r.chips[i];
+      d.title = titles[r.chips[i]];
+      shelf.appendChild(d);
+    }
+
+    el("sAdm").firstChild.textContent = r.admitted;
+    el("sAdm").className = "stat good";
+    el("sRef").firstChild.textContent = r.refused + (r.repaired ? " (+" + r.repaired + " fixed)" : "");
+    el("sRef").className = "stat warn";
+    el("sRot").firstChild.textContent = r.rotten;
+    el("sRot").className = "stat " + (r.rotten ? "dead" : "good");
+    el("sFail").firstChild.textContent = (100 * r.taskFail).toFixed(1) + "%";
+    el("sFail").className = "stat " + (r.taskFail > 0.02 ? "dead" : "good");
+
+    el("sLib").firstChild.textContent = fmt(r.libTokens);
+    el("sRead").firstChild.textContent = fmt(r.readTokens);
+    el("sShare").firstChild.textContent = r.libTokens
+      ? (100 * r.readTokens / r.libTokens).toFixed(1) + "%" : "—";
+    el("sShare").className = "stat good";
+    el("sRouter").firstChild.textContent = fmt(r.routerTokens);
+
+    var v = el("verdict"), head, cls, body;
+    if (st.mode === "none"){
+      cls = "bad"; head = "Nothing was checked";
+      body = "Every candidate is on the shelf, including " + r.rotten
+        + " that do not work. Your agent will find each one the expensive way, mid-task, "
+        + "after spending tokens acting on it.";
+    } else if (r.rotten === 0){
+      cls = "good"; head = "Nothing broken reached the shelf";
+      body = r.refused + " candidates were refused and " + r.repaired
+        + " were repaired and re-checked. The library is smaller than the pile you started with, "
+        + "and that is the point: a refused skill costs you nothing, a shelved broken one costs "
+        + "every task that opens it.";
+    } else if (st.mode === "cmd"){
+      cls = "warn"; head = "Dead commands caught, wrong claims not";
+      body = "Checking that a command exists says nothing about whether the skill's assertions "
+        + "match the source. " + r.rotten + " skills passed with a claim the repository contradicts.";
+    } else {
+      cls = "warn"; head = "Wrong claims caught, dead commands not";
+      body = "Assertions alone never execute the command the skill tells the agent to run, so "
+        + r.rotten + " skills carry a step that no longer exists.";
+    }
+    v.className = "verdict " + cls;
+    v.firstChild.textContent = head;
+    v.lastChild.textContent = body;
+    reportHeight();
+  }
+
+  function group(hostId, key){
+    el(hostId).addEventListener("click", function(ev){
+      var b = ev.target.closest("button");
+      if (!b) return;
+      st[key] = b.getAttribute("data-v");
+      var all = el(hostId).getElementsByTagName("button");
+      for (var i = 0; i < all.length; i++){
+        all[i].setAttribute("aria-pressed", all[i] === b ? "true" : "false");
+      }
+      render();
+    });
+  }
+
+  ["n", "stale", "wrong", "rename"].forEach(function(id){
+    el(id).addEventListener("input", function(){ st[id] = +el(id).value; render(); });
+  });
+
+  el("reset").addEventListener("click", function(){
+    st = { n:200, stale:25, wrong:15, rename:60, mode:"full", repair:"on" };
+    el("n").value = 200; el("stale").value = 25; el("wrong").value = 15; el("rename").value = 60;
+    var sets = [["modeGrp", "full"], ["repGrp", "on"]], i, j;
+    for (i = 0; i < sets.length; i++){
+      var bs = el(sets[i][0]).getElementsByTagName("button");
+      for (j = 0; j < bs.length; j++){
+        bs[j].setAttribute("aria-pressed", bs[j].getAttribute("data-v") === sets[i][1] ? "true" : "false");
+      }
+    }
+    render();
+  });
+
+  function reportHeight(){
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+
+  group("modeGrp", "mode");
+  group("repGrp", "repair");
+  render();
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body></html>
