@@ -1,0 +1,274 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>The Ablation That Flips</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#141821;--line:#303747;--text:#f4f6fb;--muted:#929db1;--bad:#f97316;--ok:#34d399;--acc:#818cf8;--warn:#facc15}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111827,var(--bg) 48%);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:24px}
+.kicker{font:800 .75rem ui-monospace;color:var(--warn);letter-spacing:.13em}
+h1{font-size:clamp(1.6rem,4.2vw,2.6rem);line-height:1.1;margin:.4rem 0}
+.lede{max-width:840px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.panel h2{margin:0 0 12px;font-size:1rem}
+label{display:block;font:700 .78rem ui-monospace;color:var(--muted);margin-bottom:8px}
+input[type=range]{width:100%;accent-color:var(--acc)}
+input[type=range]:disabled{opacity:.35}
+.val{color:var(--text);font-weight:700}
+.chooser{display:flex;flex-wrap:wrap;gap:8px}
+.chooser button{background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:99px;padding:8px 14px;font:600 .82rem system-ui;cursor:pointer}
+.chooser button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#0a0d18}
+.chooser button:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
+@media(max-width:760px){.two{grid-template-columns:1fr}.grid4{grid-template-columns:repeat(2,1fr)}}
+.stat{background:#0c1018;border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font:900 1.2rem ui-monospace;line-height:1.2;word-break:break-word}
+.stat small{color:var(--muted);font-size:.72rem;display:block;margin-top:3px}
+.stat.good b{color:var(--ok)} .stat.bad b{color:var(--bad)} .stat.warn b{color:var(--warn)}
+.chart{margin-top:8px}
+.row{display:grid;grid-template-columns:74px 1fr;gap:10px;align-items:center;margin-top:9px}
+.rlab{font:700 .74rem ui-monospace;color:var(--muted);text-align:right}
+.pair{display:flex;flex-direction:column;gap:3px}
+.bar{height:15px;border-radius:4px;position:relative;min-width:2px;transition:width .18s}
+.bar span{position:absolute;left:8px;top:0;line-height:15px;font:700 .66rem ui-monospace;white-space:nowrap}
+.bar.n{background:linear-gradient(90deg,#9a3412,#f97316)}
+.bar.p{background:linear-gradient(90deg,#065f46,#34d399)}
+.bar.n span,.bar.p span{color:#0a0d18}
+.best{outline:2px solid var(--warn);outline-offset:1px}
+.key{display:flex;gap:16px;margin-top:12px;font:600 .72rem ui-monospace;color:var(--muted)}
+.key i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;font-style:normal}
+.verdict{margin-top:14px;padding:14px;border-radius:12px;border:1px solid var(--line);background:#0c1018}
+.verdict b{display:block;font:900 1rem ui-monospace}
+.verdict.good b{color:var(--ok)} .verdict.bad b{color:var(--bad)} .verdict.warn b{color:var(--warn)}
+.verdict p{margin:.4rem 0 0;color:var(--muted);font-size:.87rem}
+code{font-family:ui-monospace,monospace;color:var(--warn)}
+#reset{width:100%;margin-top:16px;background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:11px;cursor:pointer;font-weight:700}
+#reset:hover{border-color:var(--acc)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main class="wrap" data-visualizer="2026-09-04">
+<header>
+<div class="kicker">EVAL HARNESSES &middot; WHOSE SCORE IS IT</div>
+<h1>The ablation that flips</h1>
+<p class="lede">Six reasoning-effort settings, one model, two harnesses. Start on the measured ARC-AGI-3 numbers, then switch to the simulation and drag the note budget: the orange curve reshapes while the green one barely moves. The simulation is the same arithmetic as <code>code_example.py</code>.</p>
+</header>
+
+<section class="panel">
+<h2>1. Where the numbers come from</h2>
+<div class="chooser" id="srcGrp" role="group" aria-label="Data source">
+  <button data-v="measured" aria-pressed="true">measured: GPT-6 Astra on ARC-AGI-3</button>
+  <button data-v="sim" aria-pressed="false">simulation you can drive</button>
+</div>
+<div class="two" style="margin-top:14px">
+  <div>
+    <label for="nb">Note budget the neutral harness allows: <span class="val" id="nbV">14</span> tokens</label>
+    <input type="range" id="nb" min="4" max="90" step="2" value="14">
+  </div>
+  <div>
+    <label for="vals">Candidate values per dial: <span class="val" id="valsV">8</span></label>
+    <input type="range" id="vals" min="4" max="12" step="1" value="8">
+  </div>
+</div>
+</section>
+
+<section class="panel">
+<h2>2. Score by reasoning effort</h2>
+<div class="chart" id="chart"></div>
+<div class="key">
+  <span><i style="background:#f97316"></i>neutral harness</span>
+  <span><i style="background:#34d399"></i>provider harness</span>
+  <span><i style="outline:2px solid #facc15;background:transparent"></i>best setting on that harness</span>
+</div>
+<div class="grid4">
+  <div class="stat" id="sNs"><b>&mdash;</b><small>spread across settings, neutral</small></div>
+  <div class="stat" id="sPs"><b>&mdash;</b><small>spread across settings, provider</small></div>
+  <div class="stat" id="sBn"><b>&mdash;</b><small>best setting if you tested on neutral</small></div>
+  <div class="stat" id="sBp"><b>&mdash;</b><small>best setting if you tested on provider</small></div>
+</div>
+<div class="verdict" id="verdict"><b>&mdash;</b><p></p></div>
+<button id="reset">Reset</button>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var el = function(id){ return document.getElementById(id); };
+
+  var EFFORTS = [["none",0,0],["low",1,7],["medium",3,8],["high",5,9],["xhigh",6,10],["max",7,11]];
+  var STEP_BUDGET = 32, EPISODES = 300;
+
+  // ARC Prize's published ARC-AGI-3 results for GPT-6 Astra, both harnesses.
+  var MEASURED = { neutral:[35.2,17.5,38.6,54.8,59.3,62.7],
+                   provider:[96.7,98.0,98.4,99.9,98.4,98.6] };
+
+  var st = { src:"measured", nb:14, vals:8 };
+
+  function lcg(seed){
+    var s = seed >>> 0;
+    return function(){ s = (s * 1664525 + 1013904223) >>> 0; return s; };
+  }
+
+  function retained(verbosity, budget){
+    return Math.max(1, Math.floor(budget / (1 + verbosity)));
+  }
+
+  function solve(secret, elim, window, values){
+    var size = Math.max(1, values - elim);
+    var history = [], steps = 0, dial = 0;
+    while (dial < secret.length && steps < STEP_BUDGET){
+      var answer = secret[dial] % size;
+      var from = (window === null) ? 0 : Math.max(0, history.length - window);
+      var tried = {};
+      for (var i = from; i < history.length; i++){
+        if (history[i][0] === dial) tried[history[i][1]] = 1;
+      }
+      var guess = 0;
+      for (var v = 0; v < size; v++){ if (!tried[v]){ guess = v; break; } }
+      history.push([dial, guess]);
+      steps++;
+      if (guess === answer) dial++;
+    }
+    return dial === secret.length;
+  }
+
+  function score(elim, window, values){
+    var rand = lcg(4242), solved = 0;
+    for (var e = 0; e < EPISODES; e++){
+      var dials = 2 + rand() % 5, secret = [];
+      for (var d = 0; d < dials; d++) secret.push(rand() % values);
+      if (solve(secret, elim, window, values)) solved++;
+    }
+    return 100 * solved / EPISODES;
+  }
+
+  function data(){
+    if (st.src === "measured") return MEASURED;
+    var neutral = [], provider = [];
+    for (var i = 0; i < EFFORTS.length; i++){
+      var elim = EFFORTS[i][1], verb = EFFORTS[i][2];
+      neutral.push(score(elim, retained(verb, st.nb), st.vals));
+      provider.push(score(elim, null, st.vals));
+    }
+    return { neutral:neutral, provider:provider };
+  }
+
+  function argmax(a){
+    var k = 0;
+    for (var i = 1; i < a.length; i++) if (a[i] > a[k]) k = i;
+    return k;
+  }
+
+  function render(){
+    el("nbV").textContent = st.nb;
+    el("valsV").textContent = st.vals;
+    var live = st.src === "sim";
+    el("nb").disabled = !live;
+    el("vals").disabled = !live;
+
+    var d = data(), bn = argmax(d.neutral), bp = argmax(d.provider);
+
+    var host = el("chart");
+    while (host.firstChild) host.removeChild(host.firstChild);
+    for (var i = 0; i < EFFORTS.length; i++){
+      var row = document.createElement("div"); row.className = "row";
+      var lab = document.createElement("div"); lab.className = "rlab";
+      lab.textContent = EFFORTS[i][0];
+      var pair = document.createElement("div"); pair.className = "pair";
+      var mk = function(cls, v, isBest){
+        var b = document.createElement("div");
+        b.className = "bar " + cls + (isBest ? " best" : "");
+        b.style.width = Math.max(2, v) + "%";
+        var s = document.createElement("span"); s.textContent = v.toFixed(1) + "%";
+        b.appendChild(s);
+        return b;
+      };
+      pair.appendChild(mk("n", d.neutral[i], i === bn));
+      pair.appendChild(mk("p", d.provider[i], i === bp));
+      row.appendChild(lab); row.appendChild(pair);
+      host.appendChild(row);
+    }
+
+    var ns = Math.max.apply(null, d.neutral) - Math.min.apply(null, d.neutral);
+    var ps = Math.max.apply(null, d.provider) - Math.min.apply(null, d.provider);
+    el("sNs").firstChild.textContent = ns.toFixed(1) + " pts";
+    el("sNs").className = "stat " + (ns > 10 ? "bad" : "good");
+    el("sPs").firstChild.textContent = ps.toFixed(1) + " pts";
+    el("sPs").className = "stat " + (ps > 10 ? "bad" : "good");
+    el("sBn").firstChild.textContent = EFFORTS[bn][0];
+    el("sBn").className = "stat warn";
+    el("sBp").firstChild.textContent = EFFORTS[bp][0];
+    el("sBp").className = "stat warn";
+
+    // A setting that scores below the one beneath it cannot be a fact about the model.
+    var back = [];
+    for (var j = 0; j < EFFORTS.length - 1; j++){
+      if (d.neutral[j + 1] < d.neutral[j]) back.push(EFFORTS[j + 1][0] + " < " + EFFORTS[j][0]);
+    }
+
+    var v = el("verdict"), head, cls, body;
+    if (bn !== bp){
+      cls = "bad"; head = "Your ablation would have picked the wrong setting";
+      body = "Testing on the neutral harness says " + EFFORTS[bn][0] + " is best. Testing on the "
+        + "provider harness says " + EFFORTS[bp][0] + ". Same weights in every row, so at least one "
+        + "of those conclusions is about the scaffold.";
+    } else if (ns - ps > 10){
+      cls = "warn"; head = "Same winner, wildly different stakes";
+      body = "Both harnesses rank " + EFFORTS[bn][0] + " first, but the neutral harness makes the "
+        + "choice look worth " + ns.toFixed(0) + " points and the provider harness worth "
+        + ps.toFixed(0) + ". Budget a rewrite off the first number and you have overpaid.";
+    } else {
+      cls = "good"; head = "The two harnesses agree";
+      body = "Spreads are within " + Math.abs(ns - ps).toFixed(1) + " points of each other, so this "
+        + "conclusion is probably about the model. That is what a safe ablation looks like, and it "
+        + "is worth knowing you are in this case rather than assuming it.";
+    }
+    if (back.length){
+      body += " On the neutral harness the effort knob also runs backwards (" + back.join(", ")
+        + "), which no property of the weights explains.";
+    }
+    v.className = "verdict " + cls;
+    v.firstChild.textContent = head;
+    v.lastChild.textContent = body;
+    reportHeight();
+  }
+
+  el("srcGrp").addEventListener("click", function(ev){
+    var b = ev.target.closest("button");
+    if (!b) return;
+    st.src = b.getAttribute("data-v");
+    var all = el("srcGrp").getElementsByTagName("button");
+    for (var i = 0; i < all.length; i++){
+      all[i].setAttribute("aria-pressed", all[i] === b ? "true" : "false");
+    }
+    render();
+  });
+
+  ["nb", "vals"].forEach(function(id){
+    el(id).addEventListener("input", function(){
+      st[id === "nb" ? "nb" : "vals"] = +el(id).value;
+      render();
+    });
+  });
+
+  el("reset").addEventListener("click", function(){
+    st = { src:"measured", nb:14, vals:8 };
+    el("nb").value = 14; el("vals").value = 8;
+    var all = el("srcGrp").getElementsByTagName("button");
+    for (var i = 0; i < all.length; i++){
+      all[i].setAttribute("aria-pressed", all[i].getAttribute("data-v") === "measured" ? "true" : "false");
+    }
+    render();
+  });
+
+  function reportHeight(){
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+
+  render();
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body></html>
