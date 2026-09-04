@@ -18,6 +18,7 @@ const { loadSession, newestSessionId, slugify } = require("./lib/video/session")
 const { buildScript } = require("./lib/video/script");
 const { buildStoryboard } = require("./lib/video/storyboard");
 const { slideForBeat } = require("./lib/video/slides");
+const { writeHtmlSlides } = require("./lib/video/html-slides");
 const { synthesizeBeats, audioDurationSec } = require("./lib/video/tts");
 const { assemble } = require("./lib/video/assemble");
 const { writeSrt } = require("./lib/video/captions");
@@ -107,21 +108,26 @@ async function main() {
     }
   }
 
-  const storyboard = buildStoryboard(session, script, { outDir, hasDemoCapture: demoCapture, beatDurations });
+  const storyboard = buildStoryboard(session, script, {
+    outDir, hasDemoCapture: demoCapture, beatDurations, silent: skipTts,
+  });
   fs.writeFileSync(path.join(outDir, "storyboard.json"), JSON.stringify(storyboard, null, 2));
   console.log(`==> storyboard: ${outDir}/storyboard.json`);
 
   const slidesDir = path.join(outDir, "slides");
   fs.mkdirSync(slidesDir, { recursive: true });
-  for (let i = 0; i < storyboard.beats.length; i++) {
-    const beat = storyboard.beats[i];
-    const n = String(i + 1).padStart(2, "0");
-    fs.writeFileSync(
-      path.join(slidesDir, `beat-${n}-${beat.id}.png`),
-      slideForBeat(session, { ...beat, ...script.beats[i] }),
-    );
+  const htmlSlides = await writeHtmlSlides(script.beats, slidesDir);
+  if (!htmlSlides.ok) {
+    for (let i = 0; i < storyboard.beats.length; i++) {
+      const beat = storyboard.beats[i];
+      const n = String(i + 1).padStart(2, "0");
+      fs.writeFileSync(
+        path.join(slidesDir, `beat-${n}-${beat.id}.png`),
+        slideForBeat(session, { ...beat, ...script.beats[i] }),
+      );
+    }
   }
-  console.log(`==> slides: ${slidesDir}/ (${storyboard.beats.length} PNGs)`);
+  console.log(`==> slides: ${slidesDir}/ (${storyboard.beats.length} PNGs${htmlSlides.ok ? ", system type" : ""})`);
 
   const srtPath = writeSrt(storyboard, path.join(outDir, "captions.srt"));
   console.log(`==> captions: ${srtPath}`);
