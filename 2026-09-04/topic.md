@@ -35,9 +35,10 @@ Model benchmarks have this exact shape, and the setup has a name. The harness is
 model that decides what carries from one step to the next, how a long conversation gets shortened,
 and what the model sees when it acts again.
 
-This week a benchmark's own maintainer ran GPT-6 Astra through the same interactive test two ways.
-Under their neutral harness it scored 62.7%. Under a harness that used the model provider's own
-context management it scored 99.9%. Nothing about the weights changed between those runs.
+This week a benchmark's own maintainer ran GPT-6 Astra through one benchmark, ARC-AGI-3, two ways.
+Same games, same actions, same limits, same scoring. Under their neutral harness it scored 62.7%.
+Under a harness using the model provider's own context management it scored 99.9%. Nothing about the
+weights changed between those runs.
 
 **The fix is to treat every score as belonging to a pair — the model and the harness — and to
 record both.** A number with only one half named cannot be compared with anything.
@@ -52,7 +53,7 @@ interface that is identical for every provider. The **provider harness** preserv
 opaque reasoning state between requests and uses compaction to shorten long conversations, so it can
 reuse prior work instead of reconstructing it.
 
-Same games, same actions, same limits, same scoring. Only the scaffold moved.
+Only the scaffold moved.
 
 ### Which knob actually mattered?
 
@@ -76,9 +77,9 @@ not of the model underneath it.
 
 ### Why didn't this show up on the older benchmarks?
 
-Because they barely carry state. Astra scores 97.5% and 95.0% on the two earlier
-benchmarks in this family, near the ceiling at every effort setting. Those are one-shot puzzles. The
-newer one is interactive, so the model takes actions in an environment over many steps.
+Because they barely carry state. Astra scores 97.5% on ARC-AGI-1 and 95.0% on ARC-AGI-2, near the
+ceiling at every effort setting. Those are one-shot puzzles. ARC-AGI-3 is interactive, so the model
+takes actions in an environment over many steps.
 
 That is the rule to take away. **The harness owns a share of the score in proportion to how much
 state the task carries across steps.** A one-shot classifier barely notices it. An agent that works
