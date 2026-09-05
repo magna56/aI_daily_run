@@ -62,6 +62,36 @@ Five types, and the first is the only one most tools use:
 `image` and `audio` carry base64 in `data`. An embedded `resource` uses `text` or `blob` depending
 on whether it is text or binary.
 
+```figure
+{
+ "kind": "anatomy",
+ "title": "What one typed block actually looks like",
+ "lines": [
+  "{",
+  "  \"type\": \"image\",",
+  "  \"data\": \"iVBORw0KGgo…\",",
+  "  \"mimeType\": \"image/png\",",
+  "  \"annotations\": {",
+  "    \"audience\": [\"user\"],",
+  "    \"priority\": 0.9",
+  "  }",
+  "}"
+ ],
+ "callouts": [
+  {
+   "line": 1,
+   "t": "The typed block the client renders. Core protocol, nothing negotiated.",
+   "s": "new"
+  },
+  {
+   "line": 5,
+   "t": "Who this block is for. Leave it out and it goes to both readers.",
+   "s": "ok"
+  }
+ ]
+}
+```
+
 ### How does one result serve both the person and the model?
 
 This is the part worth the read, and it is three words of metadata. Every block takes an
@@ -78,6 +108,39 @@ effectively required and 0 is entirely optional.
 That solves the problem the whole topic circles. **A model cannot see your chart.** It can see a
 sentence about the chart. So return both: the image marked for the user, the numbers marked for the
 assistant. One tool call, one result, two readers, and neither gets the other's copy.
+
+```figure
+{
+ "kind": "route",
+ "title": "One result, two readers, neither carrying the other's copy",
+ "source": "one tool result",
+ "parts": [
+  {
+   "t": "image block, 240 kB encoded",
+   "via": "audience: [\"user\"]",
+   "to": 0,
+   "s": "new"
+  },
+  {
+   "t": "text block, “Peak: EU at $288k”",
+   "via": "audience: [\"assistant\"]",
+   "to": 1,
+   "s": "ok"
+  }
+ ],
+ "dests": [
+  {
+   "t": "the person's screen",
+   "s": "new"
+  },
+  {
+   "t": "the model's context",
+   "s": "ok"
+  }
+ ],
+ "note": "The annotation is the whole mechanism. Drop it and both blocks travel to both places, so the model pays for pixels it cannot read."
+}
+```
 
 ### When do I link instead of embed?
 

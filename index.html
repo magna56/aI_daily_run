@@ -519,6 +519,40 @@
               animation: morepulse 1.1s ease-in-out infinite; }
   @keyframes morepulse { 0%,100% { opacity: .25; } 50% { opacity: .9; } }
   @media (prefers-reduced-motion: reduce) { .more-dot { animation: none; opacity: .6; } }
+  /* Inline article figures. Small, read at 1:1, never zoomed. */
+  .fig { display: block; width: 100%; max-width: 720px; height: auto; margin: 22px auto 6px; }
+  .fig-title { fill: var(--ink); font-weight: 700; font-family: var(--sans, system-ui); }
+  .fig-rowlabel, .fig-framelabel { fill: var(--ink); font-weight: 650; font-family: var(--sans, system-ui); }
+  .fig-celltext { fill: var(--ink); font-family: var(--sans, system-ui); }
+  .fig-note, .fig-value { fill: var(--muted); font-family: var(--mono); }
+  .fig-value { fill: var(--ink); font-weight: 700; }
+  .fig-mono { fill: var(--muted); font-family: var(--mono); }
+  .fig-mono.on { fill: var(--ink); font-weight: 600; }
+  .fig-spec { fill: rgba(127,127,127,.07); stroke: var(--line); }
+  .fig-specmark { fill: rgba(129,140,248,.16); }
+  .fig-frame { fill: none; stroke: var(--line); stroke-dasharray: 4 4; }
+  .fig-track { fill: rgba(127,127,127,.10); }
+  .fig-cell, .fig-callout { stroke: var(--line); }
+  .fig-leader { fill: none; stroke: var(--line); stroke-width: 1.4; }
+  .fig-arrowhead { fill: var(--line); stroke: none; }
+  .fig-dot { fill: var(--line); stroke: none; }
+  .fig-via { fill: var(--card); stroke: var(--line); }
+  .fig-viatext { fill: var(--muted); font-family: var(--mono); }
+  /* Four states, and only four: something works, something does not, something
+     is new in this step, or it is scenery. */
+  .fig-neutral { fill: rgba(127,127,127,.10); }
+  .fig-ok      { fill: rgba(52,211,153,.16); stroke: rgba(52,211,153,.45); }
+  .fig-bad     { fill: rgba(249,115,22,.15); stroke: rgba(249,115,22,.45); }
+  .fig-new     { fill: rgba(129,140,248,.16); stroke: rgba(129,140,248,.5); }
+  path.fig-ok  { stroke: rgba(52,211,153,.75); fill: none; }
+  path.fig-bad { stroke: rgba(249,115,22,.75); fill: none; }
+  path.fig-new { stroke: rgba(129,140,248,.8); fill: none; }
+  path.fig-arrowhead.fig-ok  { fill: rgba(52,211,153,.75); stroke: none; }
+  path.fig-arrowhead.fig-bad { fill: rgba(249,115,22,.75); stroke: none; }
+  path.fig-arrowhead.fig-new { fill: rgba(129,140,248,.8); stroke: none; }
+  circle.fig-ok { fill: rgba(52,211,153,.9); } circle.fig-bad { fill: rgba(249,115,22,.9); }
+  circle.fig-new { fill: rgba(129,140,248,.95); }
+
   .rbar { position: sticky; top: 0; z-index: 20; background: rgba(var(--bg-rgb),.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); margin: 0 -24px 0; padding: 14px 24px 0; }
   .rbar-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .back { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--ink); border-radius: 8px; padding: 7px 13px; font: inherit; font-size: 13px; cursor: pointer;
@@ -1487,6 +1521,8 @@
     return t.replace(/ {2,}\n/g, "<br>").replace(/\s*\n\s*/g, " ");
   }
 
+  var FIGURES = null;   // set by the reader before it renders a session body
+
   function md(src) {
     if (!src) return "";
     var blocks = [];
@@ -1528,8 +1564,13 @@
       if (/^<(h\d|ul|ol|pre|table|blockquote)/.test(t)) return t;
       return "<p>" + softWrap(t) + "</p>";
     }).join("\n");
-    return src.replace(/%%CB(\d+)%%/g, function (_, i) {
+    src = src.replace(/%%CB(\d+)%%/g, function (_, i) {
       return blocks[i] != null ? "<pre><code>" + e(blocks[i].replace(/^\n/, "")) + "</code></pre>" : "";
+    });
+    /* Figures are pre-rendered SVG from build.js. They go in AFTER escaping,
+       because escaping is what the marker exists to survive. */
+    return src.replace(/%%FIG(\d+)%%/g, function (_, i) {
+      return (FIGURES && FIGURES[i]) || "";
     });
   }
 
@@ -1553,7 +1594,14 @@
      Sessions before 2026-09-02 keep their markdown Glossary (often a long
      appendix) and do not get the lookup <dl>, so stripping them would throw
      the long definitions away. */
-  var GLOSS_SKIP = { CODE: 1, PRE: 1, A: 1, H1: 1, H2: 1, H3: 1, H4: 1 };
+  /* SVG is in this list because an inline figure's <text> nodes are ordinary
+     text nodes to a TreeWalker. Linking a term inside one injects an HTML <a>
+     into the SVG namespace, where it renders as nothing -- so "audience" and
+     "priority" silently disappeared from a figure's JSON specimen while the
+     surrounding quotes stayed. A figure labels its own parts; it does not need
+     the glossary. */
+  var GLOSS_SKIP = { CODE: 1, PRE: 1, A: 1, H1: 1, H2: 1, H3: 1, H4: 1,
+                     svg: 1, text: 1, tspan: 1 };
   var GLOSSARY_SINCE = "2026-09-02";
 
   function glossaryDate(p) {
@@ -1614,7 +1662,11 @@
         var el = node.parentElement;
         var skip = false;
         for (var p = el; p && p !== root; p = p.parentElement) {
-          if (GLOSS_SKIP[p.tagName] || p.classList.contains("gloss")) { skip = true; break; }
+          // ownerSVGElement rather than the tag name alone: it is true for every
+          // node inside a figure regardless of element, and does not depend on
+          // SVG tag names happening to be lowercase.
+          if (GLOSS_SKIP[p.tagName] || p.ownerSVGElement !== undefined && p.ownerSVGElement !== null
+              || p.classList.contains("gloss")) { skip = true; break; }
         }
         if (skip) continue;
         var m = node.nodeValue.match(re);
@@ -2305,6 +2357,7 @@
     if (pane === "overview") {
       var gloss = linkedGlossary(p);
       var body = gloss ? stripGlossarySection(p.topic) : p.topic;
+      FIGURES = p.figures || null;
       el.innerHTML = '<div class="prose">' + md(body) + "</div>" + glossaryHtml(gloss);
       linkGlossary(el.querySelector(".prose"), gloss);
       return;

@@ -35,6 +35,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
+const { renderFigure } = require("./lib/figure-svg");
 const { renderExcalidrawSVG } = require("./lib/excalidraw-svg");
 const { createRunner } = require("./lib/runner");
 const { renderOgPng } = require("./lib/og-png");
@@ -1040,6 +1041,22 @@ function compile(id, journal, runner, opts) {
      and the figure marker sit outside this block and did apply, which is what made
      the gap visible on 2026-08-31: a Frontier session drew band warnings and no
      structural ones. Learn sessions stay exempt; they are a different shape. */
+/* Inline figures. A ```figure fence in topic.md carries a small JSON spec;
+     it is rendered to SVG here and replaced with a %%FIG<n>%% marker, which
+     the reader substitutes after escaping — the same trick code blocks use,
+     and for the same reason: the body is escaped before it is rendered, so
+     raw SVG cannot travel through it. */
+  const figures = [];
+  topic.body = topic.body.replace(/```figure\s*\n([\s\S]*?)```/g, (_, json) => {
+    try {
+      figures.push(renderFigure(JSON.parse(json)));
+      return "%%FIG" + (figures.length - 1) + "%%";
+    } catch (err) {
+      warn(`${id}: figure ${figures.length} did not render — ${err.message}`);
+      return "";
+    }
+  });
+
   const structuralSince = kind === "frontier" ? FRONTIER_STRUCTURE_SINCE : IMPLEMENT_SECTION_SINCE;
   if ((kind === "daily" || kind === "frontier") && date >= structuralSince) {
     const sections = splitSections(topic.body);
@@ -1376,6 +1393,7 @@ function compile(id, journal, runner, opts) {
     level,
     job,
     topic: topic.body,
+    figures,
     diagram,
     visualize,
     code,
