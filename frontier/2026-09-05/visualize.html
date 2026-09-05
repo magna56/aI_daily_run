@@ -1,0 +1,220 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Write the Request</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#141821;--line:#303747;--text:#f4f6fb;--muted:#929db1;--bad:#f97316;--ok:#34d399;--acc:#818cf8;--warn:#facc15;--dead:#e11d48}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111827,var(--bg) 48%);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:24px}
+.kicker{font:800 .75rem ui-monospace;color:var(--warn);letter-spacing:.13em}
+h1{font-size:clamp(1.6rem,4.2vw,2.6rem);line-height:1.1;margin:.4rem 0}
+.lede{max-width:860px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.panel h2{margin:0 0 12px;font-size:1rem}
+label{display:block;font:700 .78rem ui-monospace;color:var(--muted);margin-bottom:8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+@media(max-width:760px){.two{grid-template-columns:1fr}.grid3{grid-template-columns:1fr}}
+.toggles{display:flex;flex-direction:column;gap:8px}
+.tog{display:flex;align-items:flex-start;gap:10px;background:#0c1018;border:1px solid var(--line);border-radius:10px;padding:11px 13px;cursor:pointer;text-align:left;color:var(--text)}
+.tog[aria-pressed="true"]{border-color:var(--ok);background:#0e1a17}
+.tog:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
+.tog .box{width:16px;height:16px;border-radius:4px;border:2px solid var(--line);flex:none;margin-top:2px}
+.tog[aria-pressed="true"] .box{background:var(--ok);border-color:var(--ok)}
+.tog .t{font:700 .84rem system-ui}
+.tog .w{display:block;font:600 .72rem ui-monospace;color:var(--muted);margin-top:2px}
+.tog[aria-pressed="true"] .w{color:var(--ok)}
+.req{background:#0a0d14;border:1px solid var(--line);border-radius:10px;padding:14px;font:600 .84rem ui-monospace;white-space:pre-wrap;min-height:150px;line-height:1.55}
+.req .p{color:var(--text)} .req .d{color:#6ee7b7} .req .m{color:#fbbf24} .req .r{color:var(--muted)}
+.stat{background:#0c1018;border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font:900 1.3rem ui-monospace;line-height:1.2}
+.stat small{color:var(--muted);font-size:.72rem;display:block;margin-top:3px}
+.stat.good b{color:var(--ok)} .stat.bad b{color:var(--bad)} .stat.warn b{color:var(--warn)}
+.meter{height:12px;border-radius:99px;background:#0a0d14;border:1px solid var(--line);overflow:hidden;margin-top:12px}
+.meter i{display:block;height:100%;background:linear-gradient(90deg,#f97316,#34d399);transition:width .2s}
+.scale{display:flex;justify-content:space-between;font:600 .7rem ui-monospace;color:var(--muted);margin-top:5px}
+.verdict{margin-top:14px;padding:14px;border-radius:12px;border:1px solid var(--line);background:#0c1018}
+.verdict b{display:block;font:900 1rem ui-monospace}
+.verdict.good b{color:var(--ok)} .verdict.bad b{color:var(--dead)} .verdict.warn b{color:var(--warn)}
+.verdict p{margin:.4rem 0 0;color:var(--muted);font-size:.87rem}
+code{font-family:ui-monospace,monospace;color:var(--warn)}
+#reset{width:100%;margin-top:16px;background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:11px;cursor:pointer;font-weight:700}
+#reset:hover{border-color:var(--acc)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main class="wrap" data-visualizer="frontier-2026-09-05">
+<header>
+<div class="kicker">REALSWE &middot; WHAT THE REQUEST IS MISSING</div>
+<h1>Write the request</h1>
+<p class="lede">One bug, and you choose what to say about it. Every part costs you typing; only some of them buy anything. The per-part penalties are the paper's measured ones, the same values <code>code_example.py</code> uses — though that file averages them over a whole corpus while this prices one request. The base rate is a knob, because the gap is the finding, not the level.</p>
+</header>
+
+<section class="panel">
+<h2>1. What you put in the request</h2>
+<div class="two">
+  <div>
+    <div class="toggles" id="toggles"></div>
+  </div>
+  <div>
+    <label>What the agent receives</label>
+    <div class="req" id="req"></div>
+  </div>
+</div>
+</section>
+
+<section class="panel">
+<h2>2. What it buys</h2>
+<div class="meter"><i id="bar"></i></div>
+<div class="scale"><span>problem statement only</span><span>everything stated</span></div>
+<div class="grid3">
+  <div class="stat" id="sRate"><b>&mdash;</b><small>expected resolution rate</small></div>
+  <div class="stat" id="sGain"><b>&mdash;</b><small>vs a bare problem statement</small></div>
+  <div class="stat" id="sWords"><b>&mdash;</b><small>words you had to type</small></div>
+</div>
+<div class="verdict" id="verdict"><b>&mdash;</b><p></p></div>
+<button id="reset">Reset</button>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var el = function(id){ return document.getElementById(id); };
+
+  var BASE = 57.6, FEATURE_SHARE = 0.25;
+
+  // Measured penalties, in points of resolution, when the part is absent.
+  var PARTS = [
+    { id:"desired", cls:"d", label:"Desired behavior",
+      worth:8.0, words:19,
+      text:"When this is fixed, an empty date should be treated as unknown and the row kept, rather than the whole import failing." },
+    { id:"motive", cls:"m", label:"Motivation",
+      worth:3.4 * FEATURE_SHARE, words:16,
+      text:"We need it because a supplier sends partial files on purpose and we cannot reject their whole batch." },
+    { id:"repro", cls:"r", label:"Reproduction steps",
+      worth:1.0, words:9,
+      text:"To reproduce: run import.py against fixtures/partial.csv." },
+    { id:"env", cls:"r", label:"Environment details",
+      worth:0.8, words:7,
+      text:"Python 3.12 on macOS, pandas 2.4.1." },
+    { id:"style", cls:"r", label:"Rewrite it formally",
+      worth:0.0, words:0,
+      text:"" }
+  ];
+
+  var PROBLEM = "The importer crashes on rows where the date column is empty.";
+  var on = {};
+
+  function total(){
+    var got = 0;
+    for (var i = 0; i < PARTS.length; i++) if (on[PARTS[i].id]) got += PARTS[i].worth;
+    return got;
+  }
+  function maxTotal(){
+    var m = 0;
+    for (var i = 0; i < PARTS.length; i++) m += PARTS[i].worth;
+    return m;
+  }
+  function words(){
+    var w = PROBLEM.split(/\s+/).length;
+    for (var i = 0; i < PARTS.length; i++) if (on[PARTS[i].id]) w += PARTS[i].words;
+    return w;
+  }
+
+  function buildToggles(){
+    var host = el("toggles");
+    while (host.firstChild) host.removeChild(host.firstChild);
+    PARTS.forEach(function(p){
+      var b = document.createElement("button");
+      b.className = "tog";
+      b.setAttribute("aria-pressed", on[p.id] ? "true" : "false");
+      var box = document.createElement("span"); box.className = "box";
+      var wrap = document.createElement("span");
+      var t = document.createElement("span"); t.className = "t"; t.textContent = p.label;
+      var w = document.createElement("span"); w.className = "w";
+      w.textContent = p.worth >= 0.05
+        ? "worth " + p.worth.toFixed(1) + " pts · " + p.words + " words"
+        : "worth nothing measurable";
+      wrap.appendChild(t); wrap.appendChild(w);
+      b.appendChild(box); b.appendChild(wrap);
+      b.addEventListener("click", function(){ on[p.id] = !on[p.id]; render(); });
+      host.appendChild(b);
+    });
+  }
+
+  function render(){
+    buildToggles();
+
+    var host = el("req");
+    while (host.firstChild) host.removeChild(host.firstChild);
+    var lead = document.createElement("span");
+    lead.className = "p";
+    lead.textContent = on.style
+      ? "The CSV importer raises an exception when the date column is empty."
+      : PROBLEM;
+    host.appendChild(lead);
+    PARTS.forEach(function(p){
+      if (!on[p.id] || !p.text) return;
+      var s = document.createElement("span");
+      s.className = p.cls;
+      s.textContent = "\n\n" + p.text;
+      host.appendChild(s);
+    });
+
+    var got = total(), max = maxTotal();
+    var rate = BASE - (max - got);
+    el("bar").style.width = (100 * got / max) + "%";
+    el("sRate").firstChild.textContent = rate.toFixed(1) + "%";
+    el("sRate").className = "stat " + (got > max * 0.7 ? "good" : got > max * 0.3 ? "warn" : "bad");
+    el("sGain").firstChild.textContent = "+" + got.toFixed(1) + " pts";
+    el("sGain").className = "stat " + (got > 0 ? "good" : "bad");
+    el("sWords").firstChild.textContent = words();
+    el("sWords").className = "stat";
+
+    var v = el("verdict"), head, cls, body;
+    var perWord = words() > 10 ? got / (words() - 10) : 0;
+    if (on.desired && on.motive){
+      cls = "good"; head = "Both of the two things are in";
+      body = "This is the whole finding, and it cost you about thirty-five words. Everything else "
+        + "you could add is worth under two points combined.";
+    } else if (on.desired){
+      cls = "good"; head = "The expensive one is in";
+      body = "Desired behavior alone is worth more than every other part put together. Add "
+        + "motivation too if this is a change rather than a fix.";
+    } else if (on.repro || on.env || on.style){
+      cls = "bad"; head = "You wrote the careful bug report and skipped the part that pays";
+      body = "Reproduction steps, environment details and a formal rewrite are the fields every "
+        + "template asks for. Together they are worth about a fifth of one sentence of desired "
+        + "behavior, and they take far longer to type. This is the most common shape of a "
+        + "thorough request.";
+    } else {
+      cls = "warn"; head = "A bare problem statement";
+      body = "This is 88% of real requests. The agent now has to guess how the story ends — "
+        + "raise an error, skip the row, retry, or accept the input — and it will pick one.";
+    }
+    if (on.style){
+      body += " Rewriting it formally changed nothing: style was measured on four dimensions "
+        + "and none of them moved the result.";
+    }
+    if (perWord > 0.3){
+      body += " You are getting " + perWord.toFixed(2) + " points per word typed, which is the "
+        + "best rate available here.";
+    }
+    v.className = "verdict " + cls;
+    v.firstChild.textContent = head;
+    v.lastChild.textContent = body;
+    reportHeight();
+  }
+
+  el("reset").addEventListener("click", function(){ on = {}; render(); });
+
+  function reportHeight(){
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+
+  render();
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body></html>
