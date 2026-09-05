@@ -1,0 +1,261 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Be the Second Caller</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#141821;--line:#303747;--text:#f4f6fb;--muted:#929db1;--bad:#f97316;--ok:#34d399;--acc:#818cf8;--warn:#facc15;--dead:#e11d48}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111827,var(--bg) 48%);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:24px}
+.kicker{font:800 .75rem ui-monospace;color:var(--warn);letter-spacing:.13em}
+h1{font-size:clamp(1.6rem,4.2vw,2.6rem);line-height:1.1;margin:.4rem 0}
+.lede{max-width:860px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.panel h2{margin:0 0 12px;font-size:1rem}
+label{display:block;font:700 .78rem ui-monospace;color:var(--muted);margin-bottom:8px}
+.chooser{display:flex;flex-wrap:wrap;gap:8px}
+.chooser button{background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:99px;padding:8px 14px;font:600 .82rem system-ui;cursor:pointer}
+.chooser button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#0a0d18}
+.chooser button:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+@media(max-width:760px){.two{grid-template-columns:1fr}.grid3{grid-template-columns:1fr}}
+.stat{background:#0c1018;border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font:900 1.25rem ui-monospace;line-height:1.2}
+.stat small{color:var(--muted);font-size:.72rem;display:block;margin-top:3px}
+.stat.good b{color:var(--ok)} .stat.bad b{color:var(--bad)} .stat.dead b{color:var(--dead)}
+.app{border:2px dashed var(--acc);border-radius:12px;padding:14px;background:#0c1018;margin-top:8px}
+.app .tag{font:800 .68rem ui-monospace;color:var(--acc);letter-spacing:.1em}
+.app .cols{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.app button{background:#151a26;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px 15px;font:700 .84rem ui-monospace;cursor:pointer}
+.app button:hover{border-color:var(--acc)}
+.app button:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
+.out{margin-top:12px;font:700 .84rem ui-monospace;min-height:1.4em}
+.out.ok{color:var(--ok)} .out.no{color:var(--dead)}
+.textonly{border:1px dashed var(--line);border-radius:12px;padding:14px;background:#0c1018;margin-top:8px;color:var(--muted);font:600 .84rem ui-monospace}
+.wire{margin-top:10px;max-height:224px;overflow:auto;background:#0a0d14;border:1px solid var(--line);border-radius:10px;padding:10px;font:600 .7rem ui-monospace}
+.wire div{padding:2px 0;color:var(--muted);white-space:pre-wrap;word-break:break-word}
+.wire .m{color:#a5b4fc} .wire .a{color:#fbbf24} .wire .s{color:var(--ok)} .wire .x{color:var(--dead)}
+.verdict{margin-top:14px;padding:14px;border-radius:12px;border:1px solid var(--line);background:#0c1018}
+.verdict b{display:block;font:900 1rem ui-monospace}
+.verdict.good b{color:var(--ok)} .verdict.bad b{color:var(--dead)}
+.verdict p{margin:.4rem 0 0;color:var(--muted);font-size:.87rem}
+code{font-family:ui-monospace,monospace;color:var(--warn)}
+#reset{width:100%;margin-top:16px;background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:11px;cursor:pointer;font-weight:700}
+#reset:hover{border-color:var(--acc)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main class="wrap" data-visualizer="2026-09-05">
+<header>
+<div class="kicker">MCP APPS &middot; ONE TOOL, TWO CALLERS</div>
+<h1>Be the second caller</h1>
+<p class="lede">The model calls the tool once, at the start. Everything after that is you clicking a button inside the rendered page — a caller the server never planned for. Change who is signed in and where the permission check lives, then click a region you are not allowed to see. Same arithmetic as <code>code_example.py</code>.</p>
+</header>
+
+<section class="panel">
+<h2>1. The setup</h2>
+<div class="two">
+  <div>
+    <label>Who is signed in</label>
+    <div class="chooser" id="userGrp" role="group" aria-label="User">
+      <button data-v="alice" aria-pressed="true">alice · NA, EU</button>
+      <button data-v="bob" aria-pressed="false">bob · NA only</button>
+    </div>
+    <label style="margin-top:14px">Does the host support apps?</label>
+    <div class="chooser" id="uiGrp" role="group" aria-label="Host support">
+      <button data-v="yes" aria-pressed="true">renders the page</button>
+      <button data-v="no" aria-pressed="false">text only</button>
+    </div>
+  </div>
+  <div>
+    <label>Where the permission check lives</label>
+    <div class="chooser" id="guardGrp" role="group" aria-label="Guard">
+      <button data-v="handler" aria-pressed="true">in the handler</button>
+      <button data-v="host" aria-pressed="false">trust the host</button>
+    </div>
+    <div class="grid3" style="grid-template-columns:1fr 1fr">
+      <div class="stat" id="sApp"><b>0</b><small>calls from the page</small></div>
+      <div class="stat" id="sLeak"><b>0</b><small>unauthorized, succeeded</small></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="panel">
+<h2>2. The conversation</h2>
+<div id="stage"></div>
+<div class="out" id="out"></div>
+</section>
+
+<section class="panel">
+<h2>3. What went over the wire</h2>
+<div class="wire" id="wire"></div>
+<div class="verdict" id="verdict"><b>&mdash;</b><p></p></div>
+<button id="reset">Reset</button>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var el = function(id){ return document.getElementById(id); };
+
+  var GRANTS = { alice: ["NA", "EU"], bob: ["NA"] };
+  var SALES = { NA: 412000, EU: 288000, APAC: 96000 };
+  var URI = "ui://pick-region/mcp-app.html";
+
+  var st = { user:"alice", ui:"yes", guard:"handler" };
+  var log = [], fromApp = 0, leaked = 0;
+
+  function money(n){ return "$" + n.toLocaleString(); }
+
+  function wire(cls, text){
+    log.push([cls, text]);
+    var host = el("wire");
+    while (host.firstChild) host.removeChild(host.firstChild);
+    for (var i = 0; i < log.length; i++){
+      var d = document.createElement("div");
+      d.className = log[i][0];
+      d.textContent = log[i][1];
+      host.appendChild(d);
+    }
+    host.scrollTop = host.scrollHeight;
+  }
+
+  // The server. It sees who is asking and how, and that is all it needs.
+  function callTool(region, caller){
+    var allowed = GRANTS[st.user].indexOf(region) !== -1;
+    if (st.guard === "handler" && !allowed){
+      return { ok:false, text:"not permitted for this user" };
+    }
+    // trust_the_host: the host approved the first call, so the handler
+    // assumes every later one is fine too. That is the bug.
+    return { ok:true, text:region + " sales: " + money(SALES[region]),
+             unauthorized: !allowed };
+  }
+
+  function click(region){
+    fromApp++;
+    wire("a", "app  -> host   " + JSON.stringify(
+      { method:"tools/call", params:{ name:"pick-region", arguments:{ region:region } } }));
+    var r = callTool(region, "app");
+    if (r.ok && r.unauthorized) leaked++;
+    wire(r.ok ? (r.unauthorized ? "x" : "s") : "s",
+         "host <- server " + (r.ok ? (r.unauthorized ? "LEAKED: " : "") : "refused: ") + r.text);
+    var out = el("out");
+    out.className = "out " + (r.ok ? "ok" : "no");
+    out.textContent = r.ok
+      ? (r.unauthorized ? "⚠ " : "") + r.text
+      : "✕ " + r.text;
+    paint();
+  }
+
+  function start(){
+    log = []; fromApp = 0; leaked = 0;
+    el("out").textContent = "";
+    el("out").className = "out";
+    wire("m", "model -> host  " + JSON.stringify(
+      { method:"tools/call", params:{ name:"pick-region", arguments:{ region:"NA" } } }));
+    var first = callTool("NA", "model");
+    wire("s", "host <- server " + first.text);
+
+    var stage = el("stage");
+    while (stage.firstChild) stage.removeChild(stage.firstChild);
+
+    if (st.ui === "yes"){
+      wire("m", "host -> app    " + JSON.stringify({ method:"ui/initialize", params:{ resourceUri:URI } }));
+      wire("m", "host -> app    " + JSON.stringify({ method:"ui/toolresult", params:{ result:first.text } }));
+      var box = document.createElement("div"); box.className = "app";
+      var tag = document.createElement("div"); tag.className = "tag";
+      tag.textContent = "SANDBOXED IFRAME · " + URI;
+      var p = document.createElement("div");
+      p.style.marginTop = "8px";
+      p.textContent = first.text;
+      var cols = document.createElement("div"); cols.className = "cols";
+      ["NA", "EU", "APAC"].forEach(function(r){
+        var b = document.createElement("button");
+        b.textContent = r;
+        b.addEventListener("click", function(){ click(r); });
+        cols.appendChild(b);
+      });
+      box.appendChild(tag); box.appendChild(p); box.appendChild(cols);
+      stage.appendChild(box);
+    } else {
+      var t = document.createElement("div"); t.className = "textonly";
+      t.textContent = "This host does not advertise the extension, so nothing renders. "
+        + "It gets the tool's text and nothing else: “" + first.text + "”. "
+        + "There is no second caller here, because there is no page to click.";
+      stage.appendChild(t);
+    }
+    paint();
+  }
+
+  function paint(){
+    el("sApp").firstChild.textContent = fromApp;
+    el("sApp").className = "stat " + (fromApp ? "good" : "");
+    el("sLeak").firstChild.textContent = leaked;
+    el("sLeak").className = "stat " + (leaked ? "dead" : "good");
+
+    var v = el("verdict"), head, cls, body;
+    if (st.ui === "no"){
+      cls = "good"; head = "No page, no second caller";
+      body = "A host without the extension never fetches the resource, so the only way in is a "
+        + "model turn. This is also why the tool has to return text worth reading: it is all this "
+        + "host will ever get, and it is what the model reads even on hosts that do render.";
+    } else if (leaked){
+      cls = "bad"; head = leaked + " unauthorized call" + (leaked > 1 ? "s" : "") + " succeeded";
+      body = "The host asked the user to approve one call, and the handler treated that as "
+        + "approval for everything after it. But a button click is not the model deciding, and "
+        + "the user behind it may not be allowed the data they just asked for.";
+    } else if (fromApp){
+      cls = "good"; head = fromApp + " call" + (fromApp > 1 ? "s" : "") + " from the page, all checked";
+      body = "Each one was authorized on its own merits inside the handler, so it stopped "
+        + "mattering whether the model or a button made the call. That is the whole fix, and it "
+        + "is the check most tools do not currently have.";
+    } else {
+      cls = "good"; head = "The page is rendered and idle";
+      body = "The model made one call and the result was pushed into the page. Click a region — "
+        + "that click goes straight to the server with no model turn in between.";
+    }
+    v.className = "verdict " + cls;
+    v.firstChild.textContent = head;
+    v.lastChild.textContent = body;
+    reportHeight();
+  }
+
+  function group(id, key){
+    el(id).addEventListener("click", function(ev){
+      var b = ev.target.closest("button");
+      if (!b) return;
+      st[key] = b.getAttribute("data-v");
+      var all = el(id).getElementsByTagName("button");
+      for (var i = 0; i < all.length; i++){
+        all[i].setAttribute("aria-pressed", all[i] === b ? "true" : "false");
+      }
+      start();
+    });
+  }
+
+  el("reset").addEventListener("click", function(){
+    st = { user:"alice", ui:"yes", guard:"handler" };
+    [["userGrp","alice"],["uiGrp","yes"],["guardGrp","handler"]].forEach(function(pair){
+      var bs = el(pair[0]).getElementsByTagName("button");
+      for (var i = 0; i < bs.length; i++){
+        bs[i].setAttribute("aria-pressed", bs[i].getAttribute("data-v") === pair[1] ? "true" : "false");
+      }
+    });
+    start();
+  });
+
+  function reportHeight(){
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+
+  group("userGrp", "user");
+  group("uiGrp", "ui");
+  group("guardGrp", "guard");
+  start();
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body></html>
