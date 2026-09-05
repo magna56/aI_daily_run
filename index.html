@@ -227,8 +227,15 @@
   /* Article pages hide the whole index header, so the reader carries its own
      brand link — otherwise the only route home is the browser back button, and
      anyone arriving from search or a shared link has no back to press. */
-  .rbrand { display: inline-flex; align-items: center; flex: 0 0 auto; text-decoration: none; opacity: .85; }
-  .rbrand:hover { opacity: 1; }
+  /* The hit area is 44px even though the mark is 26px: this is the only control
+     that returns you to the homepage from an article, and at 26px square it was
+     small enough to miss with a thumb, which reads as "the icon does nothing".
+     The negative margin keeps the mark optically where it has always been. */
+  .rbrand { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+            text-decoration: none; opacity: .85; width: 44px; height: 44px;
+            margin: -9px 0 -9px -9px; border-radius: 10px; }
+  .rbrand:hover { opacity: 1; background: rgba(127,127,127,.12); }
+  .rbrand:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .rbrand img { display: block; width: 26px; height: 26px; }
   .title {
     font-family: var(--mono); font-weight: 700;
@@ -508,15 +515,23 @@
   .reader { max-width: 1200px; margin: 0 auto; padding: 0 24px 90px; }
   .rbar { position: sticky; top: 0; z-index: 20; background: rgba(var(--bg-rgb),.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); margin: 0 -24px 0; padding: 14px 24px 0; }
   .rbar-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-  .back { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--ink); border-radius: 8px; padding: 7px 13px; font: inherit; font-size: 13px; cursor: pointer; }
+  .back { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--ink); border-radius: 8px; padding: 7px 13px; font: inherit; font-size: 13px; cursor: pointer;
+          display: inline-flex; align-items: center; min-height: 40px; }
   .back:hover { border-color: rgba(255,255,255,.28); }
   .rbar h1 { font-size: 17px; margin: 0; font-weight: 650; line-height: 1.3; flex: 1 1 260px; min-width: 0; }
   .rbar .spacer { flex: 1 1 auto; }
-  .readbtn { appearance: none; border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 8px; padding: 7px 13px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .readbtn { appearance: none; border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 8px; padding: 7px 13px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap;
+             display: inline-flex; align-items: center; min-height: 40px; }
   .readbtn:hover { border-color: rgba(255,255,255,.28); color: var(--ink); }
   .readbtn.on { color: var(--good); border-color: rgba(63,201,120,.45); background: rgba(63,201,120,.10); }
   .nav { display: flex; gap: 6px; }
-  .nav button { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--muted); border-radius: 8px; width: 30px; height: 30px; cursor: pointer; font: inherit; }
+  .nav button { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--muted); border-radius: 8px; width: 34px; height: 34px; cursor: pointer; font: inherit; }
+  @media (max-width: 640px) {
+    .nav button { width: 40px; height: 40px; }
+    /* Reserve the corner the fixed theme toggle occupies, so it stops covering
+       the session arrows underneath it. */
+    .rbar-top { padding-right: 56px; }
+  }
   .nav button:hover:not(:disabled) { color: var(--ink); border-color: rgba(255,255,255,.28); }
   .nav button:disabled { opacity: .3; cursor: default; }
 
