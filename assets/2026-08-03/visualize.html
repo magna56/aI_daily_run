@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Model Cascade Frontier Lab</title>
+  <style>
+    :root{color-scheme:dark;--bg:#080c15;--card:#111827;--line:#263149;--text:#eaf0fb;--muted:#99a7bd;--green:#63e6be;--blue:#74a7ff;--pink:#f783ac;--amber:#ffc078}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 16% 0,#172847 0,transparent 36%),var(--bg);color:var(--text);font:15px/1.45 system-ui,sans-serif}
+    main{max-width:1120px;margin:auto;padding:clamp(16px,3vw,34px)}header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:18px}h1{margin:0 0 8px;font-size:clamp(23px,4vw,37px);line-height:1.08}p{margin:0;color:var(--muted);max-width:760px}
+    button{background:#172238;border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 14px;font:inherit;cursor:pointer}button:focus-visible,button:hover{outline:none;border-color:var(--blue)}
+    .layout{display:grid;grid-template-columns:minmax(235px,.68fr) minmax(0,1.45fr);gap:15px}.card{border:1px solid var(--line);background:color-mix(in srgb,var(--card) 93%,transparent);border-radius:15px;padding:18px}
+    .controls{display:grid;gap:19px}.control-top{display:flex;justify-content:space-between;gap:8px}.value{color:var(--green);font-weight:750;font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:var(--green)}.ends{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}
+    .gate{background:#09111f;border-radius:10px;padding:12px;font:12px ui-monospace,monospace;color:var(--green)}.stage{min-height:430px}canvas{width:100%;height:350px;display:block}.legend{display:flex;gap:13px;flex-wrap:wrap;font-size:12px;color:var(--muted)}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+    .stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:11px}.stat strong{display:block;font-size:clamp(21px,3vw,29px);font-variant-numeric:tabular-nums}.stat span{color:var(--muted);font-size:12px}.good{color:var(--green)}.bar{height:6px;background:#253047;border-radius:8px;overflow:hidden;margin-top:9px}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--green))}
+    @media(max-width:730px){header{display:block}header button{margin-top:13px}.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}canvas{height:310px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer>
+  <header><div><h1>Route answers, not queries.</h1><p>Every query pays the $0.20/M flash tier first. The confidence gate escalates uncertain answers to the $10/M frontier tier—paying both calls. Sweep the threshold and calibration to see when that trade is worth it.</p></div><button id="reset" type="button">Reset</button></header>
+  <section class="layout">
+    <div class="card controls">
+      <div><div class="control-top"><label for="threshold">Escalation threshold</label><output id="thresholdOut" class="value" for="threshold"></output></div><input id="threshold" type="range" min="0" max="100" value="50"><div class="ends"><span>trust flash</span><span>escalate all</span></div></div>
+      <div><div class="control-top"><label for="calibration">Gate calibration</label><output id="calibrationOut" class="value" for="calibration"></output></div><input id="calibration" type="range" min="0" max="100" value="75"><div class="ends"><span>coin flip</span><span>perfect judge</span></div></div>
+      <div class="gate">if flash_confidence &lt; threshold:<br>&nbsp;&nbsp;answer = frontier(query)<br>else:<br>&nbsp;&nbsp;answer = flash_answer</div>
+      <p>Calibration changes which points the gate catches, not model capability. A poor judge overpays on correct answers while missing wrong ones.</p>
+    </div>
+    <div class="card stage">
+      <div class="legend"><span><i class="dot" style="background:var(--pink)"></i>flash baseline</span><span><i class="dot" style="background:var(--blue)"></i>threshold sweep</span><span><i class="dot" style="background:var(--green)"></i>selected gate</span><span><i class="dot" style="background:var(--amber)"></i>frontier baseline</span></div>
+      <canvas id="chart" role="img" aria-label="Cost versus accuracy frontier for a two-tier model cascade"></canvas>
+    </div>
+    <div class="stats">
+      <div class="card stat"><span>Accuracy</span><strong id="accuracy"></strong><div class="bar"><i id="accBar"></i></div></div>
+      <div class="card stat"><span>Escalated traffic</span><strong id="escalated"></strong></div>
+      <div class="card stat"><span>Workload cost</span><strong id="cost"></strong></div>
+      <div class="card stat"><span>Cost vs. all-frontier</span><strong id="relative" class="good"></strong></div>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $=s=>document.querySelector(s), threshold=$("#threshold"), calibration=$("#calibration"), canvas=$("#chart"), ctx=canvas.getContext("2d");
+  const N=1200, FLASH_COST=.20, FRONTIER_COST=10, TOKENS=1500/1e6, data=[]; let seed=20260803;
+  const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296), sigmoid=x=>1/(1+Math.exp(-x));
+  for(let i=0;i<N;i++){const d=rand(),fc=rand()<sigmoid(10*(.62-d)),fr=rand()<sigmoid(10*(.88-d));data.push({fc,fr,noise:rand(),jitter:(rand()+rand()+rand()-1.5)*.12})}
+  const flashAcc=data.filter(x=>x.fc).length/N, frontierAcc=data.filter(x=>x.fr).length/N, flashCost=N*FLASH_COST*TOKENS, frontierCost=N*FRONTIER_COST*TOKENS;
+  function run(t,cal){
+    let correct=0,esc=0;
+    data.forEach(x=>{const signal=x.fc?.8:.2, conf=Math.max(0,Math.min(1,cal*signal+(1-cal)*x.noise+x.jitter));if(conf<t){esc++;correct+=x.fr}else correct+=x.fc});
+    return {acc:correct/N,esc:esc/N,cost:(N*FLASH_COST+esc*FRONTIER_COST)*TOKENS};
+  }
+  function draw(){
+    const t=+threshold.value/100,cal=+calibration.value/100,sel=run(t,cal),points=[];
+    for(let i=0;i<=40;i++)points.push(run(i/40,cal));
+    const dpr=Math.min(devicePixelRatio||1,2),r=canvas.getBoundingClientRect();canvas.width=Math.max(1,Math.round(r.width*dpr));canvas.height=Math.max(1,Math.round(r.height*dpr));ctx.setTransform(dpr,0,0,dpr,0,0);
+    const w=r.width,h=r.height,L=54,R=20,T=24,B=42,x=c=>L+c/(frontierCost*1.03)*(w-L-R),y=a=>h-B-(a-.70)/.23*(h-T-B);
+    ctx.clearRect(0,0,w,h);ctx.font="11px system-ui";ctx.fillStyle="#99a7bd";ctx.strokeStyle="#263149";ctx.lineWidth=1;
+    [0,.25,.5,.75,1].forEach(v=>{const xx=x(frontierCost*v);ctx.beginPath();ctx.moveTo(xx,T);ctx.lineTo(xx,h-B);ctx.stroke();ctx.fillText(Math.round(v*100)+"%",xx-10,h-18)});
+    [.72,.76,.80,.84,.88,.92].forEach(v=>{const yy=y(v);ctx.beginPath();ctx.moveTo(L,yy);ctx.lineTo(w-R,yy);ctx.stroke();ctx.fillText(Math.round(v*100)+"%",8,yy+4)});
+    ctx.fillText("cost vs all-frontier",Math.max(L,w/2-45),h-3);ctx.save();ctx.translate(12,h/2+30);ctx.rotate(-Math.PI/2);ctx.fillText("accuracy",0,0);ctx.restore();
+    ctx.strokeStyle="#74a7ff";ctx.lineWidth=2.5;ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(x(p.cost),y(p.acc)):ctx.moveTo(x(p.cost),y(p.acc)));ctx.stroke();
+    function dot(px,py,color,rad){ctx.fillStyle=color;ctx.beginPath();ctx.arc(px,py,rad,0,Math.PI*2);ctx.fill()}
+    dot(x(flashCost),y(flashAcc),"#f783ac",6);dot(x(frontierCost),y(frontierAcc),"#ffc078",6);dot(x(sel.cost),y(sel.acc),"#63e6be",8);
+    ctx.fillStyle="#eaf0fb";ctx.font="12px system-ui";ctx.fillText("selected",Math.min(w-70,x(sel.cost)+10),Math.max(15,y(sel.acc)-10));
+    $("#thresholdOut").textContent=t.toFixed(2);$("#calibrationOut").textContent=Math.round(cal*100)+"%";$("#accuracy").textContent=(sel.acc*100).toFixed(1)+"%";$("#escalated").textContent=Math.round(sel.esc*100)+"%";$("#cost").textContent="$"+sel.cost.toFixed(3);$("#relative").textContent=Math.round(sel.cost/frontierCost*100)+"%";
+    $("#accBar").style.width=(sel.acc*100)+"%";
+  }
+  threshold.addEventListener("input",draw);calibration.addEventListener("input",draw);$("#reset").addEventListener("click",()=>{threshold.value=50;calibration.value=75;draw()});
+  new ResizeObserver(draw).observe(canvas);new ResizeObserver(()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*")).observe(document.documentElement);draw();
+})();
+</script>
+</body>
+</html>

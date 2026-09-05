@@ -1,0 +1,223 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Should You Compile This Prompt?</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#141821;--line:#303747;--text:#f4f6fb;--muted:#929db1;--bad:#f97316;--ok:#34d399;--acc:#818cf8;--warn:#facc15}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111827,var(--bg) 48%);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:24px}
+.kicker{font:800 .75rem ui-monospace;color:var(--warn);letter-spacing:.13em}
+h1{font-size:clamp(1.6rem,4.2vw,2.6rem);line-height:1.1;margin:.4rem 0}
+.lede{max-width:860px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.panel h2{margin:0 0 12px;font-size:1rem}
+label{display:block;font:700 .78rem ui-monospace;color:var(--muted);margin-bottom:8px}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.val{color:var(--text);font-weight:700}
+.chooser{display:flex;flex-wrap:wrap;gap:8px}
+.chooser button{background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:99px;padding:8px 14px;font:600 .82rem system-ui;cursor:pointer}
+.chooser button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#0a0d18}
+.chooser button:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
+@media(max-width:760px){.two{grid-template-columns:1fr}.grid4{grid-template-columns:repeat(2,1fr)}}
+.stat{background:#0c1018;border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font:900 1.2rem ui-monospace;line-height:1.2;word-break:break-word}
+.stat small{color:var(--muted);font-size:.72rem;display:block;margin-top:3px}
+.stat.good b{color:var(--ok)} .stat.bad b{color:var(--bad)} .stat.warn b{color:var(--warn)}
+.bars{margin-top:12px}
+.brow{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:center;margin-top:9px}
+.blab{font:700 .74rem ui-monospace;color:var(--muted);text-align:right}
+.bar{height:26px;border-radius:5px;position:relative;min-width:3px;transition:width .18s}
+.bar span{position:absolute;left:9px;top:0;line-height:26px;font:800 .74rem ui-monospace;color:#0a0d18;white-space:nowrap}
+.bar.r{background:linear-gradient(90deg,#9a3412,#f97316)}
+.bar.c{background:linear-gradient(90deg,#065f46,#34d399)}
+.verdict{margin-top:14px;padding:14px;border-radius:12px;border:1px solid var(--line);background:#0c1018}
+.verdict b{display:block;font:900 1rem ui-monospace}
+.verdict.good b{color:var(--ok)} .verdict.bad b{color:var(--bad)} .verdict.warn b{color:var(--warn)}
+.verdict p{margin:.4rem 0 0;color:var(--muted);font-size:.87rem}
+code{font-family:ui-monospace,monospace;color:var(--warn)}
+#reset{width:100%;margin-top:16px;background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:11px;cursor:pointer;font-weight:700}
+#reset:hover{border-color:var(--acc)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main class="wrap" data-visualizer="frontier-2026-09-04">
+<header>
+<div class="kicker">COMPILE BY TRAINING &middot; IS IT WORTH IT</div>
+<h1>Should you compile this prompt?</h1>
+<p class="lede">Put your own numbers in. Accuracy comes from the paper's measured curve — 1,440 pairs scored 0.821, 2,400 scored 0.836, 7,200 scored 0.866 — and everything the compiled function gets wrong falls back to the remote call you already make. Local inference is assumed at $0.00002 per request, which is the one number here you should replace with your own.</p>
+</header>
+
+<section class="panel">
+<h2>1. Your workload</h2>
+<div class="two">
+  <div>
+    <label for="req">Requests per month: <span class="val" id="reqV">250k</span></label>
+    <input type="range" id="req" min="0" max="100" step="1" value="55">
+    <label for="cost" style="margin-top:14px">What one remote call costs you: <span class="val" id="costV">$0.0012</span></label>
+    <input type="range" id="cost" min="0" max="100" step="1" value="40">
+  </div>
+  <div>
+    <label for="pairs">Teacher pairs you buy at build time: <span class="val" id="pairsV">2,400</span></label>
+    <input type="range" id="pairs" min="480" max="7200" step="240" value="2400">
+    <label style="margin-top:14px">Who writes the training examples</label>
+    <div class="chooser" id="mixGrp" role="group" aria-label="Teacher mix">
+      <button data-v="mix" aria-pressed="true">2:1 cheap to strong</button>
+      <button data-v="cheap" aria-pressed="false">cheap teacher only</button>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="panel">
+<h2>2. What it costs either way, per month</h2>
+<div class="bars" id="bars"></div>
+<div class="grid4">
+  <div class="stat" id="sAcc"><b>&mdash;</b><small>accuracy of the compiled artifact</small></div>
+  <div class="stat" id="sFall"><b>&mdash;</b><small>requests still hitting the remote model</small></div>
+  <div class="stat" id="sSave"><b>&mdash;</b><small>saved per month</small></div>
+  <div class="stat" id="sBreak"><b>&mdash;</b><small>build pays for itself after</small></div>
+</div>
+<div class="verdict" id="verdict"><b>&mdash;</b><p></p></div>
+<button id="reset">Reset</button>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var el = function(id){ return document.getElementById(id); };
+
+  var LOCAL_COST = 0.00002;      // per request, running the small base yourself
+  var TEACHER_COST = 0.0009;     // per synthesized pair, paid once
+  var CHEAP_PENALTY = 0.746 / 0.851;   // the paper's cheap-only vs blended ratio
+
+  // The paper's measured data-scaling points.
+  var CURVE = [[1440, 0.821], [2400, 0.836], [7200, 0.866]];
+
+  var st = { reqIdx:55, costIdx:40, pairs:2400, mix:"mix" };
+
+  function reqFor(i){ return Math.round(1000 * Math.pow(10, i / 100 * 3.7)); }
+  function costFor(i){ return 0.0002 + (i / 100) * (0.01 - 0.0002); }
+
+  function accuracy(pairs, mix){
+    var a;
+    if (pairs <= CURVE[0][0]) {
+      a = CURVE[0][1] * (0.72 + 0.28 * pairs / CURVE[0][0]);   // below the measured range
+    } else {
+      var lo = CURVE[0], hi = CURVE[1];
+      if (pairs > CURVE[1][0]) { lo = CURVE[1]; hi = CURVE[2]; }
+      var t = (Math.log(pairs) - Math.log(lo[0])) / (Math.log(hi[0]) - Math.log(lo[0]));
+      a = lo[1] + t * (hi[1] - lo[1]);
+    }
+    return Math.min(0.95, mix === "cheap" ? a * CHEAP_PENALTY : a);
+  }
+
+  function fmtN(n){
+    if (n >= 1000000) return (n / 1000000).toFixed(n >= 10000000 ? 0 : 1) + "M";
+    if (n >= 1000) return Math.round(n / 1000) + "k";
+    return String(n);
+  }
+  function money(v){
+    if (v >= 1000) return "$" + Math.round(v).toLocaleString();
+    return "$" + v.toFixed(v < 10 ? 2 : 0);
+  }
+
+  function render(){
+    var req = reqFor(st.reqIdx), cost = costFor(st.costIdx);
+    el("reqV").textContent = fmtN(req);
+    el("costV").textContent = "$" + cost.toFixed(4);
+    el("pairsV").textContent = st.pairs.toLocaleString();
+
+    var acc = accuracy(st.pairs, st.mix), fall = 1 - acc;
+    var build = st.pairs * TEACHER_COST;
+    var remoteOnly = req * cost;
+    var compiled = req * LOCAL_COST + req * fall * cost;
+    var save = remoteOnly - compiled;
+    var breakReq = save > 0 ? build / (save / req) : Infinity;
+
+    var host = el("bars");
+    while (host.firstChild) host.removeChild(host.firstChild);
+    var max = Math.max(remoteOnly, compiled, 0.01);
+    [["remote only", remoteOnly, "r"], ["compiled", compiled, "c"]].forEach(function(row){
+      var d = document.createElement("div"); d.className = "brow";
+      var l = document.createElement("div"); l.className = "blab"; l.textContent = row[0];
+      var b = document.createElement("div"); b.className = "bar " + row[2];
+      b.style.width = Math.max(3, 100 * row[1] / max) + "%";
+      var s = document.createElement("span"); s.textContent = money(row[1]) + " / month";
+      b.appendChild(s); d.appendChild(l); d.appendChild(b);
+      host.appendChild(d);
+    });
+
+    el("sAcc").firstChild.textContent = acc.toFixed(3);
+    el("sAcc").className = "stat " + (acc >= 0.83 ? "good" : "warn");
+    el("sFall").firstChild.textContent = (100 * fall).toFixed(1) + "%";
+    el("sFall").className = "stat " + (fall > 0.2 ? "bad" : "warn");
+    el("sSave").firstChild.textContent = save > 0 ? money(save) : "—" + money(-save);
+    el("sSave").className = "stat " + (save > 0 ? "good" : "bad");
+    el("sBreak").firstChild.textContent =
+      breakReq === Infinity ? "never" : fmtN(Math.round(breakReq)) + " reqs";
+    el("sBreak").className = "stat " + (breakReq === Infinity ? "bad" : "good");
+
+    var v = el("verdict"), head, cls, body;
+    if (save <= 0){
+      cls = "bad"; head = "Do not compile this one";
+      body = "At " + (100 * fall).toFixed(0) + "% fallback you are still making most of the remote "
+        + "calls, and now you also run a build pipeline and a second code path. Either raise the "
+        + "accuracy with more pairs and a better teacher mix, or leave this prompt alone.";
+    } else if (breakReq > req){
+      cls = "warn"; head = "It pays back, but not this month";
+      body = "The build costs " + money(build) + " and you save " + money(save) + " a month, so it "
+        + "clears after " + fmtN(Math.round(breakReq)) + " requests. Worth doing if this prompt is "
+        + "still in the product next quarter, and not worth it if you are still changing the spec.";
+    } else {
+      cls = "good"; head = "Compile it";
+      body = "The build pays for itself inside the first month and saves " + money(save)
+        + " a month after that. The " + (100 * fall).toFixed(0) + "% that falls back is the reason "
+        + "you keep the remote call wired up rather than deleting it.";
+    }
+    if (st.mix === "cheap"){
+      body += " You are also compiling from the cheap teacher alone, which costs you about "
+        + ((1 - CHEAP_PENALTY) * 100).toFixed(0) + "% of your accuracy for a fraction of the build bill.";
+    }
+    v.className = "verdict " + cls;
+    v.firstChild.textContent = head;
+    v.lastChild.textContent = body;
+    reportHeight();
+  }
+
+  el("mixGrp").addEventListener("click", function(ev){
+    var b = ev.target.closest("button");
+    if (!b) return;
+    st.mix = b.getAttribute("data-v");
+    var all = el("mixGrp").getElementsByTagName("button");
+    for (var i = 0; i < all.length; i++){
+      all[i].setAttribute("aria-pressed", all[i] === b ? "true" : "false");
+    }
+    render();
+  });
+
+  el("req").addEventListener("input", function(){ st.reqIdx = +this.value; render(); });
+  el("cost").addEventListener("input", function(){ st.costIdx = +this.value; render(); });
+  el("pairs").addEventListener("input", function(){ st.pairs = +this.value; render(); });
+
+  el("reset").addEventListener("click", function(){
+    st = { reqIdx:55, costIdx:40, pairs:2400, mix:"mix" };
+    el("req").value = 55; el("cost").value = 40; el("pairs").value = 2400;
+    var all = el("mixGrp").getElementsByTagName("button");
+    for (var i = 0; i < all.length; i++){
+      all[i].setAttribute("aria-pressed", all[i].getAttribute("data-v") === "mix" ? "true" : "false");
+    }
+    render();
+  });
+
+  function reportHeight(){
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+
+  render();
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body></html>

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Observe Think Act</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0a1018;--panel:#141c28;--line:#2d3b50;--ink:#eef4ff;--muted:#94a3b8;--lime:#bef264;--blue:#7dd3fc;--orange:#fb923c;--red:#fb7185}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 10% 0,#1e293b 0,transparent 40%),var(--bg);color:var(--ink);font:15px/1.45 ui-sans-serif,system-ui,sans-serif}
+    [data-visualizer]{max-width:1120px;margin:auto;padding:clamp(16px,3vw,36px)}
+    h1{font-size:clamp(24px,4vw,38px);line-height:1.08;margin:0 0 8px}p{color:var(--muted);margin:0 0 14px;max-width:780px}
+    .controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+    button,select{font:inherit;font-weight:750;color:var(--ink);background:#1b2433;border:1px solid var(--line);border-radius:9px;padding:9px 13px}
+    button{cursor:pointer}button:hover,button:focus-visible,select:focus-visible{outline:3px solid #bef26466;border-color:var(--lime)}
+    .loop{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .step{border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--panel);min-height:140px}
+    .step.on{border-color:var(--lime);box-shadow:inset 3px 0 0 var(--lime)}
+    .step h2{margin:0 0 6px;font-size:14px}.step h2 small{color:var(--muted);font-weight:600}
+    .step pre{margin:0;white-space:pre-wrap;font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:#dbe7f6}
+    .schema{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .card h2{font-size:14px;margin:0 0 8px}
+    .ok{color:var(--lime)}.bad{color:var(--red)}
+    .rail{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+    .chip{border:1px solid var(--line);border-radius:999px;padding:4px 10px;font:700 11px ui-monospace,monospace}
+    .chip.http{border-color:var(--blue);color:var(--blue)}
+    @media(max-width:800px){.loop,.schema{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer="the-agent-loop">
+  <h1>Look. Decide. Open the labeled drawer.</h1>
+  <p>The trained policy always emits <code>edit_file</code>. Step the loop. Switch the advertised contract. MCP is the same act over <code>tools/list</code> and <code>tools/call</code> — HTTP for tools, not a different loop.</p>
+  <div class="controls">
+    <label>Advertised tools
+      <select id="schema">
+        <option value="match">edit_file (trained name)</option>
+        <option value="rename">mutate_buffer (renamed)</option>
+        <option value="mcp">MCP list + call, still edit_file</option>
+      </select>
+    </label>
+    <button id="step" type="button">Step</button>
+    <button id="reset" type="button">Reset</button>
+  </div>
+  <div class="loop" aria-label="Agent loop">
+    <article class="step" id="s0"><h2>1. Observe <small>transcript</small></h2><pre id="obs">waiting…</pre></article>
+    <article class="step" id="s1"><h2>2. Think <small>model call</small></h2><pre id="thk">waiting…</pre></article>
+    <article class="step" id="s2"><h2>3. Act <small>dispatcher</small></h2><pre id="act">waiting…</pre></article>
+  </div>
+  <div class="schema">
+    <section class="card">
+      <h2>Tool schema the harness sent</h2>
+      <pre id="spec"></pre>
+      <div class="rail" id="mcp" hidden>
+        <span class="chip http">GET tools/list</span>
+        <span class="chip http">POST tools/call</span>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Contract result</h2>
+      <p id="result" class="ok">Step to run the loop.</p>
+      <p id="note"></p>
+    </section>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const CALL = {name:"edit_file", arguments:{path:"app.py", old_string:"debug = True", new_string:"debug = False"}};
+  const SPECS = {
+    match: {edit_file:{properties:["path","old_string","new_string"],required:["path","old_string","new_string"]}},
+    rename: {mutate_buffer:{properties:["path","old_string","new_string"],required:["path","old_string","new_string"]}},
+    mcp: {edit_file:{properties:["path","old_string","new_string"],required:["path","old_string","new_string"]}}
+  };
+  const $ = id => document.getElementById(id);
+  let phase = 0;
+  function spec(){return SPECS[$("schema").value]}
+  function dispatch(){
+    const tools=spec(), name=CALL.name;
+    if(!(name in tools)) return {ok:false, msg:`schema miss: ${name} not in [${Object.keys(tools)}]`};
+    return {ok:true, msg:`${name}(app.py): 'debug = True' → 'debug = False'`};
+  }
+  function paint(){
+    const tools=spec(), mcp=$("schema").value==="mcp";
+    $("spec").textContent=JSON.stringify(tools,null,2);
+    $("mcp").hidden=!mcp;
+    ["s0","s1","s2"].forEach((id,i)=>$(id).classList.toggle("on", i===Math.min(phase,2) && phase>0 || (phase===0 && i===0 && $("obs").textContent!=="waiting…")));
+    for(let i=0;i<3;i++) $("s"+i).classList.toggle("on", phase===i+1 || (phase>=3 && i===0));
+    if(phase===0){
+      $("obs").textContent="waiting…"; $("thk").textContent="waiting…"; $("act").textContent="waiting…";
+      $("result").textContent="Step to run the loop."; $("result").className="";
+      $("note").textContent="";
+    }
+  }
+  function step(){
+    if(phase>=3){phase=0; paint(); return;}
+    phase += 1;
+    if(phase===1){
+      $("obs").textContent='user: "turn off debug in app.py"\nresults: []';
+      $("thk").textContent="waiting…"; $("act").textContent="waiting…";
+      $("result").textContent="Observed. Ready to think."; $("result").className="";
+      $("note").textContent=$("schema").value==="mcp" ? "MCP tools/list already returned the catalog sitting in the prefix." : "The catalog is whatever this harness advertised.";
+    } else if(phase===2){
+      $("thk").textContent=JSON.stringify(CALL,null,2);
+      $("result").textContent="Model emitted the trained name."; $("result").className="";
+      $("note").textContent="Think does not edit the file. It asks.";
+    } else {
+      const r=dispatch();
+      $("act").textContent=($("schema").value==="mcp"?"MCP tools/call name=edit_file\n":"")+r.msg;
+      $("obs").textContent='user: "turn off debug in app.py"\nresults: ['+JSON.stringify(r.msg)+"]";
+      $("result").textContent=r.ok?"ok — name matched the contract":"stopped — contract missed";
+      $("result").className=r.ok?"ok":"bad";
+      $("note").textContent=r.ok?"The loop did not change. The name matched.":"Daily lab 2026-07-05: trained schemas leak when the label does not.";
+    }
+    ["s0","s1","s2"].forEach((id,i)=>$(id).classList.toggle("on", (phase===1&&i===0)||(phase===2&&i===1)||(phase===3&&i===2)));
+  }
+  $("step").addEventListener("click",step);
+  $("reset").addEventListener("click",()=>{phase=0;$("schema").value="match";paint();$("obs").textContent="waiting…";$("thk").textContent="waiting…";$("act").textContent="waiting…";});
+  $("schema").addEventListener("change",()=>{phase=0;$("obs").textContent="waiting…";$("thk").textContent="waiting…";$("act").textContent="waiting…";paint();});
+  paint();
+  const post=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(post).observe(document.documentElement); post();
+})();
+</script>
+</body>
+</html>

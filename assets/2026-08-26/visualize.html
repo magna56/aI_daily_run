@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'" />
+<title>Prose review vs typed findings</title>
+<style>
+  :root {
+    --bg: #111217; --ink: #e7e2d8; --muted: #9a9488; --dim: #857f70;
+    --line: rgba(255,255,255,.11); --card: rgba(255,255,255,.03);
+    --accent: #a78bfa; --accent2: #c4b5fd;
+    --yes: #6ec18e; --no: #d9744e; --warn: #d9a544;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 20px 16px 28px; }
+  h1 { font-size: 17px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 13.5px; margin: 0 0 18px; }
+
+  .toggle { display: flex; gap: 6px; margin: 0 0 18px; }
+  .toggle button {
+    flex: 1; font-family: var(--mono); font-size: 12px; padding: 9px 10px; cursor: pointer;
+    background: var(--card); color: var(--muted); border: 1px solid var(--line); border-radius: 7px;
+  }
+  .toggle button.on { background: rgba(167,139,250,.14); color: var(--accent2); border-color: var(--accent); font-weight: 700; }
+  .toggle button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .findings { display: grid; gap: 8px; margin: 0 0 16px; }
+  .finding { border: 1px solid var(--line); border-left: 3px solid var(--dim); border-radius: 8px; padding: 10px 12px; background: var(--card); }
+  .finding.confirmed { border-left-color: var(--no); }
+  .finding.plausible { border-left-color: var(--warn); }
+  .finding.filtered { border-left-color: var(--line); opacity: .5; }
+  .finding .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .finding .loc { font-family: var(--mono); font-size: 11.5px; color: var(--dim); }
+  .finding p { margin: 4px 0 0; font-size: 13.5px; }
+  .finding select {
+    font-family: var(--mono); font-size: 11px; padding: 3px 6px; margin-top: 7px;
+    background: rgba(0,0,0,.28); color: var(--ink); border: 1px solid var(--line); border-radius: 5px;
+  }
+  .verdict { font-family: var(--mono); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  .verdict.confirmed { color: var(--no); } .verdict.plausible { color: var(--warn); } .verdict.filtered { color: var(--dim); }
+
+  .out { border: 1px solid var(--line); border-radius: 8px; padding: 13px; background: rgba(0,0,0,.22); font-family: var(--mono); font-size: 12.5px; white-space: pre-wrap; }
+  .out .big { font-family: var(--sans); font-size: 15px; font-weight: 700; margin: 0 0 8px; }
+  .gate { margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  .gate b { color: var(--ink); }
+  .note { margin: 14px 0 0; font-size: 12.5px; color: var(--dim); border-left: 2px solid var(--line); padding-left: 11px; }
+  .resetrow { display: flex; justify-content: flex-end; margin: 0 0 14px; }
+  .resetrow button { font-family: var(--mono); font-size: 11.5px; padding: 5px 10px; cursor: pointer; background: var(--card); color: var(--accent2); border: 1px solid var(--accent); border-radius: 999px; }
+</style>
+</head>
+<body>
+<div class="wrap" data-visualizer="2026-08-26">
+  <h1>Same review, two shapes</h1>
+  <p class="sub">One review, three candidate findings. Change who's asking, and change what each finding is backed by &mdash; and watch the output shape, and whether it can gate a merge, change with it.</p>
+
+  <div class="toggle">
+    <button type="button" id="modeProse">Terminal reply (prose)</button>
+    <button type="button" id="modeTyped">Host app (typed ReportFindings)</button>
+  </div>
+
+  <div class="findings" id="findings"></div>
+
+  <div class="resetrow"><button type="button" id="reset">Reset</button></div>
+
+  <div class="out" id="out"></div>
+  <p class="note" id="note"></p>
+</div>
+
+<script>
+(function () {
+  var DEFAULTS = [
+    { file: "session.ts", line: 142, summary: "Token refresh races with logout", category: "correctness", support: "strong" },
+    { file: "expiry.ts", line: 88, summary: "parseExpiry silently returns 0 on malformed input", category: "style", support: "weak" },
+    { file: "session.ts", line: 142, summary: "“SQL injection” in a file with no query at all", category: "correctness", support: "none" }
+  ];
+  var findings = DEFAULTS.map(function (f) { return Object.assign({}, f); });
+  var mode = "typed";
+
+  var els = ["findings", "out", "note", "modeProse", "modeTyped", "reset"].reduce(function (a, id) {
+    a[id] = document.getElementById(id); return a;
+  }, {});
+
+  function verdictOf(support) {
+    if (support === "none") return "filtered";
+    return support === "strong" ? "confirmed" : "plausible";
+  }
+
+  function renderFindings() {
+    els.findings.innerHTML = findings.map(function (f, i) {
+      var v = verdictOf(f.support);
+      return '<div class="finding ' + v + '">' +
+        '<div class="top"><span class="loc">' + f.file + ":" + f.line + '</span>' +
+        '<span class="verdict ' + v + '">' + v + '</span></div>' +
+        '<p>' + f.summary + '</p>' +
+        '<select data-i="' + i + '">' +
+          '<option value="strong"' + (f.support === "strong" ? " selected" : "") + '>source shows it — strong</option>' +
+          '<option value="weak"' + (f.support === "weak" ? " selected" : "") + '>plausible, not proven — weak</option>' +
+          '<option value="none"' + (f.support === "none" ? " selected" : "") + '>source contradicts it — none</option>' +
+        '</select>' +
+        '</div>';
+    }).join("");
+    Array.prototype.forEach.call(els.findings.querySelectorAll("select"), function (sel) {
+      sel.addEventListener("change", function () {
+        findings[Number(this.getAttribute("data-i"))].support = this.value;
+        render();
+      });
+    });
+  }
+
+  function render() {
+    els.modeProse.className = mode === "prose" ? "on" : "";
+    els.modeTyped.className = mode === "typed" ? "on" : "";
+    renderFindings();
+
+    var kept = findings.filter(function (f) { return f.support !== "none"; });
+    var confirmedBlocking = kept.some(function (f) { return f.support === "strong" && f.category !== "style"; });
+
+    if (mode === "prose") {
+      var text = kept.length
+        ? kept.map(function (f) { return f.summary + " at " + f.file + ":" + f.line + "."; }).join(" Also, ")
+        : "No issues found.";
+      els.out.innerHTML = '<p class="big">Terminal reply</p>' + text;
+    } else {
+      var lines = kept.length
+        ? kept.map(function (f) {
+            return "[" + verdictOf(f.support).toUpperCase() + "] " + f.file + ":" + f.line + "  " + f.summary;
+          }).join("\n")
+        : "[] — nothing survived verification";
+      var counts = { normal: 0, nit: 0 };
+      kept.forEach(function (f) { counts[f.category === "style" ? "nit" : "normal"]++; });
+      els.out.innerHTML = '<p class="big">ReportFindings (typed)</p>' + lines +
+        '\n\nbughunter-severity: {"normal": ' + counts.normal + ', "nit": ' + counts.nit + '}' +
+        '<div class="gate">should_block_merge() &rarr; <b style="color:' +
+          (confirmedBlocking ? "var(--no)" : "var(--yes)") + '">' + confirmedBlocking + '</b></div>';
+    }
+
+    els.note.textContent = mode === "prose"
+      ? "This is what a terminal /code-review reply looks like — the same three findings, but nothing here is checkable by a script without parsing English."
+      : (findings.some(function (f) { return f.support === "none"; })
+        ? "The SQL-injection claim is filtered, not demoted — verify() dropped it because the file has no query in it at all."
+        : "Set a finding to “source contradicts it” to see verify() filter a false positive out entirely, the way it filtered the SQL claim by default.");
+
+    postHeight();
+  }
+
+  els.modeProse.addEventListener("click", function () { mode = "prose"; render(); });
+  els.modeTyped.addEventListener("click", function () { mode = "typed"; render(); });
+  els.reset.addEventListener("click", function () {
+    findings = DEFAULTS.map(function (f) { return Object.assign({}, f); });
+    mode = "typed";
+    render();
+  });
+
+  function postHeight() {
+    try {
+      parent.postMessage({
+        type: "adl-visualize-height",
+        height: document.documentElement.scrollHeight
+      }, "*");
+    } catch (e) {}
+  }
+  window.addEventListener("load", postHeight);
+  if (window.ResizeObserver) new ResizeObserver(postHeight).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>

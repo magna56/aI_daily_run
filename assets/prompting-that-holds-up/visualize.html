@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Specs and examples beat vague prompts</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090c12;--panel:#121821;--edge:#2a3544;--ink:#edf4ff;--muted:#95a4b8;--lime:#bef264;--blue:#60a5fa;--orange:#fb923c;--pink:#f472b6;--bad:#f87171}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#101928 0,#090c12 42%);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,sans-serif}
+    main{max-width:1040px;margin:auto;padding:clamp(18px,4vw,36px)}
+    header{display:flex;justify-content:space-between;align-items:end;gap:22px;margin-bottom:18px}
+    h1{font-size:clamp(24px,4.4vw,40px);line-height:1.08;margin:6px 0}
+    .kicker{font:800 11px ui-monospace,monospace;letter-spacing:.16em;color:var(--lime);text-transform:uppercase}
+    .intro{max-width:440px;color:var(--muted)}
+    button{border:1px solid #435168;border-radius:9px;background:#192231;color:var(--ink);padding:9px 13px;font-weight:750;cursor:pointer}
+    button:hover{border-color:var(--lime)}
+    button:focus-visible{outline:3px solid #bef26466;outline-offset:2px}
+    .toggle{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+    .toggle button[aria-pressed="true"]{border-color:var(--lime);color:var(--lime)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .panel{border:1px solid var(--edge);border-radius:16px;background:var(--panel);padding:16px;min-width:0}
+    .panel h2{font-size:13px;margin:0 0 10px}
+    pre{margin:0;white-space:pre-wrap;font:12px/1.45 ui-monospace,monospace;color:#d5deea}
+    .diff{margin-top:8px}
+    .add{color:var(--lime)}.del{color:var(--bad)}.same{color:var(--muted)}
+    .score{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+    .score strong{font-size:28px}
+    .rubric{display:grid;gap:6px}
+    .ok,.bad{border-radius:8px;padding:8px 10px;font-size:13px}
+    .ok{background:#122018;border:1px solid #2f6}.bad{background:#211418;border:1px solid #833}
+    .callout{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+    .callout div{padding:11px;border-radius:10px;background:#111925;color:var(--muted)}
+    .callout b{color:var(--ink);display:block}
+    @media(max-width:800px){header{display:block}.grid,.callout{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<main data-visualizer="prompting-that-holds-up">
+  <header>
+    <div>
+      <div class="kicker">Prompt as a ticket</div>
+      <h1>Same agent.<br>Wish vs spec.</h1>
+    </div>
+    <p class="intro">Toggle the instruction. Watch the fake agent invent scope on a vague wish, then stay inside the ticket when you add examples and non-goals.</p>
+  </header>
+  <div class="toggle">
+    <button type="button" id="vague" aria-pressed="true">Vague wish</button>
+    <button type="button" id="spec" aria-pressed="false">Spec + examples</button>
+    <button type="button" id="reset">Reset</button>
+  </div>
+  <div class="grid">
+    <section class="panel">
+      <h2>Prefix the agent sees</h2>
+      <pre id="prompt"></pre>
+    </section>
+    <section class="panel">
+      <div class="score"><h2>Reviewer rubric</h2><strong id="score"></strong></div>
+      <div class="rubric" id="rubric"></div>
+      <div class="diff"><h2>Diff</h2><pre id="diff"></pre></div>
+    </section>
+  </div>
+  <div class="callout">
+    <div><b>Adjectives are not types</b>“Improve” and “robust” are unbounded. The model fills the gap.</div>
+    <div><b>Examples are fixtures</b>One allowed signature and one rejected helper beat a paragraph of taste.</div>
+    <div><b>Production has no adult</b>A nightly agent cannot course-correct. The first message is the program.</div>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const vague = "Improve retry and make it more robust. Follow best practices.";
+  const spec = [
+    "Add an optional deadline (epoch seconds) to retry() in src/net.py.",
+    "Do not change attempts. Do not edit other files.",
+    "Example — allowed: def retry(fn, attempts=3, deadline=None)",
+    "Example — reject: new helpers, README edits, catching BaseException.",
+    "Done when: src/net.py is the only diff and retry() still raises last."
+  ].join("\n");
+  const diffs = {
+    vague: [
+      ["del","- def retry(fn, attempts=3):"],
+      ["add","+ def retry(fn, attempts=3, deadline=None):"],
+      ["add","+ except Exception as e:  # noqa"],
+      ["bad","+ created src/utils.py  (unused helper)"],
+      ["bad","+ edited README.md  (“now more robust”)"]
+    ],
+    spec: [
+      ["del","- def retry(fn, attempts=3):"],
+      ["add","+ def retry(fn, attempts=3, deadline=None):"],
+      ["add","+ if deadline is not None and time.time() > deadline: raise TimeoutError(last)"],
+      ["same","  (src/net.py only — no README, no extra helper)"]
+    ]
+  };
+  const rubrics = {
+    vague: [
+      [false,"Deadline added (got lucky via “robust” rewrite)"],
+      [false,"Only src/net.py changed"],
+      [false,"No extra helpers"],
+      [true,"Function still raises last"],
+      [false,"Would you merge this?"]
+    ],
+    spec: [
+      [true,"Deadline added"],
+      [true,"Only src/net.py changed"],
+      [true,"No extra helpers"],
+      [true,"Function still raises last"],
+      [true,"Would you merge this?"]
+    ]
+  };
+  let mode = "vague";
+  const $ = (id) => document.getElementById(id);
+  function render() {
+    $("vague").setAttribute("aria-pressed", mode==="vague" ? "true" : "false");
+    $("spec").setAttribute("aria-pressed", mode==="spec" ? "true" : "false");
+    $("prompt").textContent = mode==="vague" ? vague : spec;
+    const rows = rubrics[mode];
+    const pts = rows.filter((r) => r[0]).length;
+    $("score").textContent = pts + "/5";
+    $("rubric").innerHTML = rows.map((r) =>
+      `<div class="${r[0]?"ok":"bad"}">${r[0]?"pass":"fail"} — ${r[1]}</div>`
+    ).join("");
+    $("diff").innerHTML = diffs[mode].map((d) =>
+      `<span class="${d[0]==="bad"?"del":d[0]}">${d[1]}</span>`
+    ).join("\n");
+  }
+  $("vague").addEventListener("click", () => { mode = "vague"; render(); });
+  $("spec").addEventListener("click", () => { mode = "spec"; render(); });
+  $("reset").addEventListener("click", () => { mode = "vague"; render(); });
+  render();
+  const postHeight=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(postHeight).observe(document.documentElement);postHeight();
+})();
+</script>
+</body>
+</html>

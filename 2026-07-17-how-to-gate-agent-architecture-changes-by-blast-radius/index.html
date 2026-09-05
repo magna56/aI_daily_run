@@ -1,0 +1,3059 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#111217" />
+<!-- build.js replaces the META:START..END block below per-session for
+     site/<id>/index.html — see the "Real per-post URLs" plan. The bare
+     markers below must stay exactly as-is: build.js finds them by exact
+     string search, not a parser. -->
+<!-- META:START -->
+<title>How to Gate Agent Architecture Changes by Blast Radius — The AI Commit</title>
+<meta name="description" content="Code review friction historically synced teams' shared mental models as a side effect (Ronacher, &quot;The Tower Keeps Rising&quot;); agents remove the friction…" />
+<link rel="canonical" href="https://theaicommit.com/2026-07-17-how-to-gate-agent-architecture-changes-by-blast-radius/" />
+<!-- META:END -->
+<link rel="alternate" type="application/rss+xml" title="The AI Commit" href="https://theaicommit.com/feed.xml" />
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.json" />
+
+<!-- Same deal as META:START above — bare markers, exact string search. -->
+<!-- OG:START -->
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="The AI Commit" />
+<meta property="og:title" content="How to Gate Agent Architecture Changes by Blast Radius — The AI Commit" />
+<meta property="og:description" content="Code review friction historically synced teams' shared mental models as a side effect (Ronacher, &quot;The Tower Keeps Rising&quot;); agents remove the friction…" />
+<meta property="og:image" content="https://theaicommit.com/og/2026-07-17.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="How to Gate Agent Architecture Changes by Blast Radius" />
+<meta property="og:url" content="https://theaicommit.com/2026-07-17-how-to-gate-agent-architecture-changes-by-blast-radius/" />
+      <meta property="article:published_time" content="2026-07-17" />
+      <meta property="article:section" content="AI Engineering Practices" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="How to Gate Agent Architecture Changes by Blast Radius — The AI Commit" />
+<meta name="twitter:description" content="Code review friction historically synced teams' shared mental models as a side effect (Ronacher, &quot;The Tower Keeps Rising&quot;); agents remove the friction…" />
+<meta name="twitter:image" content="https://theaicommit.com/og/2026-07-17.png" />
+<meta name="twitter:image:alt" content="How to Gate Agent Architecture Changes by Blast Radius" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "How to Gate Agent Architecture Changes by Blast Radius",
+  "description": "Code review friction historically synced teams' shared mental models as a side effect (Ronacher, \"The Tower Keeps Rising\"); agents remove the friction…",
+  "datePublished": "2026-07-17",
+  "url": "https://theaicommit.com/2026-07-17-how-to-gate-agent-architecture-changes-by-blast-radius/",
+  "mainEntityOfPage": "https://theaicommit.com/2026-07-17-how-to-gate-agent-architecture-changes-by-blast-radius/",
+  "image": "https://theaicommit.com/og/2026-07-17.png",
+  "publisher": {
+    "@type": "Organization",
+    "name": "The AI Commit",
+    "alternateName": "theaicommit.com",
+    "disambiguatingDescription": "Daily AI engineering lab for software engineers. Not a git commit-message generator.",
+    "url": "https://theaicommit.com/",
+    "logo": "https://theaicommit.com/icon-512.png"
+  }
+}
+</script>
+<!-- OG:END -->
+
+<script>
+  // Applied before first paint (blocking, in <head>) so switching themes never
+  // flashes the wrong one on load. An explicit saved choice wins. First visit
+  // (no saved choice) follows the OS. Dark is still the brand: no attribute
+  // means dark, and that is what a dark OS — or an unknown preference — gets.
+  (function () {
+    try {
+      var t = localStorage.getItem("theme");
+      if (t === "light") document.documentElement.setAttribute("data-theme", "light");
+      else if (t === "dark") return;
+      else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    } catch (e) {}
+  })();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Loaded non-render-blocking. As a plain stylesheet this request measured
+     4->469ms on a cold load and first paint landed at 496ms directly behind it
+     — the page was holding its own text hostage to a third-party CSS file.
+     media="print" makes it a non-blocking fetch; onload promotes it to "all"
+     once it arrives. The URL already carries display=swap and every stack has a
+     real local fallback, so text paints immediately and swaps when the webfont
+     lands. <noscript> keeps it working with JS disabled. -->
+<link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap"></noscript>
+<!-- Pyodide is NOT loaded here. Booting it costs ~12MB (wasm + stdlib) on every
+     page view, including the homepage and every article whose Code pane is
+     never opened — 99% of the site's bandwidth for a feature most visits don't
+     use. It is now fetched on demand by ensurePyodide() the first time someone
+     actually opens a Code pane or hits Run. -->
+<style>
+  :root {
+    --bg: #111217;
+    --bg-rgb: 17,18,23;
+    --ink: #e7e2d8;
+    --muted: #9a9488;
+    --dim: #857f70; /* WCAG AA 4.5:1 min against --bg (was #6f6a60 at 3.5:1) */
+    --line: rgba(255,255,255,.10);
+    --card: rgba(255,255,255,.028);
+    --card-hi: rgba(255,255,255,.05);
+    --surface: #1b1c22; /* solid (non-transparent) popover surface — select options, toast */
+    --accent: #a78bfa;
+    --accent2: #c4b5fd;
+    --publish-ink: #17102b; /* text on the filled --accent publish button — 6.74:1 */
+    --good: #6fd79a;
+
+    /* Reading measure. One fixed px value (not `ch`, which is font-relative and
+       made .insight and .prose disagree) so every text block shares an edge. */
+    --measure: 640px;
+
+    /* Category families. The 11 rotation categories collapse into 5 conceptual
+       groups, because no categorical palette gets 11 hues a reader can actually
+       tell apart — 5 is learnable ("orange = infrastructure"). Steps are the
+       dataviz reference palette's validated dark slots; the -tx variants are
+       lightened so chip labels clear WCAG AA 4.5:1 against their OWN tinted
+       background (the base hues only cleared it against the bare page). */
+    --cat-models: #3987e5;  --cat-models-tx: #428ce6;
+    --cat-infra:  #d95926;  --cat-infra-tx:  #dc6637;
+    --cat-agents: #d55181;  --cat-agents-tx: #d9618d;
+    --cat-craft:  #199e70;  --cat-craft-tx:  #199e70;
+    --cat-safety: #c98500;  --cat-safety-tx: #c98500;
+    --warn: #ffc879;
+    --sans: "Source Sans 3", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  /* Light theme — a chosen palette, not an inversion. Every token here was
+     contrast-checked against --bg #faf9f6 (warm off-white, not pure white)
+     independently; category chip text was re-derived against ITS tinted
+     background too, same method as the dark set. First visit follows the
+     OS; an explicit toggle is stored and wins after that. Dark remains
+     the brand (no data-theme attribute). */
+  :root[data-theme="light"] {
+    --bg: #faf9f6;
+    --bg-rgb: 250,249,246;
+    --ink: #1a1a1f;
+    --muted: #5c5850;
+    --dim: #726c5e;
+    --line: rgba(0,0,0,.10);
+    --card: rgba(0,0,0,.03);
+    --card-hi: rgba(0,0,0,.05);
+    --surface: #ffffff;
+    --accent: #7c5cd9;
+    --accent2: #6845c2;
+    --publish-ink: #ffffff; /* on the darker light-mode accent — 4.78:1 */
+    --good: #137a44;
+    --warn: #a3690a;
+    --cat-models: #3987e5;  --cat-models-tx: #1668cb;
+    --cat-infra:  #d95926;  --cat-infra-tx:  #b1461b;
+    --cat-agents: #d55181;  --cat-agents-tx: #bf2a60;
+    --cat-craft:  #199e70;  --cat-craft-tx:  #107452;
+    --cat-safety: #c98500;  --cat-safety-tx: #8c5d00;
+  }
+
+  /* Code/terminal/diagram panels intentionally stay dark in both themes — they
+     already carry their own dark background (#0d0e12) independent of the page
+     theme, matching how most dev tooling keeps code blocks dark regardless of
+     site theme. Only page-chrome text (prose, insight box, pill labels) needs
+     a light-mode override here, since those don't sit on a fixed dark panel. */
+  :root[data-theme="light"] .prose { color: #3a362e; }
+  :root[data-theme="light"] .prose em { color: #26221c; }
+  :root[data-theme="light"] .insight { color: #1f2937; }
+  :root[data-theme="light"] .pill-btn { color: #4a453b; }
+  :root[data-theme="light"] .course-invite { background: rgba(124,92,217,.08); border-color: rgba(124,92,217,.28); }
+  :root[data-theme="light"] .top-nav a:hover { border-color: rgba(0,0,0,.18); }
+
+  /* The code/output panels and the captured-output fallback box keep their
+     own fixed dark background in every theme (see the comment above), but
+     everything inside them — the editor text, Run/Reset/Publish buttons,
+     panel-head labels, syntax highlighting — was still reading --ink/--muted/
+     --dim/--line off the PAGE theme. In light mode that resolved to near-
+     black text and a near-black border, both landing on the still-dark panel
+     background: illegible. Re-declaring the dark-mode values scoped to these
+     containers fixes every descendant that reads var(--ink) etc. at once,
+     rather than patching each selector individually. */
+  :root[data-theme="light"] .panel,
+  :root[data-theme="light"] .fallback {
+    --ink: #e7e2d8;
+    --muted: #9a9488;
+    --dim: #857f70;
+    --line: rgba(255,255,255,.10);
+  }
+
+  .theme-toggle {
+    position: fixed; top: 16px; right: 16px; z-index: 30;
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; padding: 0;
+    background: var(--card); border: 1px solid var(--line); border-radius: 999px;
+    color: var(--muted); cursor: pointer;
+  }
+  .theme-toggle:hover { color: var(--ink); border-color: rgba(167,139,250,.4); }
+  .theme-toggle .i-sun { display: none; }
+  :root[data-theme="light"] .theme-toggle .i-moon { display: none; }
+  :root[data-theme="light"] .theme-toggle .i-sun { display: block; }
+  @media (max-width: 640px) { .theme-toggle { top: 12px; right: 12px; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle 420px at 40% 16%, rgba(167,139,250,.10) 0, transparent 80%),
+      radial-gradient(circle 560px at 58% 60%, rgba(120,152,255,.05) 0, transparent 85%),
+      radial-gradient(circle 250px at 72% 82%, rgba(196,181,253,.10) 0, transparent 90%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px 90px; }
+  .hidden { display: none !important; }
+
+  /* Header */
+  header.top { text-align: center; padding: 44px 24px 6px; }
+  .brand { display: block; text-decoration: none; color: inherit; }
+  .brand:hover .title { color: var(--accent); }
+  .brand-mark { display: block; width: 56px; height: 56px; margin: 0 auto 14px; }
+  /* Article pages hide the whole index header, so the reader carries its own
+     brand link — otherwise the only route home is the browser back button, and
+     anyone arriving from search or a shared link has no back to press. */
+  /* The hit area is 44px even though the mark is 26px: this is the only control
+     that returns you to the homepage from an article, and at 26px square it was
+     small enough to miss with a thumb, which reads as "the icon does nothing".
+     The negative margin keeps the mark optically where it has always been. */
+  .rbrand { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+            text-decoration: none; opacity: .85; width: 44px; height: 44px;
+            margin: -9px 0 -9px -9px; border-radius: 10px; }
+  .rbrand:hover { opacity: 1; background: rgba(127,127,127,.12); }
+  .rbrand:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .rbrand img { display: block; width: 26px; height: 26px; }
+  .title {
+    font-family: var(--mono); font-weight: 700;
+    font-size: clamp(24px, 4.6vw, 44px); letter-spacing: .06em; margin: 0;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .kicker { font-family: var(--mono); color: var(--dim); font-size: 12.5px; letter-spacing: .18em; margin: 10px 0 0; text-transform: uppercase; }
+  .top-nav { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 18px 0 0; font-family: var(--mono); font-size: 12.5px; flex-wrap: wrap; }
+  .top-nav a { color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; }
+  .top-nav a:hover { color: var(--ink); border-color: rgba(255,255,255,.22); }
+  .top-nav a.on { color: var(--publish-ink); background: var(--accent); border-color: transparent; font-weight: 650; }
+  .tag.kind-learn { font-family: var(--mono); background: rgba(167,139,250,.14); color: var(--accent2); border-color: rgba(167,139,250,.32); }
+  .course-invite {
+    max-width: 720px; margin: 8px auto 28px; padding: 16px 18px;
+    border: 1px solid rgba(167,139,250,.32); border-radius: 12px;
+    background: rgba(167,139,250,.08);
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .course-invite .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent2); margin: 0 0 4px; }
+  .course-invite p { margin: 0; color: var(--ink); font-size: 14.5px; line-height: 1.45; max-width: 460px; }
+  .course-invite a {
+    font-family: var(--mono); font-size: 12.5px; font-weight: 650;
+    color: var(--publish-ink); background: var(--accent); text-decoration: none;
+    border-radius: 999px; padding: 8px 14px; white-space: nowrap;
+  }
+  .course-invite a:hover { filter: brightness(1.08); }
+  .mlc-invite {
+    max-width: 720px; margin: -12px auto 28px; padding: 16px 18px;
+    border: 1px solid var(--line); border-radius: 12px;
+    background: var(--card);
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  /* The lead story. Deliberately not a .card: it is one thing, not a cell in a
+     grid, and it is the first content a phone reader sees. */
+  .hero-card {
+    display: block; text-decoration: none; margin: 0 0 22px;
+    padding: 20px 22px; border: 1px solid var(--line); border-radius: 14px;
+    background: var(--card); transition: background .15s, border-color .15s;
+  }
+  .hero-card:hover { background: var(--card-hi); border-color: var(--accent); }
+  .hero-card .k {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 7px;
+  }
+  .hero-card .t {
+    margin: 0; font-size: 21px; font-weight: 700; color: var(--ink); line-height: 1.24;
+    letter-spacing: -.01em;
+  }
+  .hero-card .d { margin: 9px 0 0; font-size: 14.5px; color: var(--muted); line-height: 1.55; }
+  .hero-card .meta { margin: 13px 0 0; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+  .hero-card .go {
+    margin: 13px 0 0; display: block; font-family: var(--mono); font-size: 12.5px; color: var(--accent);
+  }
+  @media (max-width: 560px) {
+    .hero-card { padding: 17px 16px; margin-bottom: 18px; }
+    .hero-card .t { font-size: 19px; }
+  }
+  /* The lead story is the daily lab's own view. Every other route replaces the
+     grid, so a stale hero would sit above content it has nothing to do with. */
+  body.on-learn .hero-card,
+  body.on-frontier .hero-card { display: none; }
+
+  /* Frontier: the newest piece itself, so the strip doubles as proof the track is
+     alive. A generic "check out our new section" card would say nothing, and this
+     one degrades honestly on a skipped day by simply showing an older date. */
+  .frontier-strip {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap; text-decoration: none;
+    background: var(--card); border: 1px solid var(--line); border-left: 2px solid var(--accent);
+    border-radius: 8px; padding: 12px 14px; margin: 0 0 14px; color: inherit;
+  }
+  .frontier-strip:hover { background: var(--card-hi); }
+  .frontier-strip .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent2); margin: 0 0 4px; }
+  .frontier-strip .t { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.34; }
+  .frontier-strip .m { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); font-family: var(--mono); }
+  .frontier-strip .go { margin-left: auto; font-family: var(--mono); font-size: 12.5px; color: var(--accent2); white-space: nowrap; }
+  @media (max-width: 560px) { .frontier-strip .go { margin-left: 0; } }
+
+  /* The Frontier index: a dated list, not cards. This audience scans indexes, and
+     a list absorbs the gaps a skipped day leaves without looking broken. */
+  .frontier-list { list-style: none; margin: 0 0 30px; padding: 0; border-top: 1px solid var(--line); }
+  .frontier-list li { border-bottom: 1px solid var(--line); }
+  .frontier-list a {
+    display: grid; grid-template-columns: 78px 1fr; gap: 14px; align-items: start;
+    padding: 14px 2px; text-decoration: none; color: inherit;
+  }
+  .frontier-list a:hover .ft { color: var(--accent2); }
+  .frontier-list .fd { font-family: var(--mono); font-size: 11.5px; color: var(--dim); padding-top: 3px; font-variant-numeric: tabular-nums; }
+  .frontier-list .ft { margin: 0; font-size: 15.5px; font-weight: 600; color: var(--ink); line-height: 1.34; }
+  .frontier-list .fs { margin: 4px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+  .frontier-list .fm { margin: 8px 0 0; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+  .frontier-chip {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; padding: 2px 7px;
+    border-radius: 4px; border: 1px solid var(--line); color: var(--dim);
+  }
+  .frontier-chip.run { color: var(--accent2); border-color: rgba(167,139,250,.38); background: rgba(167,139,250,.12); }
+  @media (max-width: 560px) { .frontier-list a { grid-template-columns: 1fr; gap: 4px; } }
+
+  .tag.kind-frontier { font-family: var(--mono); background: rgba(167,139,250,.14); color: var(--accent2); border-color: rgba(167,139,250,.32); }
+
+  .mlc-invite .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 0 0 4px; }
+  .mlc-invite p { margin: 0; color: var(--ink); font-size: 14.5px; line-height: 1.45; max-width: 460px; }
+  .mlc-invite a {
+    font-family: var(--mono); font-size: 12.5px; font-weight: 650;
+    color: var(--publish-ink); background: var(--accent); text-decoration: none;
+    border-radius: 999px; padding: 8px 14px; white-space: nowrap;
+  }
+  .mlc-invite a:hover { filter: brightness(1.08); }
+  :root[data-theme="light"] .mlc-invite { background: rgba(0,0,0,.03); }
+  body.on-learn .tagline,
+  body.on-learn .subtitle,
+  body.on-learn .trust,
+  body.on-learn .stats,
+  body.on-learn .controls,
+  body.on-learn .pills,
+  body.on-learn .count,
+  body.on-learn .course-invite,
+  body.on-learn .mlc-invite { display: none; }
+  /* Progressive disclosure. The orientation copy answers "what is this site?" —
+     worth a first-time visitor's screen space, worth none of a returning one's.
+     The site already knows which it is: `is-returning` is set from the same
+     read-state that renders the streak counter. Kept to the two paragraphs that
+     are purely explanatory; the h1 and nav stay put so the page still looks
+     like itself. */
+  body.is-returning .subtitle,
+  body.is-returning .trust { display: none; }
+
+  body.on-frontier .tagline,
+  body.on-frontier .subtitle,
+  body.on-frontier .trust,
+  body.on-frontier .stats,
+  body.on-frontier .controls,
+  body.on-frontier .pills,
+  body.on-frontier .levels,
+  body.on-frontier .count,
+  body.on-frontier .frontier-strip,
+  body.on-frontier .nl-home,
+  body.on-frontier .course-invite,
+  body.on-frontier .mlc-invite { display: none; }
+  .lessons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .lesson {
+    display: flex; align-items: baseline; gap: 14px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; color: inherit; text-decoration: none;
+  }
+  .lesson:hover, .lesson.kbd { border-color: var(--accent); background: var(--card-hi); }
+  .lesson .n {
+    flex-shrink: 0; font-family: var(--mono); font-size: 13px; font-weight: 700;
+    color: var(--accent2); width: 1.6em;
+  }
+  .lesson h3 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
+  .lesson .desc { display: block; -webkit-line-clamp: 2; margin: 4px 0 0; font-size: 13px; }
+  .lesson .mins { margin-left: auto; }
+  .tagline { color: var(--ink); font-size: 18px; font-weight: 600; max-width: 560px; margin: 20px auto 0; letter-spacing: -.01em; }
+  .subtitle { color: var(--muted); font-size: 15px; max-width: 640px; margin: 16px auto 0; line-height: 1.6; }
+  .trust { color: var(--dim); font-size: 12.5px; max-width: 560px; margin: 18px auto 0; line-height: 1.6; padding-top: 16px; border-top: 1px solid var(--line); }
+  .trust a { color: var(--accent2); white-space: nowrap; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin: 34px 0 8px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; text-align: center; }
+  .stat .n { font-family: var(--mono); font-size: 30px; font-weight: 700; line-height: 1; }
+  .stat.accent .n { background: linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .stat .l { color: var(--muted); font-size: 11.5px; margin-top: 9px; text-transform: uppercase; letter-spacing: .06em; }
+  .stat .sub { color: var(--dim); font-size: 11px; margin-top: 5px; }
+
+  hr.sep { border: none; border-top: 1px solid var(--line); margin: 30px 0 22px; }
+
+  /* Controls */
+  .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; margin-bottom: 18px; }
+  .search { flex: 1 1 320px; max-width: 520px; display: flex; align-items: center; gap: 9px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px; }
+  .search:focus-within { border-color: rgba(167,139,250,.55); }
+  .search input { border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: 15px; width: 100%; }
+  .search svg { flex-shrink: 0; opacity: .5; }
+  .search kbd { flex-shrink: 0; font-family: var(--mono); font-size: 10.5px; color: var(--dim); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  select { font: inherit; font-size: 13.5px; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; cursor: pointer; }
+  select:hover { border-color: rgba(255,255,255,.22); }
+  option { background: var(--surface); color: var(--ink); }
+
+  /* Pill filter bar */
+  .pills { display: flex; flex-wrap: wrap; gap: 0; justify-content: center; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin: 0 auto 26px; width: fit-content; max-width: 100%; }
+  .pill-btn { appearance: none; border: 0; background: transparent; color: #cfcabf; font: inherit; font-size: 13px; padding: 10px 16px; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s; }
+  .pill-btn + .pill-btn { border-left: 1px solid var(--line); }
+  .pill-btn:hover { background: rgba(255,255,255,.06); color: #fff; }
+  .pill-btn.active { background: var(--accent); color: #06202e; font-weight: 600; }
+  .pill-btn .c { opacity: .6; font-family: var(--mono); font-size: 11px; margin-left: 6px; }
+  .pill-btn.active .c { opacity: .8; }
+
+  /* Below ~640px, 12 wrapped pills cost 4 rows (~360px) before any session is
+     visible — measured on a 390px viewport, that's 1.4 screens of nothing but
+     filters. A horizontally-scrollable single row (the iOS App Store category-
+     chip pattern) keeps the same control in ~50px; the right-edge fade signals
+     there's more to scroll. */
+  @media (max-width: 640px) {
+    .pills {
+      display: flex; flex-wrap: nowrap; gap: 8px; justify-content: flex-start;
+      width: auto; max-width: none; border: none; border-radius: 0;
+      overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+      margin: 0 -24px 22px; padding: 2px 24px 6px;
+      mask-image: linear-gradient(90deg, #000 90%, transparent);
+      -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent);
+    }
+    .pills::-webkit-scrollbar { display: none; }
+    .pill-btn { flex: none; border: 1px solid var(--line); border-radius: 999px; }
+    .pill-btn + .pill-btn { border-left: 1px solid var(--line); }
+  }
+
+  .count { text-align: center; color: var(--dim); font-family: var(--mono); font-size: 12.5px; margin-bottom: 18px; }
+  .count .reset { margin-left: 10px; color: var(--accent); cursor: pointer; border: 0; background: none; font: inherit; font-size: 12.5px; }
+
+  .grid-stack { display: flex; flex-direction: column; gap: 32px; }
+  .band-k {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--dim); margin: 0 0 12px;
+  }
+  .trail-next {
+    max-width: var(--measure); margin: 8px auto 22px;
+    padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--card); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .trail-next .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+  .trail-next a { font-weight: 650; }
+  .pills.levels { margin-bottom: 12px; }
+  .tag.level { font-family: var(--mono); font-size: 10.5px; letter-spacing: .03em; }
+  .tag.level-start { background: rgba(25,158,112,.13); color: var(--cat-craft-tx); border-color: rgba(25,158,112,.3); }
+  .tag.level-building { background: rgba(57,135,229,.13); color: var(--cat-models-tx); border-color: rgba(57,135,229,.3); }
+  .tag.level-deeper { background: rgba(201,133,0,.15); color: var(--cat-safety-tx); border-color: rgba(201,133,0,.32); }
+  .tag.job { font-family: var(--mono); background: rgba(255,255,255,.05); color: var(--muted); border-color: var(--line); }
+  /* Cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 20px; }
+  /* .card is an <a> (a real href to the canonical URL), so it needs the link
+     defaults reset — colour and underline in particular. */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; min-height: 220px; cursor: pointer; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; color: inherit; text-decoration: none; }
+  .card:hover, .card.kbd { transform: translateY(-6px); border-color: transparent; box-shadow: 0 8px 24px rgba(167,139,250,.28), 0 0 0 2px var(--accent); background: var(--card-hi); }
+  .card-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .card-title { font-size: 16.5px; font-weight: 650; line-height: 1.32; margin: 0; }
+  .new { flex-shrink: 0; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .08em; background: linear-gradient(90deg,var(--accent),var(--accent2)); color: #06202e; border-radius: 999px; padding: 3px 8px; }
+  .done { flex-shrink: 0; color: var(--good); font-size: 15px; line-height: 1.2; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .tag { font-size: 11px; border-radius: 6px; padding: 3px 8px; border: 1px solid transparent; white-space: nowrap; }
+  .tag.cat-models { background: rgba(57,135,229,.13); color: var(--cat-models-tx); border-color: rgba(57,135,229,.3); }
+  .tag.cat-infra  { background: rgba(217,89,38,.13);  color: var(--cat-infra-tx);  border-color: rgba(217,89,38,.3); }
+  .tag.cat-agents { background: rgba(213,81,129,.13); color: var(--cat-agents-tx); border-color: rgba(213,81,129,.3); }
+  .tag.cat-craft  { background: rgba(25,158,112,.13); color: var(--cat-craft-tx);  border-color: rgba(25,158,112,.3); }
+  .tag.cat-safety { background: rgba(201,133,0,.15);  color: var(--cat-safety-tx); border-color: rgba(201,133,0,.32); }
+  /* Small solid dot beside "Category" in the reader meta strip — same family
+     color as the card tag, so the color vocabulary learned while browsing
+     the grid carries into the reading view. */
+  .catdot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .catdot.cat-models { background: var(--cat-models); }
+  .catdot.cat-infra  { background: var(--cat-infra); }
+  .catdot.cat-agents { background: var(--cat-agents); }
+  .catdot.cat-craft  { background: var(--cat-craft); }
+  .catdot.cat-safety { background: var(--cat-safety); }
+  .tag.day { font-family: var(--mono); background: rgba(255,255,255,.05); color: var(--muted); border-color: var(--line); }
+  /* Cross-cutting tag chips. A <button> inside the card's <a>, so it filters
+     instead of opening the session — the click handler stops it there. */
+  .topic-head { text-align: center; padding: 8px 0 24px; }
+  .topic-head h1, .topic-head h2 { font-size: clamp(22px, 3.4vw, 32px); margin: 12px 0 0; letter-spacing: -.02em; }
+  .topic-head .subtitle { margin-top: 12px; }
+  .topic-head .back { font-family: var(--mono); font-size: 12px; color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 7px; padding: 5px 10px; display: inline-block; }
+  .topic-head .back:hover { color: var(--ink); border-color: var(--accent); }
+  .tags.facets { margin: 0 0 12px; }
+  .tag.facet { font-family: var(--mono); background: transparent; color: var(--dim); border-color: var(--line); cursor: pointer; font-size: 10.5px; letter-spacing: .02em; }
+  .tag.facet:hover { color: var(--ink); border-color: var(--accent); background: rgba(255,255,255,.04); }
+  .tag.facet::before { content: "#"; opacity: .55; }
+  /* The journal's key insight runs long by design — clamp on the card, full text in the reader. */
+  .desc { color: var(--muted); font-size: 13.2px; line-height: 1.55; margin: 0 0 14px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-family: var(--mono); font-size: 10.5px; color: #a9c6d4; background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; }
+  .chip.off { color: var(--dim); opacity: .45; }
+  .mins { font-family: var(--mono); font-size: 11.5px; color: var(--dim); white-space: nowrap; }
+  .empty { text-align: center; color: var(--muted); padding: 60px 0; grid-column: 1 / -1; }
+
+  /* ---- Reader ---- */
+  .reader { max-width: 1200px; margin: 0 auto; padding: 0 24px 90px; }
+  .rbar { position: sticky; top: 0; z-index: 20; background: rgba(var(--bg-rgb),.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); margin: 0 -24px 0; padding: 14px 24px 0; }
+  .rbar-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .back { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--ink); border-radius: 8px; padding: 7px 13px; font: inherit; font-size: 13px; cursor: pointer;
+          display: inline-flex; align-items: center; min-height: 40px; }
+  .back:hover { border-color: rgba(255,255,255,.28); }
+  .rbar h1 { font-size: 17px; margin: 0; font-weight: 650; line-height: 1.3; flex: 1 1 260px; min-width: 0; }
+  .rbar .spacer { flex: 1 1 auto; }
+  .readbtn { appearance: none; border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 8px; padding: 7px 13px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap;
+             display: inline-flex; align-items: center; min-height: 40px; }
+  .readbtn:hover { border-color: rgba(255,255,255,.28); color: var(--ink); }
+  .readbtn.on { color: var(--good); border-color: rgba(63,201,120,.45); background: rgba(63,201,120,.10); }
+  .nav { display: flex; gap: 6px; }
+  .nav button { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--muted); border-radius: 8px; width: 34px; height: 34px; cursor: pointer; font: inherit; }
+  @media (max-width: 640px) {
+    .nav button { width: 40px; height: 40px; }
+    /* Reserve the corner the fixed theme toggle occupies, so it stops covering
+       the session arrows underneath it. */
+    .rbar-top { padding-right: 56px; }
+  }
+  .nav button:hover:not(:disabled) { color: var(--ink); border-color: rgba(255,255,255,.28); }
+  .nav button:disabled { opacity: .3; cursor: default; }
+
+  .tabs { display: flex; gap: 2px; margin-top: 14px; overflow-x: auto; }
+  .tab { appearance: none; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); font: inherit; font-size: 14px; padding: 10px 15px; cursor: pointer; white-space: nowrap; }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+  .tab .n { font-family: var(--mono); font-size: 11px; opacity: .55; margin-left: 5px; }
+  .tab .tab-gh { width: 12px; height: 12px; margin-left: 6px; opacity: .7; vertical-align: -1px; fill: currentColor; }
+  .tab.active .tab-gh { opacity: 1; }
+
+  .rmeta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12.5px; color: var(--muted); margin: 20px 0 6px; }
+  .rmeta .k { color: var(--dim); text-transform: uppercase; font-size: 10.5px; letter-spacing: .05em; margin-right: 6px; }
+  .share { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12.5px; margin: 4px 0 6px; }
+  .share .k { color: var(--dim); text-transform: uppercase; font-size: 10.5px; letter-spacing: .05em; }
+  .share a, .share button {
+    appearance: none; display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line); border-radius: 6px; padding: 4px 9px;
+    background: transparent; color: var(--muted); font: inherit; cursor: pointer;
+  }
+  .share a:hover, .share button:hover {
+    color: var(--accent2); border-color: rgba(167,139,250,.45); text-decoration: none;
+  }
+  .share svg { width: 14px; height: 14px; flex: none; fill: currentColor; }
+  /* Reading column. One shared measure for every text block on Overview so the
+     eye tracks a single column edge; Diagram/Code panes stay full-width since
+     they are tools, not prose. ~68ch keeps lines in the comfortable 45-75
+     character range (it was running 103 before, left-aligned in a 1152px area
+     with ~370px of dead space beside it). */
+  /* Centered reading column (Medium/reader-app pattern) — prioritizes the
+     comfortable measure over strict edge-alignment with the header/tabs
+     above, which stay full-width. */
+  .insight, .prose, .rmeta, .share, .article-end { max-width: var(--measure); margin-left: auto; margin-right: auto; }
+  /* Everything a reader might do AFTER reading: share it, subscribe. Separated by
+     a rule so it reads as an afterword rather than more article. */
+  .article-end { margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--line); }
+  .article-end .share { margin: 0 0 18px; }
+  .insight { background: rgba(167,139,250,.07); border: 1px solid rgba(167,139,250,.22); border-left: 3px solid var(--accent); border-radius: 8px; padding: 16px 20px; margin-top: 18px; margin-bottom: 14px; color: #cfe6f2; font-size: 15.5px; line-height: 1.7; }
+  .gloss { max-width: var(--measure); margin: 28px auto 0; border-top: 1px solid var(--line); padding-top: 18px; }
+  .gloss h2 { font-size: 15px; letter-spacing: .04em; text-transform: uppercase; color: var(--dim); margin: 0 0 10px; }
+  .gloss dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; }
+  .gloss dt { font-weight: 700; color: var(--accent2); scroll-margin-top: 80px; }
+  .gloss dd { margin: 0; color: var(--dim); }
+  @media (max-width: 620px) { .gloss dl { grid-template-columns: 1fr; gap: 2px; } .gloss dd { margin-bottom: 8px; } }
+  .gloss-ref { color: inherit; background: none; border: 0; border-bottom: 1px dotted var(--accent);
+    padding: 0; margin: 0; font: inherit; line-height: inherit; cursor: pointer; }
+  .gloss-ref:hover { border-bottom-style: solid; }
+  .gloss-ref:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+  .gloss dt.hit { background: rgba(167,139,250,.18); border-radius: 4px; }
+  .insight.tldr { background: rgba(148,163,184,.06); border-color: rgba(148,163,184,.18); border-left-color: var(--dim); margin-top: 10px; }
+  .insight .k { display: block; color: var(--accent2); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+  .pane { padding: 22px 0 0; }
+  .visualize-shell { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #0a0d18; }
+  .visualize-frame { display: block; width: 100%; min-height: 680px; border: 0; background: #0a0d18; }
+  .visualize-note { margin: 9px 4px 0; color: var(--dim); font: 11px/1.5 var(--mono); }
+
+  /* Prose */
+  .prose { color: #d5d0c6; font-size: 17px; line-height: 1.75; }
+  /* Headings get more space above than below, so each one binds to the text it
+     introduces instead of floating between two blocks. */
+  .prose h2 { font-size: 21px; margin: 42px 0 12px; color: var(--accent2); letter-spacing: -.01em; }
+  .prose > :first-child { margin-top: 0; }
+  .prose em { color: #e6e1d7; font-style: italic; }
+  .prose strong { color: var(--ink); font-weight: 650; }
+  .prose h3, .prose h4 { font-size: 16.5px; margin: 30px 0 8px; color: var(--ink); }
+  .prose p { margin: 0 0 17px; }
+  .prose ul, .prose ol { margin: 0 0 17px; padding-left: 22px; }
+  .prose li { margin: 8px 0; }
+  .prose code { font-family: var(--mono); font-size: 12.8px; background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; }
+  /* This block keeps its dark background in BOTH themes, so it must also pin its own
+     text colour. Without this it inherits the computed colour off .prose, which the
+     light theme overrides to #3a362e — near-black text on a near-black block. The
+     .panel / .fallback token override further up does not reach here: `code` inherits
+     an already-resolved colour, not the var. #e7e2d8 is the dark theme --ink, so this
+     changes nothing in dark mode. */
+  .prose pre { background: #0d0e12; color: #e7e2d8; border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow: auto; }
+  .prose pre code { background: none; padding: 0; font-size: 12.5px; }
+  .prose blockquote { margin: 0 0 14px; padding-left: 14px; border-left: 2px solid var(--line); color: var(--muted); }
+  .prose table { border-collapse: collapse; margin: 0 0 18px; font-size: 13.5px; width: 100%; }
+  .prose th, .prose td { border: 1px solid var(--line); padding: 8px 11px; text-align: left; vertical-align: top; }
+  .prose th { background: rgba(255,255,255,.04); color: var(--ink); font-weight: 600; }
+
+  /* Diagram */
+  .dgm-tools { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .dgm-view { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fff; height: min(74vh, 780px); cursor: grab; touch-action: none; }
+  .dgm-view.drag { cursor: grabbing; }
+  .dgm-canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  .dgm-canvas svg { display: block; }
+  .dgm-hint { color: var(--dim); font-size: 12px; margin-top: 9px; }
+
+  /* Code + output */
+  .code-cols { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); gap: 18px; align-items: start; }
+  /* Output that draws ASCII charts needs the full width or it scrolls sideways. */
+  .code-cols.stacked { grid-template-columns: 1fr; }
+  /* Cap the (read-only, scrollable) output pane when stacked so it doesn't
+     push the editor below the fold — the editor itself is exempt: it grows
+     with content (see .editor-textarea and autoGrow()), so a fixed cap here
+     would fight that and re-introduce the cramped-while-typing problem. */
+  .code-cols.stacked .terminal-output { height: 40vh; }
+  @media (max-width: 940px) {
+    .code-cols { grid-template-columns: 1fr; }
+    .code-cols .terminal-output { height: 40vh; }
+  }
+  .panel { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #0d0e12; }
+  .panel-head { display: flex; align-items: center; gap: 10px; padding: 9px 13px; background: rgba(255,255,255,.03); border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+  .panel-head .spacer { margin-left: auto; }
+  .panel pre { margin: 0; padding: 15px; overflow: auto; max-height: 70vh; font-family: var(--mono); font-size: 12.4px; line-height: 1.62; }
+  .panel pre code { font: inherit; }
+  .mini { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--muted); border-radius: 6px; padding: 3px 9px; font: inherit; font-family: var(--mono); font-size: 11px; cursor: pointer; }
+  .mini:hover { color: var(--accent2); border-color: rgba(167,139,250,.45); }
+  .mini.done { color: var(--good); border-color: rgba(63,201,120,.45); }
+  .runline { font-family: var(--mono); font-size: 11.5px; color: var(--dim); margin: 0 0 12px; }
+  .out-ok { color: #cfcabf; }
+  .out-bad { color: #ffb4a2; }
+  .badge { font-family: var(--mono); font-size: 10.5px; border-radius: 999px; padding: 2px 8px; border: 1px solid; }
+  .badge.ok { color: var(--good); border-color: rgba(63,201,120,.4); background: rgba(63,201,120,.10); }
+  .badge.bad { color: var(--warn); border-color: rgba(255,176,76,.4); background: rgba(255,176,76,.10); }
+  .shot { max-width: 100%; border: 1px solid var(--line); border-radius: 10px; margin-top: 16px; display: block; background: #fff; }
+
+  /* Interactive code editor — mirrors the two-column .code-cols layout the
+     static code/output panels used, so this reads as one screen, not a
+     scroll-through-three-panes stack. */
+  .code-editor { display: flex; flex-direction: column; height: 100%; }
+  /* Grows with content (see the JS autoGrow() call) instead of a fixed height
+     that forces scrolling inside a small box while typing. No max-height: a
+     capped height sounds safer but every real example here runs 100-400
+     lines, so any viewport-relative cap gets hit almost immediately and the
+     "auto-grow" never actually shows more than a screenful — the page itself
+     scrolls for a long file, same as any other tall page content, rather
+     than nesting a second scrollbar inside it. */
+  /* Syntax highlighting with no library and no contenteditable: a <pre> paints
+     the coloured tokens and the real <textarea> lies transparently on top of
+     it, so editing, selection, undo and the caret all stay native browser
+     behaviour. The two MUST agree on every metric that affects where a glyph
+     lands (font, size, line-height, padding, wrapping) or the painted text
+     drifts out from under the typed text — that is why those are declared once,
+     for both, rather than separately. Selectors are .editor-wrap-scoped because
+     `.panel pre` above sets overflow/max-height and would otherwise win. */
+  .editor-wrap { position: relative; display: block; }
+  .editor-wrap .editor-hl,
+  .editor-wrap .editor-textarea {
+    font-family: var(--mono); font-size: 12.4px; line-height: 1.62;
+    padding: 15px; margin: 0; border: 0; width: 100%;
+    white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; tab-size: 4;
+  }
+  .editor-wrap .editor-hl {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+    background: #0d0e12; color: #e7e2d8; border-radius: 0; max-height: none;
+  }
+  .editor-wrap .editor-textarea {
+    /* display:block matters: a textarea is inline-block by default, which adds
+       a baseline descender gap under it and makes the wrapper ~6px taller than
+       the textarea — leaving a dark strip the painted layer stretches into. */
+    position: relative; display: block; background: transparent; color: transparent;
+    caret-color: #e7e2d8; resize: none; min-height: 300px; overflow-y: hidden; border-radius: 0;
+  }
+  .editor-wrap .editor-textarea:focus { outline: 1px solid var(--accent); }
+  .editor-wrap .editor-textarea::selection { background: rgba(167,139,250,.40); }
+  /* One palette, not a per-theme pair: .panel is always dark in both themes
+     (see the :root[data-theme="light"] .panel override above). */
+  .editor-hl .t-kw  { color: #bb9af7; }
+  .editor-hl .t-str { color: #9ece6a; }
+  .editor-hl .t-com { color: #6f7a8d; font-style: italic; }
+  .editor-hl .t-num { color: #ff9e64; }
+  .editor-hl .t-bi  { color: #7dcfff; }
+  .editor-hl .t-fn  { color: #7aa2f7; }
+  .editor-hl .t-dec { color: #e0af68; }
+  /* Run/Reset sit ABOVE the editor: these examples run 100-400 lines, so a
+     control bar underneath meant scrolling the whole file to find Run. */
+  .editor-controls { display: flex; gap: 8px; padding: 9px 13px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.03); }
+  .btn-repl { appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--ink); border-radius: 6px; padding: 6px 16px; font: inherit; font-family: var(--mono); font-size: 12px; cursor: pointer; transition: all .15s; }
+  .btn-repl:hover { color: var(--accent2); border-color: rgba(167,139,250,.45); }
+  .btn-repl:active { transform: scale(.98); }
+  .btn-repl.running { opacity: .6; cursor: wait; }
+  .btn-repl:disabled { opacity: .6; cursor: default; }
+  /* Publish CTA — a full-width bar ABOVE the code columns, not a quiet chip in
+     the panel header. This one sits outside .panel, so unlike the controls
+     inside it, it does NOT inherit the always-dark override and must work in
+     both themes: --publish-ink flips so the filled violet button keeps legible
+     text either way (6.7:1 dark, 4.8:1 light, both checked). */
+  .code-cta {
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    background: linear-gradient(90deg, rgba(167,139,250,.14), rgba(167,139,250,.05));
+    border: 1px solid rgba(167,139,250,.30);
+    border-radius: 12px; padding: 16px 20px; margin: 0 0 16px;
+  }
+  .code-cta-copy { display: flex; flex-direction: column; gap: 3px; min-width: 240px; flex: 1; }
+  .code-cta-copy strong { color: var(--ink); font-size: 15.5px; font-weight: 650; }
+  .code-cta-copy span { color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+  .btn-publish {
+    display: inline-flex; align-items: center; gap: 9px; flex: none;
+    appearance: none; border: 0; cursor: pointer;
+    background: var(--accent); color: var(--publish-ink);
+    font: inherit; font-size: 14.5px; font-weight: 650;
+    padding: 11px 20px; border-radius: 9px;
+    box-shadow: 0 3px 14px rgba(167,139,250,.28);
+    transition: transform .12s ease, box-shadow .15s ease, filter .15s ease;
+  }
+  .btn-publish:hover { filter: brightness(1.07); box-shadow: 0 5px 20px rgba(167,139,250,.42); transform: translateY(-1px); }
+  .btn-publish:active { transform: translateY(0); }
+  .btn-publish:disabled { opacity: .65; cursor: default; transform: none; box-shadow: none; }
+  .btn-publish svg { flex: none; }
+  @media (prefers-reduced-motion: reduce) { .btn-publish { transition: none; } .btn-publish:hover { transform: none; } }
+  .terminal-pane { height: 100%; }
+  .terminal-output { padding: 15px; overflow-y: auto; height: 70vh; font-family: var(--mono); font-size: 12.4px; line-height: 1.62; white-space: pre-wrap; word-wrap: break-word; }
+  .terminal-out-ok { color: #cfcabf; }
+  .terminal-out-err { color: #ffb4a2; }
+  .terminal-out-run { color: var(--dim); font-style: italic; }
+  .pyodide-note { font-size: 10.5px; color: var(--muted); }
+
+  /* Captured-output fallback, collapsed by default so it never adds scroll
+     unless someone actually wants it. */
+  .fallback { margin-top: 18px; border: 1px solid var(--line); border-radius: 10px; background: #0d0e12; overflow: hidden; }
+  .fallback summary { cursor: pointer; padding: 11px 15px; font-family: var(--mono); font-size: 11.5px; color: var(--muted); list-style: none; }
+  .fallback summary::-webkit-details-marker { display: none; }
+  .fallback summary::before { content: "▸ "; color: var(--dim); }
+  .fallback[open] summary::before { content: "▾ "; }
+  .fallback summary:hover { color: var(--accent2); }
+  .fallback pre { margin: 0; padding: 0 15px 15px; overflow: auto; max-height: 40vh; font-family: var(--mono); font-size: 12.4px; line-height: 1.62; }
+
+  /* Python syntax colours */
+  .py-kw  { color: #c792ea; }
+  .py-str { color: #a5d6a7; }
+  .py-com { color: #6f6a60; font-style: italic; }
+  .py-num { color: #ffcb8b; }
+  .py-dec { color: #82aaff; }
+  .py-fn  { color: #c4b5fd; }
+
+  /* Articles */
+  .agroup h2 { font-size: 15px; color: var(--accent2); margin: 26px 0 12px; text-transform: uppercase; letter-spacing: .06em; }
+  .alist { display: grid; gap: 12px; }
+  .acard { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 16px 18px; }
+  .acard:hover { border-color: rgba(167,139,250,.35); background: var(--card-hi); }
+  .acard h3 { margin: 0 0 6px; font-size: 15px; font-weight: 600; line-height: 1.35; }
+  .acard .am { font-family: var(--mono); font-size: 11px; color: var(--dim); margin: 0 0 8px; }
+  .acard p.as { margin: 0; color: var(--muted); font-size: 13.4px; line-height: 1.6; }
+  .acard .host { color: var(--dim); font-size: 11px; font-family: var(--mono); }
+
+  footer { text-align: center; color: var(--dim); font-size: 12.5px; margin-top: 50px; line-height: 1.7; }
+  footer code { font-family: var(--mono); font-size: 11.5px; background: rgba(255,255,255,.05); padding: 1px 5px; border-radius: 4px; }
+
+  .nl { text-align: left; }
+  .nl-home {
+    max-width: 720px; margin: 4px auto 22px; padding: 0;
+    border: none; background: none;
+  }
+  .nl-home .nl-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .nl-home .nl-label { font-family: var(--mono); font-size: 12px; color: var(--dim); white-space: nowrap; }
+  .nl-row input[type=email] {
+    flex: 1 1 180px; min-width: 0; font: inherit; font-size: 13.5px; color: var(--ink);
+    background: transparent; border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px;
+  }
+  .nl-row input[type=email]:focus { outline: none; border-color: var(--accent); }
+  .nl-row button {
+    font: inherit; font-weight: 600; font-size: 13px; color: var(--muted);
+    background: transparent; border: 1px solid var(--line); border-radius: 7px;
+    padding: 7px 12px; cursor: pointer;
+  }
+  .nl-row button:hover { color: var(--ink); border-color: rgba(255,255,255,.22); }
+  .nl-row button:disabled { opacity: .55; cursor: default; }
+  .nl-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .nl-status { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
+  .nl-status.ok { color: var(--accent2); }
+  .nl-status.err { color: #f0a0a0; }
+  .nl .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 0 0 4px; }
+  .nl .lede { margin: 0 0 10px; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+  .nl .fine { margin: 8px 0 0; font-size: 12px; color: var(--dim); }
+  .reader .nl-article {
+    max-width: var(--measure); margin: 0 auto 28px; padding: 16px 18px;
+    border: 1px solid rgba(167,139,250,.28); border-radius: 10px;
+    background: rgba(167,139,250,.07);
+  }
+  .reader .nl-article .k { color: var(--accent2); margin: 0 0 5px; }
+  .reader .nl-article .lede { margin: 0 0 12px; color: var(--ink); font-size: 14.5px; line-height: 1.45; }
+  .reader .nl-article .nl-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .reader .nl-article input[type=email] {
+    background: rgba(17,18,23,.35);
+  }
+  .reader .nl-article button {
+    color: var(--publish-ink); background: var(--accent); border-color: transparent; font-weight: 650;
+  }
+  .reader .nl-article button:hover { color: var(--publish-ink); filter: brightness(1.08); }
+  :root[data-theme="light"] .nl-article {
+    background: rgba(124,92,217,.08); border-color: rgba(124,92,217,.28);
+  }
+  :root[data-theme="light"] .nl-article .lede { color: #1f2937; }
+  :root[data-theme="light"] .nl-article input[type=email] { background: #fff; }
+
+  .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); background: var(--surface); border: 1px solid var(--line); color: var(--ink); font-size: 13px; padding: 10px 16px; border-radius: 9px; box-shadow: 0 10px 30px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; z-index: 50; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card, .toast { transition: none; }
+    .card:hover, .card.kbd { transform: none; }
+  }
+</style>
+</head>
+<body>
+<!-- build.js replaces the bare ARTICLE_NOSCRIPT marker below (exact string
+     search, same as META:START above) with a <noscript> snapshot of the
+     session's article body on site/<id>/index.html, so crawlers that don't
+     execute JS still see real content instead of just this shell's meta
+     tags. Root index.html has no single session, so it keeps the marker
+     as-is here — an inert comment. -->
+<noscript>
+<article>
+<h1>How to Gate Agent Architecture Changes by Blast Radius</h1>
+<h2>What It Is</h2>
+<p>Armin Ronacher's essay &quot;The Tower Keeps Rising&quot; (July 14, 2026) makes an observation that matters a lot once agents write most of your diffs: a codebase's real specification isn't the code — it's a distributed, mostly-undocumented &quot;shared language&quot; the team carries around in their heads about what concepts mean, where module boundaries sit, which invariants must hold, and who owns what. Historically, that shared model got synchronized as a side effect of friction: to change a storage layer you had to read someone else's code, ask questions in review, and coordinate across teams. Some of that slowness was pure waste. But some of it was the mechanism by which &quot;your understanding became mine&quot; — the point where both parties discovered whether they still agreed on how the system worked.</p>
+<p>Agents remove the friction without replacing the synchronization. An agent can generate a large, internally coherent, fully-tested diff that crosses three modules and changes a shared interface in one shot — with no human ever having to read the boundary code to make the change happen. The code can be correct and the team's shared mental model can silently diverge anyway, because the step that used to force alignment (a human reading and explaining the crossing) never happened.</p>
+<p>The practical response isn't &quot;add more review&quot; (that's just re-adding the waste). It's to separate the two things friction used to bundle together — implementation cost and synchronization value — and gate only on the second. That means scoring diffs by how much they cross architectural boundaries (modules, public interfaces, invariants, ownership) and routing only high-scoring diffs through a mandatory &quot;explain-back&quot; checkpoint, regardless of who or what wrote the code.</p>
+<h2>Why It Matters</h2>
+<p>Teams running Claude Code / Copilot-style agents at scale are already hitting this: agents happily produce PRs that touch five files across three owned areas, pass CI, and get rubber- stamped because reviewing them line-by-line the old way doesn't scale and doesn't match how the change was actually produced. The failure mode isn't a bug slipping through — tests catch that. It's slow architectural drift: two teams' mental models of a shared invariant quietly diverging until a production incident reveals they'd disagreed about it for months.</p>
+<p>This reframes &quot;human-in-the-loop&quot; for agentic engineering: instead of gating on who wrote the code (agent vs. human) or diff size, gate on blast radius — a semantic measure of whether this specific change crosses a boundary that requires two people (or a person and an agent) to re-confirm shared understanding. It's the same idea as Claude Code's permission-mode system (some tool calls are auto-allowed, some need a human), applied one layer up, to architecture instead of individual actions.</p>
+<h2>Key Technical Details</h2>
+<ul><li>Blast radius ≠ diff size. A 200-line change confined to one module's internals can be lower risk than a 5-line change to a shared type's public signature.</li><li>Signals that matter: number of distinct modules touched, whether any touched symbol is part of a public/exported interface, whether the change crosses a CODEOWNERS boundary, and the fan-in of touched symbols (how many other modules depend on them) — high fan-in means more places whose implicit assumptions could now be wrong.</li><li>Two-tier gate: below threshold → agent + CI can merge with no human sync step (this is where removing friction is a pure win). At or above threshold → merge is blocked until a human produces an &quot;explain-back&quot;: a short, structured statement of what invariant changed and why, attached to the PR (functionally a micro-ADR).</li><li>The explain-back is the point, not the code review. It doesn't require the human to have written or even deeply reviewed the diff — it requires them to state, in their own words, what boundary moved. That's the cheapest possible re-creation of the old &quot;your understanding became mine&quot; moment, and it's auditable later when the invariant is questioned.</li><li>This composes with existing tooling (CODEOWNERS, RFC-required paths) rather than replacing it — it adds a semantic signal (interface/invariant change) that path-based ownership alone can't see.</li></ul>
+<h2>How It Connects to What You Know</h2>
+<p>This is the ReAct/human-in-the-loop pattern applied at the architecture layer instead of the tool-call layer. Claude Code already does per-action gating (auto-allow safe tools, prompt for destructive ones); blast-radius gating is the same risk-proportionate-friction idea applied to what a diff means rather than what a tool does. It's also a direct answer to the &quot;vibe coding vs. agentic engineering&quot; tension Simon Willison and others have been writing about: the fix isn't slowing agents down uniformly, it's building a cheap classifier for the narrow slice of changes where slowing down actually buys you something.</p>
+<h2>Try It Yourself</h2>
+<p>code_example.py builds a tiny synthetic module/ownership/call graph, simulates several agent-authored diffs, computes a blast-radius score from cross-module reach + public-interface touches + ownership crossings + symbol fan-in, and applies the two-tier gate — printing which diffs fast-track and which get routed to a required human explain-back, with the reasons why.</p>
+<p>More in this category: <a href="/topics/ai-engineering-practices/">AI Engineering Practices</a></p>
+</article>
+</noscript>
+  <button id="themeToggle" class="theme-toggle" aria-label="Switch to light theme" title="Switch theme">
+    <svg class="i-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="i-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+  </button>
+
+  <!-- ============================ index view ============================ -->
+  <div id="viewIndex">
+    <header class="top">
+      <!-- The brand is deliberately NOT an <h1>: every page ships this header,
+           so a permanent brand h1 would give each article page two competing
+           topic signals. The tagline below is the homepage's h1 — build.js
+           swaps that one line to <h1> for the homepage only (see HOME_H1 in
+           build.js), leaving it a <p> on session and topic pages where the
+           article/topic title is the h1 instead. Both classes set explicit
+           margin/font-size, so the tag swap is visually identical. -->
+      <!-- The brand is a link because every reader expects it to be one. It stays
+           a real <a href> so crawlers and middle-click work; goHome() below
+           upgrades a plain left-click to hash routing when we are already on the
+           SPA root, so in-app navigation stays instant. -->
+      <a class="brand" id="brandHome" href="/" aria-label="The AI Commit — home">
+        <img class="brand-mark" src="/favicon.svg" width="56" height="56" alt="" />
+        <p class="title">THE AI COMMIT</p>
+      </a>
+      <p class="kicker">read · see · run · keep</p>
+      <p class="tagline">A daily AI engineering lab for software engineers</p>
+      <p class="subtitle">Understand one real AI development in 30 minutes — a plain-English explanation, a diagram of the actual mechanism, and code you can run, then publish to your own GitHub. Written for software engineers.</p>
+      <nav class="top-nav" aria-label="Site">
+        <a href="#" class="nav-lab on" id="navLab">Daily lab</a>
+        <a href="#learn" class="nav-course" id="navCourse">AI basics</a>
+        <a href="#frontier" class="nav-frontier" id="navFrontier" hidden>Frontier</a>
+      </nav>
+      <p class="trust">Picked daily from papers, changelogs, and engineering blogs from the last 48 hours — not a content calendar. Every session links its real sources, and every code example runs live in your browser so you can check it yourself.</p>
+    </header>
+
+    <div class="wrap">
+      <!-- Filled by route() on #topic/<slug> and #tag/<slug>, empty otherwise.
+           This carries the h1 for a topic page in the JS-rendered view; the
+           non-JS view gets its own h1 from the generated <noscript>. -->
+      <div id="topicHead"></div>
+      <form class="nl nl-home" id="nlHome" action="https://theaicommit.com/api/subscribe" method="post">
+        <div class="nl-row">
+          <span class="nl-label">Daily email</span>
+          <label class="nl-hp" aria-hidden="true">Leave blank <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+          <input type="email" name="email" required placeholder="you@email.com" autocomplete="email" />
+          <button type="submit">Subscribe</button>
+        </div>
+        <p class="nl-status" hidden></p>
+      </form>
+      <!-- Today's session, as the lead story rather than the first cell of a
+           grid. It is both what a returning reader came for and the best
+           possible demo for a first-time one — a real article beats a paragraph
+           describing what the articles are like. Rendered by renderHero(), and
+           only on the unfiltered daily-lab view. -->
+      <a class="hero-card" id="heroCard" hidden></a>
+      <hr class="sep" />
+
+      <div class="controls">
+        <label class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="q" type="search" placeholder="Search topic, insight, category…" autocomplete="off" />
+          <kbd>/</kbd>
+        </label>
+        <select id="sort" aria-label="Sort order">
+          <option value="date-desc">Newest first</option>
+          <option value="date-asc">Oldest first</option>
+          <option value="title-asc">Title A–Z</option>
+        </select>
+        <select id="fRead" aria-label="Filter by read state">
+          <option value="">All sessions</option>
+          <option value="unread">Unread only</option>
+          <option value="read">Read only</option>
+        </select>
+      </div>
+
+      <div class="pills levels" id="levels" aria-label="Filter by level"></div>
+      <div class="pills" id="pills"></div>
+      <div class="count" id="count"></div>
+      <div class="grid" id="grid"></div>
+
+      <!-- Orientation, below the grid on purpose. These four blocks all answer
+           "what is this site?" — a question a returning reader has already
+           answered and paid 472px for on every visit. All three destinations
+           stay one tap away in the top nav, so nothing here is the only route
+           to anything. -->
+      <div class="course-invite" id="courseInvite">
+        <div>
+          <p class="k">New to this?</p>
+          <p>AI basics — 11 short lessons, in order. Separate from the daily lab above.</p>
+        </div>
+        <a href="#learn">Start the basics →</a>
+      </div>
+      <div class="mlc-invite" id="mlcInvite">
+        <div>
+          <p class="k">Intermediate basics</p>
+          <p>Six primers on this site — freeze a matrix, watch attention, poke a calibration curve. Separate from the daily lab.</p>
+        </div>
+        <a href="#learn/intermediate">Open the primers →</a>
+      </div>
+      <a class="frontier-strip" id="frontierStrip" href="#frontier" hidden></a>
+      <div class="stats" id="stats"></div>
+
+      <footer>
+        Keys: <code>/</code> search · <code>↑↓</code> or <code>j/k</code> move · <code>Enter</code> open<br />
+        <a href="/privacy.html">Privacy Policy</a> · <a href="/terms.html">Terms & Conditions</a>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ============================ reader view =========================== -->
+  <div id="viewReader" class="reader hidden"></div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  // Real per-session pages (site/<id>/index.html — same body as this one,
+  // built.js only swaps the <head> meta) live one directory deeper than root,
+  // so a plain relative "data/index.js" resolves against the WRONG directory
+  // there. GitHub Pages compounds this: it serves from /aI_daily_run/, not
+  // domain root, so even the root page needs a host-aware prefix. Computed
+  // once, reused by the main script below for the same reason (data/<id>.json
+  // fetches, assets/ image src).
+  window.SITE_ROOT = (location.hostname === "magna56.github.io" ? "/aI_daily_run" : "");
+  // A static <script src> is fetched by the parser the instant it's seen —
+  // there's no way for JS to compute its path first. document.write, run
+  // synchronously during parsing, is the correct (if old-school) tool for
+  // exactly this "resolve one tag's src before the parser reaches it" case.
+  // ?v= is stamped per build by build.js. Without it, a browser that cached this
+  // manifest can resolve a just-published id against a stale copy and render the
+  // article as "No session <id>" while its payload sits live and fresh alongside.
+  // The custom domain's zone-level Browser Cache TTL overrides Cache-Control, so
+  // a versioned URL — not a header — is what actually guarantees freshness here.
+  document.write('<script src="' + window.SITE_ROOT + '/data/index.js?v=mtoii3mw"><' + '/script>');
+</script>
+<script>
+(function () {
+  "use strict";
+
+  var SITE_ROOT = window.SITE_ROOT || "";  // set by the head script, above
+  var DATA = (window.SESSIONS || []).slice();
+  var ROTATION = window.CATEGORIES || [];
+
+  // The 11 rotation categories collapse into 5 colored families — no
+  // categorical palette gives 11 hues a reader can tell apart, and 5 is
+  // learnable ("orange = infrastructure") in a way 11 never would be.
+  // Colour by TIER, not by arbitrary topic family — the tier is what a reader
+  // actually wants to know at a glance ("can I use this today, or is this a
+  // frontier read?"), so the grid encodes that rather than a taxonomy only the
+  // author cares about. Three hues reused from the validated 5-colour set:
+  // craft/green = Tier A, models/blue = Tier B, safety/amber = Tier C.
+  var CAT_FAMILY = {
+    // Tier A — ship it this week
+    "Coding Agents & Productivity": "craft",
+    "Building Agents & MCP": "craft",
+    "AI Engineering Practices": "craft",
+    "Evals & Reliability": "craft",
+    // Tier B — understand the machine
+    "New Models & APIs": "models",
+    "AI in Production": "models",
+    "Hands-on Techniques": "models",
+    // Tier C — frontier
+    "Applied Research": "safety",
+    "AI Hardware for Engineers": "safety",
+    "Multimodal Engineering": "safety",
+    "AI Safety & Alignment": "safety",
+  };
+  function famClass(cat) { return "cat-" + (CAT_FAMILY[cat] || "models"); }
+  var CACHE = {};                                  // id -> fetched payload
+  var state = { q: "", cat: "", tag: "", level: "", learn: false, read: "", sort: "date-desc" };
+  var LEVELS = window.LEVELS || ["Start here", "Building", "Deeper"];
+  var LEARN = window.LEARN_TRACK || { ids: [], sessions: [] };
+  var INTERMEDIATE = window.INTERMEDIATE_TRACK || { ids: [], sessions: [] };
+
+  function isLearn(s) { return s && s.kind === "learn"; }
+  function isFrontier(s) { return s && s.kind === "frontier"; }
+  // The grid is the daily lab only. Frontier lives on its own tab by design, and
+  // Learn is the evergreen track — both stay searchable, neither is a card.
+  function labSessions() { return DATA.filter(function (s) { return !isLearn(s) && !isFrontier(s); }); }
+  function frontierSessions() {
+    return DATA.filter(isFrontier).slice().sort(function (a, b) {
+      return String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id));
+    });
+  }
+  function orderedLearn(track) {
+    var order = (track && track.ids) || [];
+    return DATA.filter(function (s) { return isLearn(s) && order.indexOf(s.id) !== -1; })
+      .sort(function (a, b) { return order.indexOf(a.id) - order.indexOf(b.id); });
+  }
+  function courseSessions() { return orderedLearn(LEARN); }
+  function intermediateSessions() { return orderedLearn(INTERMEDIATE); }
+  function pool() { return state.learn ? courseSessions().concat(intermediateSessions()) : labSessions(); }
+  var kbdIndex = -1;                               // keyboard-focused card
+  var view = null;                                 // null = grid, else {id, pane}
+  var PANES = ["overview", "visualize", "diagram", "code", "articles"];
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // Visualizers run in an opaque-origin sandbox. They can report layout size,
+  // but cannot reach the reader DOM, storage, forms, popups, or network APIs.
+  window.addEventListener("message", function (ev) {
+    var frame = $("visualizeFrame");
+    if (!frame || ev.source !== frame.contentWindow || !ev.data ||
+        ev.data.type !== "adl-visualize-height") return;
+    var height = Number(ev.data.height);
+    if (!isFinite(height)) return;
+    frame.style.height = Math.max(560, Math.min(2400, Math.ceil(height))) + "px";
+  });
+
+  /* ---- REPL setup (lazy) ----
+     Pyodide is ~12MB of wasm + stdlib. Loading it eagerly meant every visit —
+     the homepage included, where there is no code at all — paid for a Python
+     runtime most readers never invoke. ensurePyodide() injects the script and
+     boots the runtime on first real need instead: opening a Code pane warms it
+     in the background, and pressing Run awaits the same promise.
+
+     One promise is cached and reused, so concurrent callers share a single
+     download. Failure is non-fatal by design: the captured output rendered at
+     build time is always present, so a CDN hiccup costs the REPL, not the page. */
+  var PYODIDE_INDEX = "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/";
+  var pyodidePromise = null;
+  window.pyodideReady = false;
+
+  // The label is rendered once with the pane but the runtime now arrives later,
+  // so it has to be refreshed when the promise settles rather than left stale.
+  function pyodideNoteText() {
+    return window.pyodideReady ? "Pyodide ✓" : (pyodidePromise ? "Pyodide loading…" : "Pyodide loads on first Run");
+  }
+  function refreshPyodideNote() {
+    var n = document.getElementById("pyodideNote");
+    if (n) n.textContent = pyodideNoteText();
+  }
+
+  function ensurePyodide() {
+    if (pyodidePromise) return pyodidePromise;
+    pyodidePromise = new Promise(function (resolve, reject) {
+      var s = document.createElement("script");
+      s.src = PYODIDE_INDEX + "pyodide.js";
+      s.onload = function () {
+        if (typeof loadPyodide === "undefined") return reject(new Error("pyodide.js loaded but loadPyodide is missing"));
+        loadPyodide({ indexURL: PYODIDE_INDEX }).then(function (py) {
+          window.pyodide = py;
+          window.pyodideReady = true;
+          refreshPyodideNote();
+          resolve(py);
+        }, reject);
+      };
+      s.onerror = function () { reject(new Error("could not fetch pyodide.js")); };
+      document.head.appendChild(s);
+    });
+    pyodidePromise.catch(function (e) {
+      console.warn("Pyodide failed to load — REPL disabled, captured output still shown:", e);
+      pyodidePromise = null;   // let a later Run retry rather than fail forever
+      refreshPyodideNote();
+    });
+    refreshPyodideNote();
+    return pyodidePromise;
+  }
+
+  function getCodeCache(sessionId) {
+    var cached = localStorage.getItem("code_editor_" + sessionId);
+    if (!cached) return null;
+    try {
+      var data = JSON.parse(cached);
+      var now = Date.now();
+      if (data.expires && now > data.expires) {
+        localStorage.removeItem("code_editor_" + sessionId);
+        return null;
+      }
+      return data.code;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setCodeCache(sessionId, code, ttlMs) {
+    ttlMs = ttlMs || 24 * 60 * 60 * 1000;  // 24 hours default
+    localStorage.setItem("code_editor_" + sessionId, JSON.stringify({
+      code: code,
+      expires: Date.now() + ttlMs,
+      savedAt: new Date().toISOString()
+    }));
+  }
+
+  function clearCodeCache(sessionId) {
+    localStorage.removeItem("code_editor_" + sessionId);
+  }
+
+  /* ---- GitHub sign-in + publish (Code tab "Publish to GitHub") ----------
+     Stateless OAuth: the code->token exchange happens in a Cloudflare Pages
+     Function (functions/api/github/token.js) — the only place the client
+     secret ever exists. The resulting token lives in localStorage on the
+     client, same as everything else this site stores; there is no server-
+     side session or database. Signing out just forgets the token locally —
+     it does not revoke it on GitHub's side (the user can do that themselves
+     from https://github.com/settings/applications). */
+  var GITHUB_CLIENT_ID = "Ov23lidE2UufeMgoVZj7";
+
+  // Set right before redirecting to GitHub when the user clicked "Publish to
+  // GitHub" while signed out, and consumed by renderCode() once the Code tab
+  // for that same session re-renders after the round trip — this is what
+  // makes sign-in-then-publish feel like ONE action instead of two: click
+  // once, get redirected, come back, and it just publishes rather than
+  // requiring a second click now that you happen to be signed in.
+  var ghAutoPublishSession = null;
+
+  function ghToken() { return localStorage.getItem("gh_token"); }
+  function ghUser() { try { return JSON.parse(localStorage.getItem("gh_user") || "null"); } catch (e) { return null; } }
+  function ghSignOut() { localStorage.removeItem("gh_token"); localStorage.removeItem("gh_user"); }
+
+  function ghSignIn() {
+    // redirect_uri must be ONE fixed URL. GitHub matches it against the OAuth app's
+    // registered callback, and since sessions got real permalinks this was sending
+    // /2026-08-29-some-slug/ instead of the site root — which GitHub rejects outright
+    // with "The redirect_uri is not associated with this application", before the user
+    // ever sees a consent screen. Where to return to rides in `state` instead, which
+    // GitHub echoes back untouched and ghHandleOAuthReturn already restores.
+    // (The token exchange in functions/api/github/token.js sends no redirect_uri, so
+    // pinning it here cannot desynchronise the two halves of the flow.)
+    var redirect = location.origin + (window.SITE_ROOT || "") + "/";
+    // public_repo: create a public repository with the session code + README.
+    // (Replaces the old gist-only flow — existing localStorage tokens with only
+    // the gist scope will fail publish and get bounced back through here.)
+    var url = "https://github.com/login/oauth/authorize"
+      + "?client_id=" + encodeURIComponent(GITHUB_CLIENT_ID)
+      + "&scope=public_repo"
+      + "&redirect_uri=" + encodeURIComponent(redirect)
+      + "&state=" + encodeURIComponent(location.hash);
+    location.href = url;
+  }
+
+  // Runs once at boot: if we just landed back from GitHub's authorize page,
+  // there's a ?code= in the URL. Exchange it, remember who signed in, restore
+  // the hash the user was actually on (GitHub's redirect drops it) — and if
+  // that hash points at a Code tab, arm the auto-publish flag so renderCode()
+  // finishes the job without another click. Strip ?code=/&state= from the
+  // address bar either way so a refresh doesn't re-exchange it.
+  function ghHandleOAuthReturn() {
+    var params = new URLSearchParams(location.search);
+    var code = params.get("code");
+    if (!code) return Promise.resolve(false);
+    var state = params.get("state") || "";
+    var stateParts = state.replace(/^#/, "").split("/");
+
+    return fetch("/api/github/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code }),
+    })
+      .then(function (r) {
+        if (!r.ok && r.status === 404) throw new Error("not available on this host (try theaicommit.com)");
+        return r.json();
+      })
+      .then(function (data) {
+        if (data.error || !data.access_token) throw new Error(data.error_description || data.error || "sign-in failed");
+        localStorage.setItem("gh_token", data.access_token);
+        return fetch("https://api.github.com/user", {
+          headers: { "Authorization": "Bearer " + data.access_token },
+        });
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (u) {
+        if (u && u.login) localStorage.setItem("gh_user", JSON.stringify({ login: u.login, avatar: u.avatar_url }));
+        history.replaceState(null, "", location.pathname + state);
+        if (stateParts[1] === "code" && stateParts[0]) {
+          ghAutoPublishSession = stateParts[0];
+          toast("Signed in as " + (u && u.login ? u.login : "you") + " — publishing…");
+        } else {
+          toast("Signed in to GitHub as " + (u && u.login ? u.login : "you"));
+        }
+        return true;
+      })
+      .catch(function (err) {
+        history.replaceState(null, "", location.pathname + state);
+        toast("GitHub sign-in failed: " + err.message);
+        return false;
+      });
+  }
+
+  // Create a public repo under the signed-in user, then write each file via
+  // the Contents API. The Git Data API (blobs/trees/commits) returns
+  // "Not Found" on a brand-new empty repo — it needs at least one commit
+  // first. Contents PUT works on empty repos and creates `main` for us.
+  // Returns the repo JSON (html_url is what we open).
+  function ghApi(path, opts) {
+    opts = opts || {};
+    var headers = Object.assign({
+      "Authorization": "Bearer " + ghToken(),
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    }, opts.headers || {});
+    return fetch("https://api.github.com" + path, Object.assign({}, opts, { headers: headers }))
+      .then(function (r) {
+        return r.json().then(function (body) {
+          if (!r.ok) {
+            var msg = (body && body.message) || ("HTTP " + r.status);
+            // Old gist-scoped tokens (or revoked ones) can't create repos —
+            // signal the UI to forget them and re-auth with public_repo.
+            // GitHub also sometimes answers 404 instead of 403 for missing
+            // scopes on /user/repos, so treat that the same when the body
+            // is the classic "Not Found".
+            if (r.status === 401 || r.status === 403 ||
+                (r.status === 404 && /not found/i.test(msg) && path === "/user/repos")) {
+              throw new Error("NEED_REAUTH:" + msg);
+            }
+            throw new Error(msg);
+          }
+          return body;
+        }, function () {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return {};
+        });
+      });
+  }
+
+  function b64utf8(str) {
+    // btoa alone breaks on non-Latin1 (em-dashes, emoji in titles/output).
+    return btoa(unescape(encodeURIComponent(String(str))));
+  }
+
+  function ghRepoName(sessionId, title) {
+    var raw = ("ai-commit-" + sessionId + "-" + slugify(title))
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+    return (raw || ("ai-commit-" + sessionId)).slice(0, 100).replace(/[._-]+$/, "");
+  }
+
+  function ghPutFile(owner, repo, path, content, message) {
+    return ghApi("/repos/" + owner + "/" + repo + "/contents/" + path.split("/").map(encodeURIComponent).join("/"), {
+      method: "PUT",
+      body: JSON.stringify({
+        message: message,
+        content: b64utf8(content),
+      }),
+    });
+  }
+
+  function ghPublishRepo(repoName, description, files) {
+    function create(name) {
+      return ghApi("/user/repos", {
+        method: "POST",
+        body: JSON.stringify({
+          name: name,
+          description: String(description || "").slice(0, 350),
+          private: false,
+          auto_init: false,
+          has_issues: false,
+          has_projects: false,
+          has_wiki: false,
+        }),
+      });
+    }
+
+    return create(repoName).catch(function (err) {
+      // Name taken → retry once with a short unique suffix.
+      if (/already exists|name already exists/i.test(err.message || "")) {
+        var suffix = "-" + Date.now().toString(36).slice(-5);
+        var alt = (repoName.slice(0, 100 - suffix.length) + suffix).replace(/[._-]+$/, "");
+        return create(alt);
+      }
+      throw err;
+    }).then(function (repo) {
+      var owner = repo.owner.login;
+      var name = repo.name;
+      // README first so the repo homepage isn't an empty code file; then the
+      // script. Sequential so the second commit has a parent on `main`.
+      var paths = Object.keys(files);
+      paths.sort(function (a, b) {
+        if (a === "README.md") return -1;
+        if (b === "README.md") return 1;
+        return a.localeCompare(b);
+      });
+      var chain = Promise.resolve();
+      paths.forEach(function (path, i) {
+        chain = chain.then(function () {
+          return ghPutFile(
+            owner, name, path, files[path],
+            i === 0
+              ? "Initial commit — code, README, and run output"
+              : "Add " + path
+          );
+        });
+      });
+      return chain.then(function () { return repo; });
+    });
+  }
+
+  function parseRequires(sourceCode) {
+    var lines = String(sourceCode).split("\n");
+    for (var i = 0; i < Math.min(5, lines.length); i++) {
+      var m = lines[i].match(/^#\s*REQUIRES:\s*(.+)$/);
+      if (m) {
+        return m[1].split(/[,\s]+/).filter(function (s) { return s.trim(); });
+      }
+    }
+    return [];
+  }
+
+  async function runPython(code, outputEl, sessionId) {
+    setCodeCache(sessionId, code);
+    var term = outputEl.querySelector(".terminal-output") || outputEl;
+
+    // First Run on a cold page pays for the runtime download (~12MB), so say so
+    // rather than showing a silent "running..." for several seconds.
+    if (!window.pyodideReady) {
+      term.innerHTML = '<span class="terminal-out-run">> starting Python (one-time ~12MB download)…</span>';
+      try {
+        await ensurePyodide();
+      } catch (e) {
+        term.innerHTML = '<span class="terminal-out-err">> could not start Python: ' + esc(e.message) +
+          '\n> the captured output above was produced at build time and is unaffected.</span>';
+        return;
+      }
+    }
+
+    term.innerHTML = '<span class="terminal-out-run">> running...</span>';
+
+    try {
+      var requires = parseRequires(code);
+      if (requires.length > 0) {
+        term.innerHTML = '<span class="terminal-out-run">> installing: ' + esc(requires.join(", ")) + '</span>\n';
+        await pyodide.loadPackagesFromImports(code);
+      }
+
+      var oldStdout = pyodide.globals.get("_old_stdout");
+      if (!oldStdout) {
+        pyodide.globals.set("_output", "");
+        pyodide.runPython("import sys\nclass _Capture:\n  def write(self, s):\n    globals()['_output'] += str(s)\n  def flush(self): pass\n_old_stdout = sys.stdout\nsys.stdout = _Capture()");
+      }
+
+      pyodide.runPython("globals()['_output'] = ''");
+      pyodide.runPython(code);
+      var output = pyodide.globals.get("_output");
+      term.innerHTML = '<span class="terminal-out-ok">' + esc(output || "(the script printed nothing)") + '</span>\n<span class="terminal-out-run">> done</span>';
+    } catch (e) {
+      term.innerHTML = '<span class="terminal-out-err">' + esc(String(e)) + '</span>\n<span class="terminal-out-run">> error</span>';
+    }
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  // Card blurbs come from journal.md, which is markdown — strip the emphasis
+  // markers rather than rendering them, since the card clamps to four lines.
+  function plain(s) {
+    return String(s == null ? "" : s)
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/(^|\W)\*([^*]+)\*(?=\W|$)/g, "$1$2")
+      .replace(/\[([^\]]+)\]\([^)\s]*\)/g, "$1");
+  }
+  function slugify(title, maxLen) {
+    var s = String(title || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    if (s.length > (maxLen || 48)) s = s.slice(0, maxLen || 48).replace(/-+$/, "");
+    return s || "session";
+  }
+  function byId(id) { for (var i = 0; i < DATA.length; i++) if (DATA[i].id === id) return DATA[i]; return null; }
+  function host(url) { try { return new URL(url).hostname.replace(/^www\./, ""); } catch (e) { return ""; } }
+
+  /* ---- toast + clipboard (same behaviour as the tooling directory) ---- */
+  var toastTimer;
+  function toast(msg) {
+    var t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove("show"); }, 1800);
+  }
+  function copyText(text, done) {
+    function ok() { toast("Copied"); if (done) done(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); ok(); } catch (e) { toast("Copy failed"); }
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok, fallback);
+    } else { fallback(); }
+  }
+
+  /* ---- read progress -------------------------------------------------- */
+  var READ_KEY = "adl:read";
+  function readSet() {
+    try { return new Set(JSON.parse(localStorage.getItem(READ_KEY) || "[]")); }
+    catch (e) { return new Set(); }
+  }
+  function isRead(id) { return readSet().has(id); }
+  function toggleRead(id) {
+    var s = readSet();
+    if (s.has(id)) s.delete(id); else s.add(id);
+    try { localStorage.setItem(READ_KEY, JSON.stringify(Array.from(s))); } catch (e) { /* private mode */ }
+    return s.has(id);
+  }
+
+  /* ---- markdown ------------------------------------------------------- */
+  // Extends the tooling directory's renderer with GFM pipe tables, which the
+  // topic write-ups use for comparisons.
+  function mdTables(src) {
+    var lines = src.split("\n");
+    var out = [];
+    for (var i = 0; i < lines.length; i++) {
+      var isRow = /^\s*\|.*\|\s*$/.test(lines[i]);
+      var isRule = i + 1 < lines.length && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1]);
+      if (!isRow || !isRule) { out.push(lines[i]); continue; }
+
+      var cells = function (row) {
+        return row.trim().replace(/^\||\|$/g, "").split("|").map(function (c) { return c.trim(); });
+      };
+      var head = cells(lines[i]);
+      var aligns = cells(lines[i + 1]).map(function (c) {
+        if (/^:.*:$/.test(c)) return " style=\"text-align:center\"";
+        if (/:$/.test(c)) return " style=\"text-align:right\"";
+        return "";
+      });
+      var html = "<table><thead><tr>";
+      head.forEach(function (h, k) { html += "<th" + (aligns[k] || "") + ">" + h + "</th>"; });
+      html += "</tr></thead><tbody>";
+      i += 2;
+      for (; i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i]); i++) {
+        html += "<tr>";
+        cells(lines[i]).forEach(function (c, k) { html += "<td" + (aligns[k] || "") + ">" + c + "</td>"; });
+        html += "</tr>";
+      }
+      i--;
+      out.push(html + "</tbody></table>");
+    }
+    return out.join("\n");
+  }
+
+  /* Source prose in topic.md is hard-wrapped at ~100 columns for readable diffs.
+     Markdown says a single newline inside a paragraph is a SPACE, not a break —
+     rendering it as <br> is what made every article read as ragged half-lines.
+     An explicit hard break (two or more trailing spaces, per markdown) is kept.
+     build.js's own mdToHtml already joins with a space; this brings the reader
+     into line with it, so the SPA and the crawlable index agree. */
+  function softWrap(t) {
+    return t.replace(/ {2,}\n/g, "<br>").replace(/\s*\n\s*/g, " ");
+  }
+
+  function md(src) {
+    if (!src) return "";
+    var blocks = [];
+    src = String(src).replace(/```[a-z]*\n?([\s\S]*?)```/g, function (_, c) {
+      blocks.push(c); return "%%CB" + (blocks.length - 1) + "%%";
+    });
+    function e(s) { return s.replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
+    src = e(src);
+    src = mdTables(src);
+    src = src.replace(/^#### (.*)$/gm, "<h4>$1</h4>")
+             .replace(/^### (.*)$/gm, "<h3>$1</h3>")
+             .replace(/^## (.*)$/gm, "<h2>$1</h2>")
+             .replace(/^# (.*)$/gm, "<h2>$1</h2>");
+    src = src.replace(/(?:^|\n)((?:&gt; .*(?:\n|$))+)/g, function (_, q) {
+      return "\n<blockquote>" + softWrap(q.replace(/^&gt; ?/gm, "").trim()) + "</blockquote>";
+    });
+    /* Fold a hard-wrapped list item back onto one line before the list regexes
+       run. They match only lines that START with a marker, so an indented
+       continuation used to fall out of the <ul>/<ol> as loose text and split the
+       list in two — visible on any item longer than one source line. */
+    src = src.replace(/^(?:[*-]|\d+\.)[ \t]+.*(?:\n[ \t]+\S.*)+/gm, function (item) {
+      return item.replace(/\n[ \t]+/g, " ");
+    });
+    src = src.replace(/(?:^|\n)((?:\d+\. .*(?:\n|$))+)/g, function (_, items) {
+      var lis = items.trim().split("\n").map(function (l) { return "<li>" + l.replace(/^\d+\. /, "") + "</li>"; }).join("");
+      return "\n<ol>" + lis + "</ol>\n\n";
+    });
+    src = src.replace(/(?:^|\n)((?:[*-] .*(?:\n|$))+)/g, function (_, items) {
+      var lis = items.trim().split("\n").map(function (l) { return "<li>" + l.replace(/^[*-] /, "") + "</li>"; }).join("");
+      return "\n<ul>" + lis + "</ul>\n\n";
+    });
+    src = src.replace(/`([^`]+)`/g, "<code>$1</code>");
+    src = src.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    src = src.replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
+    src = src.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    src = src.split(/\n{2,}/).map(function (ch) {
+      var t = ch.trim();
+      if (!t) return "";
+      if (/^<(h\d|ul|ol|pre|table|blockquote)/.test(t)) return t;
+      return "<p>" + softWrap(t) + "</p>";
+    }).join("\n");
+    return src.replace(/%%CB(\d+)%%/g, function (_, i) {
+      return blocks[i] != null ? "<pre><code>" + e(blocks[i].replace(/^\n/, "")) + "</code></pre>" : "";
+    });
+  }
+
+  // Markdown for a single run of prose — same rules, minus the block wrapper.
+  function inline(src) { return md(src).replace(/^<p>/, "").replace(/<\/p>\s*$/, ""); }
+
+  /* ---- glossary -------------------------------------------------------
+     `## Glossary` in topic.md is the source parseGlossary() reads; it is NOT
+     also rendered as markdown. Overview strips that heading and paints one
+     <dl> at the foot via glossaryHtml(), and the FIRST appearance of each
+     term in the remaining body becomes a button that scrolls to its <dt>.
+     Rendering both was the duplicate the 2026-09-02 article showed.
+
+     Done on the rendered DOM rather than on the markdown, because md()
+     escapes < and > and would turn any anchor we injected into visible text.
+
+     Text nodes only, and never inside code, pre, headings, or the glossary list
+     itself — linking a term inside its own definition, or inside a code sample
+     where it is an identifier rather than a word, is worse than not linking.
+
+     Sessions before 2026-09-02 keep their markdown Glossary (often a long
+     appendix) and do not get the lookup <dl>, so stripping them would throw
+     the long definitions away. */
+  var GLOSS_SKIP = { CODE: 1, PRE: 1, A: 1, H1: 1, H2: 1, H3: 1, H4: 1 };
+  var GLOSSARY_SINCE = "2026-09-02";
+
+  function glossaryDate(p) {
+    var m = String(p && p.date || "").match(/\d{4}-\d{2}-\d{2}/);
+    return m ? m[0] : "";
+  }
+
+  function linkedGlossary(p) {
+    return p && p.kind !== "learn" && glossaryDate(p) >= GLOSSARY_SINCE
+      && p.glossary && p.glossary.length ? p.glossary : null;
+  }
+
+  /* Drop `## Glossary` and everything after it. Mirrors build.js splitSections:
+     ignore a heading inside a fence, and Glossary is always the last section. */
+  function stripGlossarySection(src) {
+    var lines = String(src || "").split("\n");
+    var out = [];
+    var fenced = false;
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (/^```/.test(line)) fenced = !fenced;
+      if (!fenced && /^##\s+Glossary\s*$/.test(line)) break;
+      out.push(line);
+    }
+    while (out.length && !out[out.length - 1].trim()) out.pop();
+    return out.join("\n");
+  }
+
+  function glossSlug(term) {
+    return "g-" + String(term).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  }
+
+  function glossaryHtml(items) {
+    if (!items || !items.length) return "";
+    return '<div class="gloss"><h2>Glossary</h2><dl>' + items.map(function (e) {
+      return '<dt id="' + esc(glossSlug(e.term)) + '">' + inline(e.term) + "</dt>" +
+             "<dd>" + inline(e.definition) + "</dd>";
+    }).join("") + "</dl></div>";
+  }
+
+  function revealGlossary(slug) {
+    var dt = document.getElementById(slug);
+    if (!dt) return;
+    dt.scrollIntoView({ behavior: "smooth", block: "center" });
+    dt.classList.add("hit");
+    setTimeout(function () { dt.classList.remove("hit"); }, 1400);
+  }
+
+  function linkGlossary(root, items) {
+    if (!items || !items.length) return;
+    // longest first, so "KV cache" wins over "cache"
+    var terms = items.slice().sort(function (a, b) { return b.term.length - a.term.length; });
+    terms.forEach(function (e) {
+      var re = new RegExp("\\b" + e.term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i");
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      var node;
+      while ((node = walker.nextNode())) {
+        var el = node.parentElement;
+        var skip = false;
+        for (var p = el; p && p !== root; p = p.parentElement) {
+          if (GLOSS_SKIP[p.tagName] || p.classList.contains("gloss")) { skip = true; break; }
+        }
+        if (skip) continue;
+        var m = node.nodeValue.match(re);
+        if (!m) continue;
+        var idx = m.index;
+        var after = node.splitText(idx);
+        after.splitText(m[0].length);
+        /* A BUTTON, not an anchor with href="#...". The reader is a hash-routed
+           SPA: writing location.hash sends parseHash() a route it cannot match,
+           and the router toasts "No session g-<term>" and bounces to the index.
+           Scrolling directly leaves the route alone. */
+        var a = document.createElement("button");
+        a.type = "button";
+        a.className = "gloss-ref";
+        a.title = e.definition;
+        a.setAttribute("aria-label", e.term + ": " + e.definition);
+        a.textContent = after.nodeValue;
+        a.addEventListener("click", function () { revealGlossary(glossSlug(e.term)); });
+        after.parentNode.replaceChild(a, after);
+        return;                       // first appearance only
+      }
+    });
+  }
+
+  /* The top of Overview. From 2026-09-02 a session leads with the engineering
+     translation and a two-line summary under it; before that it carried a single
+     "Key insight" box, and 30 published sessions still do. Both shapes render. */
+  function topBoxes(p) {
+    var strip = function (h) { return h.replace(/^<p>|<\/p>$/g, ""); };
+    if (p.engineerView) {
+      return '<div class="insight"><span class="k">For a software engineer</span>' +
+               strip(md(p.engineerView)) + "</div>" +
+             (p.tldr
+               ? '<div class="insight tldr"><span class="k">TL;DR</span>' +
+                   strip(md(p.tldr)) + "</div>"
+               : "");
+    }
+    return p.insight
+      ? '<div class="insight"><span class="k">Key insight</span>' + strip(md(p.insight)) + "</div>"
+      : "";
+  }
+
+  /* ---- python highlighting -------------------------------------------- */
+  // Tokenise the RAW source (so quotes are still quotes), escaping each piece
+  // on the way out. Strings and comments come first in the alternation, which
+  // is what keeps a `#` inside a string from starting a comment.
+  var PY_RE = new RegExp([
+    '"""[\\s\\S]*?"""', "'''[\\s\\S]*?'''",
+    '#[^\\n]*',
+    '"(?:\\\\.|[^"\\\\\\n])*"', "'(?:\\\\.|[^'\\\\\\n])*'",
+    '@[A-Za-z_][\\w.]*',
+    '\\b(?:False|None|True|and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield)\\b',
+    '\\b\\d[\\d_]*\\.?\\d*(?:[eE][+-]?\\d+)?\\b'
+  ].join("|"), "g");
+
+  function pyClass(tok) {
+    var c = tok[0];
+    if (c === "#") return "py-com";
+    if (c === '"' || c === "'") return "py-str";
+    if (c === "@") return "py-dec";
+    if (c >= "0" && c <= "9") return "py-num";
+    return "py-kw";
+  }
+
+  function highlightPython(src) {
+    var out = "", last = 0, m;
+    PY_RE.lastIndex = 0;
+    while ((m = PY_RE.exec(src)) !== null) {
+      out += esc(src.slice(last, m.index));
+      out += '<span class="' + pyClass(m[0]) + '">' + esc(m[0]) + "</span>";
+      last = PY_RE.lastIndex;
+    }
+    out += esc(src.slice(last));
+    // Name that follows def/class reads as the thing being defined.
+    return out.replace(/(<span class="py-kw">(?:def|class)<\/span>\s+)([A-Za-z_]\w*)/g,
+      '$1<span class="py-fn">$2</span>');
+  }
+
+  /* ---- stats ----------------------------------------------------------- */
+  function dayKey(d) { return String(d || "").slice(0, 10); }
+
+  // Consecutive calendar days with at least one session, counting back from the
+  // latest one — and only "current" if that day is today or yesterday.
+  function streak() {
+    var days = Array.from(new Set(labSessions().map(function (s) { return dayKey(s.date); }))).sort().reverse();
+    if (!days.length) return 0;
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var latest = new Date(days[0] + "T00:00:00");
+    var gap = Math.round((today - latest) / 864e5);
+    if (gap > 1) return 0;
+    var n = 1;
+    for (var i = 1; i < days.length; i++) {
+      var a = new Date(days[i - 1] + "T00:00:00"), b = new Date(days[i] + "T00:00:00");
+      if (Math.round((a - b) / 864e5) === 1) n++; else break;
+    }
+    return n;
+  }
+
+  // Mirrors the skill's own selection rule: a never-covered category jumps the
+  // queue (so a newly added one does not wait out a full cycle), otherwise take
+  // the category after the most recent session's.
+  function nextCategory() {
+    if (!ROTATION.length) return "";
+    var covered = {};
+    labSessions().forEach(function (s) { covered[s.category] = true; });
+    for (var k = 0; k < ROTATION.length; k++) {
+      if (!covered[ROTATION[k]]) return ROTATION[k];
+    }
+    var latest = labSessions().slice().sort(function (a, b) { return (b.date || "").localeCompare(a.date || ""); })[0];
+    var i = latest ? ROTATION.indexOf(latest.category) : -1;
+    return i === -1 ? ROTATION[0] : ROTATION[(i + 1) % ROTATION.length];
+  }
+
+  function renderStats() {
+    var lab = labSessions();
+    var covered = new Set(lab.map(function (s) { return s.category; }).filter(Boolean));
+    var read = readSet();
+    var readCount = lab.filter(function (s) { return read.has(s.id); }).length;
+    var cards = [
+      { n: lab.length, l: "Sessions" },
+      { n: readCount + "/" + lab.length, l: "Read", a: true },
+      { n: covered.size + "/" + ROTATION.length, l: "Categories", sub: "next: " + esc(nextCategory()) },
+      { n: streak(), l: "Day streak" }
+    ];
+    $("stats").innerHTML = cards.map(function (c) {
+      return '<div class="stat' + (c.a ? " accent" : "") + '"><div class="n">' + c.n + "</div>" +
+             '<div class="l">' + c.l + "</div>" + (c.sub ? '<div class="sub">' + c.sub + "</div>" : "") + "</div>";
+    }).join("");
+  }
+
+  /* ---- grid ------------------------------------------------------------ */
+  var categories = Array.from(new Set(labSessions().map(function (s) { return s.category; }).filter(Boolean)))
+    .sort(function (a, b) {
+      var ia = ROTATION.indexOf(a), ib = ROTATION.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+
+  // The h1 for a filtered view in the JS-rendered path. Cleared on the plain
+  // grid, where the homepage's own tagline h1 is already the page heading.
+  var BLURBS = window.CATEGORY_BLURBS || {};
+  // On the homepage document build.js promotes the tagline to the page's h1,
+  // so a topic filter applied *there* is a section within the site and takes an
+  // h2. On a generated /topics/<slug>/ page the tagline stays a <p>, so the
+  // topic name is that page's h1. Either way the document ends up with exactly
+  // one h1 — checked at boot rather than guessed per render.
+  var HEADER_HAS_H1 = !!document.querySelector("header.top h1");
+  function renderTopicHead(cat, tag, level, learn, frontier) {
+    var el = $("topicHead");
+    if (!el) return;
+    if (!cat && !tag && !level && !learn && !frontier) { el.innerHTML = ""; return; }
+    var name, blurb;
+    if (frontier) {
+      name = (window.FRONTIER && window.FRONTIER.title) || "Frontier";
+      blurb = (window.FRONTIER && window.FRONTIER.blurb) || "";
+    } else if (learn) {
+      name = LEARN.title || "AI basics";
+      blurb = LEARN.blurb || "Eleven short lessons, then six mechanism primers. Start here if you are new. This is not the daily lab.";
+    } else if (level) {
+      name = level;
+      blurb = level === "Start here"
+        ? "Assumes you already ship with Cursor or Claude — not that you have trained a model."
+        : level === "Building"
+          ? "You've written a skill, a tool, or a small agent. These add the next mechanism."
+          : "Papers and serving details. Still opens with an analogy, then the numbers.";
+    } else {
+      name = cat || "#" + tag;
+      blurb = cat ? (BLURBS[cat] || "") : "Every session tagged " + name + ".";
+    }
+    var h = HEADER_HAS_H1 ? "h2" : "h1";
+    el.innerHTML =
+      '<div class="topic-head">' +
+        '<a class="back" href="' + SITE_ROOT + '/">' + (learn || frontier ? "← Daily lab" : "← All sessions") + "</a>" +
+        "<" + h + ">" + esc(name) + "</" + h + ">" +
+        (blurb ? '<p class="subtitle">' + esc(blurb) + "</p>" : "") +
+      "</div>";
+  }
+
+  function slugifyLevel(s) {
+    return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+
+  function levelFromSlug(slug) {
+    for (var i = 0; i < LEVELS.length; i++) {
+      if (slugifyLevel(LEVELS[i]) === slug) return LEVELS[i];
+    }
+    return null;
+  }
+
+  function learnIndex(id) {
+    var i = (LEARN.ids || []).indexOf(id);
+    if (i !== -1) return { i: i, ids: LEARN.ids, sessions: LEARN.sessions || [], label: "Lesson" };
+    i = (INTERMEDIATE.ids || []).indexOf(id);
+    if (i !== -1) return { i: i, ids: INTERMEDIATE.ids, sessions: INTERMEDIATE.sessions || [], label: "Primer" };
+    return null;
+  }
+
+  function learnHref(id, pane) {
+    return "#learn/" + id + (pane && pane !== "overview" ? "/" + pane : "");
+  }
+
+  function sessionHash(id, pane) {
+    var s = byId(id);
+    if (s && s.kind === "learn") return learnHref(id, pane).slice(1);
+    return id + (pane && pane !== "overview" ? "/" + pane : "");
+  }
+
+  // The real, crawlable path for a routed view, if build.js generated one —
+  // /<slug>/, /topics/<slug>/, /frontier/. Everything else (tag, level, the
+  // learn index, an unknown id) has no static file behind it, so it falls
+  // back to "/": there is nothing truer to show in the address bar for those,
+  // and the hash — untouched by this — still carries the real state.
+  function canonicalPathFor(target) {
+    if (target) {
+      if (target.frontierIndex) return "/frontier/";
+      if (target.topic) {
+        var cat = categoryFromSlug(target.topic);
+        if (cat) return "/topics/" + slugifyCat(cat) + "/";
+      } else if (target.id) {
+        var s = byId(target.id);
+        if (s && s.slug) return "/" + s.slug + "/";
+      }
+    }
+    return "/";
+  }
+
+  // Every location.hash = ... write below still drives all routing state, as
+  // it always has — shared #2026-08-25 / #learn/... links keep working
+  // unchanged, and so does reloading or copying the URL while on a non-
+  // overview tab (the hash still carries the pane; only the pathname is
+  // rewritten). This only layers a cosmetic replaceState on top so the
+  // address bar (and therefore copy-paste, share, and analytics) shows the
+  // real path the card's own <a href> already points at, instead of a bare
+  // "/#<hash>" that only existed because a click intercepted that href. No
+  // new history entries: back/forward still traverse exactly the entries
+  // hash routing already created, each just relabelled with its real path.
+  function syncPath(target) {
+    var want = SITE_ROOT + canonicalPathFor(target) + location.hash;
+    if (location.pathname + location.hash !== want) history.replaceState(null, "", want);
+  }
+
+  function levelClass(level) {
+    if (level === "Start here") return "level-start";
+    if (level === "Building") return "level-building";
+    if (level === "Deeper") return "level-deeper";
+    return "";
+  }
+
+  function cardBlurb(s) {
+    return s.hook || s.insight || "Open to read the write-up.";
+  }
+
+  function renderLevels() {
+    var el = $("levels");
+    if (!el) return;
+    var rows = pool();
+    var items = [{ v: "", l: "All levels", c: rows.length }].concat(LEVELS.map(function (lv) {
+      return { v: lv, l: lv, c: rows.filter(function (s) { return s.level === lv; }).length };
+    }));
+    el.innerHTML = items.map(function (it) {
+      return '<button class="pill-btn' + (state.level === it.v ? " active" : "") + '" data-level="' + esc(it.v) + '">' +
+             esc(it.l) + '<span class="c">' + it.c + "</span></button>";
+    }).join("");
+  }
+
+  function renderPills() {
+    var rows = pool();
+    var items = [{ v: "", l: "All topics", c: rows.length }].concat(categories.map(function (c) {
+      return { v: c, l: c, c: rows.filter(function (s) { return s.category === c; }).length };
+    }));
+    $("pills").innerHTML = items.map(function (it) {
+      return '<button class="pill-btn' + (state.cat === it.v ? " active" : "") + '" data-cat="' + esc(it.v) + '">' +
+             esc(it.l) + '<span class="c">' + it.c + "</span></button>";
+    }).join("");
+  }
+
+  function filtered() {
+    var q = state.q.toLowerCase();
+    var read = readSet();
+    var rows = pool().filter(function (s) {
+      if (state.level && s.level !== state.level) return false;
+      if (state.cat && s.category !== state.cat) return false;
+      if (state.tag && (s.tags || []).indexOf(state.tag) === -1) return false;
+      if (state.read === "read" && !read.has(s.id)) return false;
+      if (state.read === "unread" && read.has(s.id)) return false;
+      if (!q) return true;
+      return (s.title + " " + cardBlurb(s) + " " + (s.insight || "") + " " + s.category + " " +
+              (s.level || "") + " " + (s.job || "") + " " +
+              (s.tags || []).join(" ") + " " + s.date).toLowerCase().indexOf(q) > -1;
+    });
+    if (state.learn) {
+      var order = (LEARN.ids || []).concat(INTERMEDIATE.ids || []);
+      return rows.sort(function (a, b) { return order.indexOf(a.id) - order.indexOf(b.id); });
+    }
+    var sorters = {
+      "date-desc": function (a, b) { return (b.date || "").localeCompare(a.date || ""); },
+      "date-asc": function (a, b) { return (a.date || "").localeCompare(b.date || ""); },
+      "title-asc": function (a, b) { return a.title.localeCompare(b.title); }
+    };
+    return rows.sort(sorters[state.sort]);
+  }
+
+  function chip(on, label) { return '<span class="chip' + (on ? "" : " off") + '">' + label + "</span>"; }
+
+  function renderGrid() {
+    var grid = $("grid");
+    // Here rather than in syncChrome: the search box and the filter selects call
+    // renderGrid() directly without routing, and the hero must disappear the
+    // moment the reader starts looking for something specific.
+    renderHero();
+    // The Frontier index is a dated list, not cards — it reuses the grid slot so
+    // routing, scroll and the shell stay identical.
+    if (state.frontier) { grid.className = "frontier-wrap"; grid.innerHTML = renderFrontierIndex(); return; }
+    grid.className = "grid";
+
+    var rows = filtered();
+    var read = readSet();
+
+    var total = pool().length;
+    $("count").innerHTML = rows.length + " of " + total + " session" + (total === 1 ? "" : "s") +
+      (state.q || state.cat || state.tag || state.read || state.level
+        ? ' <button class="reset" id="reset">clear filters</button>' : "");
+
+    if (!rows.length) {
+      grid.className = "grid";
+      grid.innerHTML = '<div class="empty">Nothing matches. Try a different search.</div>';
+      return;
+    }
+
+    // A real <a href> to the canonical URL, not a div with a click handler:
+    // crawlers can follow it, and middle-click / open-in-new-tab work like any
+    // other link. The click handler below still takes over for same-tab clicks,
+    // so in-app navigation stays instant and hash-based exactly as before.
+    function cardHtml(s, i) {
+      return '<a class="card" href="' + SITE_ROOT + "/" + esc(s.slug) + '/" data-id="' + esc(s.id) + '" data-kind="' + esc(s.kind || "daily") + '" data-i="' + i + '">' +
+        '<div class="card-top">' +
+          '<h3 class="card-title">' + esc(plain(s.title)) + "</h3>" +
+          (read.has(s.id) ? '<span class="done" title="Read">✓</span>' : "") +
+        "</div>" +
+        '<div class="tags">' +
+          (s.level ? '<span class="tag level ' + levelClass(s.level) + '">' + esc(s.level) + "</span>" : "") +
+          (s.job ? '<span class="tag job">' + esc(s.job) + "</span>" : "") +
+          (s.category ? '<span class="tag cat ' + famClass(s.category) + '">' + esc(s.category) + "</span>" : "") +
+          '<span class="tag day">' + esc(s.date) + "</span>" +
+        "</div>" +
+        '<p class="desc">' + esc(plain(cardBlurb(s))) + "</p>" +
+        ((s.tags && s.tags.length)
+          ? '<div class="tags facets">' + s.tags.map(function (t) {
+              return '<button class="tag facet" data-tag="' + esc(t) + '">' + esc(t) + "</button>";
+            }).join("") + "</div>"
+          : "") +
+        '<div class="card-foot">' +
+          '<div class="chips">' +
+            chip(s.visualize, "visualize") +
+            chip(s.diagram, "diagram") +
+            chip(s.code, s.codeLines ? s.codeLines + " lines" : "code") +
+            chip(s.articles > 0, s.articles ? s.articles + " links" : "links") +
+          "</div>" +
+          '<span class="mins">~' + s.minutes + " min</span>" +
+        "</div>" +
+      "</a>";
+    }
+
+    function lessonHtml(s, i) {
+      return '<a class="lesson" href="' + SITE_ROOT + "/" + esc(s.slug) + '/" data-id="' + esc(s.id) + '" data-kind="learn" data-i="' + i + '">' +
+        '<span class="n">' + (i + 1) + "</span>" +
+        "<div>" +
+          "<h3>" + esc(plain(s.title)) + "</h3>" +
+          '<p class="desc">' + esc(plain(cardBlurb(s))) + "</p>" +
+        "</div>" +
+        (read.has(s.id) ? '<span class="done" title="Read">✓</span>' : "") +
+        '<span class="mins">~' + s.minutes + " min</span>" +
+      "</a>";
+    }
+
+    if (state.learn) {
+      var byLearnId = {};
+      rows.forEach(function (s) { byLearnId[s.id] = s; });
+      function pick(ids) { return ids.map(function (id) { return byLearnId[id]; }).filter(Boolean); }
+      var day1Ids = (LEARN.ids || []).slice(0, 6);
+      var day2Ids = (LEARN.ids || []).slice(6);
+      var midIds = INTERMEDIATE.ids || [];
+      var day1 = pick(day1Ids);
+      var day2 = pick(day2Ids);
+      var mid = pick(midIds);
+      grid.className = "grid-stack";
+      grid.innerHTML =
+        '<section class="band"><p class="band-k">Day 1 — foundations</p><ol class="lessons">' +
+          day1.map(function (s, i) { return lessonHtml(s, i); }).join("") +
+        "</ol></section>" +
+        (day2.length
+          ? '<section class="band"><p class="band-k">Day 2 — agents and the machine</p><ol class="lessons">' +
+              day2.map(function (s, i) { return lessonHtml(s, day1Ids.length + i); }).join("") +
+            "</ol></section>"
+          : "") +
+        (mid.length
+          ? '<section class="band" id="intermediate"><p class="band-k">Intermediate — poke at the mechanism</p><ol class="lessons">' +
+              mid.map(function (s, i) { return lessonHtml(s, i); }).join("") +
+            "</ol></section>"
+          : "");
+    } else {
+      grid.className = "grid";
+      grid.innerHTML = rows.map(cardHtml).join("");
+    }
+
+    Array.prototype.forEach.call(grid.querySelectorAll(".card, .lesson"), function (el) {
+      el.addEventListener("click", function (ev) {
+        // Let the browser handle new-tab/new-window intents natively.
+        if (ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
+        var facet = ev.target.closest ? ev.target.closest(".facet") : null;
+        if (facet) {   // a tag chip inside the card filters instead of opening it
+          ev.preventDefault();
+          location.hash = "tag/" + facet.getAttribute("data-tag");
+          return;
+        }
+        ev.preventDefault();
+        var openId = el.getAttribute("data-id");
+        location.hash = (el.getAttribute("data-kind") === "learn" ? "learn/" : "") + openId;
+      });
+      el.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          location.hash = (el.getAttribute("data-kind") === "learn" ? "learn/" : "") + el.getAttribute("data-id");
+        }
+      });
+    });
+    kbdIndex = -1;
+  }
+
+  /* ---- reader ---------------------------------------------------------- */
+  // CACHE holds resolved payloads; INFLIGHT holds the promise while the fetch is
+  // still open. Both are needed: on a real per-session page, route() runs twice
+  // in quick succession at boot — once from the path->hash bootstrap's
+  // hashchange, once from ghHandleOAuthReturn().then(route). Caching only the
+  // *result* meant the second call started a duplicate fetch of the same ~54KB
+  // payload before the first had landed.
+  var INFLIGHT = {};
+  function load(id) {
+    if (CACHE[id]) return Promise.resolve(CACHE[id]);
+    if (INFLIGHT[id]) return INFLIGHT[id];
+    INFLIGHT[id] = fetch(SITE_ROOT + "/data/" + encodeURIComponent(id) + ".json")
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (p) { CACHE[id] = p; delete INFLIGHT[id]; return p; })
+      .catch(function (e) { delete INFLIGHT[id]; throw e; });   // let a retry work
+    return INFLIGHT[id];
+  }
+
+  function availablePanes(p) {
+    return PANES.filter(function (name) {
+      if (name === "visualize") return !!p.visualize;
+      if (name === "diagram") return !!p.diagram;
+      if (name === "code") return !!p.code;
+      if (name === "articles") return !!(p.articles && p.articles.length);
+      return true;
+    });
+  }
+
+  // Inline Simple Icons paths keep the brand marks sharp and avoid six extra
+  // image requests on every session page.
+  var SHARE_ICONS = {
+    x: "M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z",
+    reddit: "M12 0C5.373 0 0 5.373 0 12c0 3.314 1.343 6.314 3.515 8.485l-2.286 2.286C.775 23.225 1.097 24 1.738 24H12c6.627 0 12-5.373 12-12S18.627 0 12 0Zm4.388 3.199c1.104 0 1.999.895 1.999 1.999 0 1.105-.895 2-1.999 2-.946 0-1.739-.657-1.947-1.539v.002c-1.147.162-2.032 1.15-2.032 2.341v.007c1.776.067 3.4.567 4.686 1.363.473-.363 1.064-.58 1.707-.58 1.547 0 2.802 1.254 2.802 2.802 0 1.117-.655 2.081-1.601 2.531-.088 3.256-3.637 5.876-7.997 5.876-4.361 0-7.905-2.617-7.998-5.87-.954-.447-1.614-1.415-1.614-2.538 0-1.548 1.255-2.802 2.803-2.802.645 0 1.239.218 1.712.585 1.275-.79 2.881-1.291 4.64-1.365v-.01c0-1.663 1.263-3.034 2.88-3.207.188-.911.993-1.595 1.959-1.595Zm-8.085 8.376c-.784 0-1.459.78-1.506 1.797-.047 1.016.64 1.429 1.426 1.429.786 0 1.371-.369 1.418-1.385.047-1.017-.553-1.841-1.338-1.841Zm7.406 0c-.786 0-1.385.824-1.338 1.841.047 1.017.634 1.385 1.418 1.385.785 0 1.473-.413 1.426-1.429-.046-1.017-.721-1.797-1.506-1.797Zm-3.703 4.013c-.974 0-1.907.048-2.77.135-.147.015-.241.168-.183.305.483 1.154 1.622 1.964 2.953 1.964 1.33 0 2.47-.81 2.953-1.964.057-.137-.037-.29-.184-.305-.863-.087-1.795-.135-2.769-.135Z",
+    linkedin: "M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z",
+    whatsapp: "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z",
+    slack: "M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z",
+    discord: "M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"
+  };
+
+  function shareIcon(name) {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + SHARE_ICONS[name] + '"/></svg>';
+  }
+
+  function renderReader(p, pane) {
+    var panes = availablePanes(p);
+    if (panes.indexOf(pane) === -1) pane = panes[0];
+
+    var order = DATA.map(function (s) { return s.id; }).sort().reverse();
+    var idx = order.indexOf(p.id);
+    var prev = idx < order.length - 1 ? order[idx + 1] : null;   // older
+    var next = idx > 0 ? order[idx - 1] : null;                  // newer
+    var read = isRead(p.id);
+    var label = { overview: "Overview", visualize: "Visualize", diagram: "Diagram", code: "Code", articles: "Articles" };
+
+    var head =
+      '<div class="rbar"><div class="rbar-top">' +
+        '<a class="rbrand" id="rbrandHome" href="' + SITE_ROOT + '/" aria-label="The AI Commit — home">' +
+          '<img src="' + SITE_ROOT + '/favicon.svg" width="26" height="26" alt="" /></a>' +
+        '<button class="back" id="back">' + (p.kind === "learn" ? "← AI basics" : p.kind === "frontier" ? "← Frontier" : "← All sessions") + "</button>" +
+        "<h1>" + esc(plain(p.title)) + "</h1>" +
+        '<div class="nav">' +
+          '<button id="goPrev" title="Older session ([)" aria-label="Older session"' + (prev ? "" : " disabled") + ">←</button>" +
+          '<button id="goNext" title="Newer session (])" aria-label="Newer session"' + (next ? "" : " disabled") + ">→</button>" +
+        "</div>" +
+        '<button class="readbtn' + (read ? " on" : "") + '" id="markRead">' +
+          (read ? "✓ Read" : "Mark as read") + "</button>" +
+      "</div>" +
+      '<div class="tabs">' + panes.map(function (name) {
+        var n = name === "articles" ? p.articles.reduce(function (a, g) { return a + g.items.length; }, 0)
+              : name === "code" ? p.code.lines : 0;
+        return '<button class="tab' + (name === pane ? " active" : "") + '" data-pane="' + name + '">' +
+               label[name] + (n ? '<span class="n">' + n + "</span>" : "") +
+               (name === "code" ? '<svg class="tab-gh" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>' : "") +
+               "</button>";
+      }).join("") + "</div></div>";
+
+    var shareUrl = location.origin + location.pathname + "#" + sessionHash(p.id);
+    var shareTitle = plain(p.title) + " — The AI Commit";
+    var share =
+      '<div class="share">' +
+        '<span class="k">Share</span>' +
+        '<a href="https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareTitle) + '&url=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener" aria-label="Share on X">' + shareIcon("x") + "X</a>" +
+        '<a href="https://www.reddit.com/submit?url=' + encodeURIComponent(shareUrl) + '&title=' + encodeURIComponent(shareTitle) + '" target="_blank" rel="noopener" aria-label="Share on Reddit">' + shareIcon("reddit") + "Reddit</a>" +
+        '<a href="https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener" aria-label="Share on LinkedIn">' + shareIcon("linkedin") + "LinkedIn</a>" +
+        '<a href="https://wa.me/?text=' + encodeURIComponent(shareTitle + " " + shareUrl) + '" target="_blank" rel="noopener" aria-label="Share on WhatsApp">' + shareIcon("whatsapp") + "WhatsApp</a>" +
+        '<button type="button" data-share-app="slack" aria-label="Copy link and open Slack">' + shareIcon("slack") + "Slack</button>" +
+        '<button type="button" data-share-app="discord" aria-label="Copy link and open Discord">' + shareIcon("discord") + "Discord</button>" +
+      "</div>";
+
+    var rmeta =
+      '<div class="rmeta">' +
+        (p.category ? '<span><span class="k">Category</span><span class="catdot ' + famClass(p.category) + '"></span>' + esc(p.category) + "</span>" : "") +
+        (p.level ? '<span><span class="k">Level</span>' + esc(p.level) + "</span>" : "") +
+        (p.job ? '<span><span class="k">For</span>' + esc(p.job) + "</span>" : "") +
+        '<span><span class="k">Date</span>' + esc(p.date) + "</span>" +
+        (p.meta["Time to read"] ? '<span><span class="k">Read</span>' + esc(p.meta["Time to read"]) + "</span>" : "") +
+        (p.source && p.source.url
+          ? '<span><span class="k">Source</span><a href="' + esc(p.source.url) + '" target="_blank" rel="noopener">' + esc(p.source.label) + "</a></span>"
+          : "") +
+      "</div>";
+
+    // Overview gets one subtle cue: category. It fits between the title and
+    // Key insight, is not a full metadata row, and helps the reader orient
+    // themselves. The dot comes from .catdot, which already exists for the full
+    // rmeta row on the doing tabs. Computed before `meta` below, which reads it —
+    // `var` hoisting had this declared after its use, so `meta` picked up the
+    // hoisted `undefined` and rendered the literal text "undefined" on every
+    // Overview tab until this was reordered.
+    var categoryDot = pane === "overview" && p.category
+      ? '<div style="margin: 2px 0 6px; font-size: 12px;"><span class="catdot ' + famClass(p.category) + '" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle;"></span><span style="color: var(--dim); text-transform: uppercase; font-size: 9px; letter-spacing: .05em;">' + esc(p.category) + "</span></div>"
+      : "";
+
+    // Overview is for READING, so nothing but the thesis stands between the title
+    // and the first sentence. The metadata row, the share strip, a Publish-to-GitHub
+    // promo and the newsletter form used to sit there — four blocks of chrome ahead
+    // of a single line of article, which is what the site is for.
+    //
+    // The row still renders on the doing tabs (Visualize/Diagram/Code/Articles),
+    // where there is no prose to interrupt and Level/Read is genuine orientation.
+    // Share and the signup move BELOW the article: a reader who wants either has,
+    // by definition, finished reading. The GitHub promo is gone outright — the Code
+    // tab is one click away and carries the same button in context.
+    var meta =
+      (pane === "overview" ? categoryDot : rmeta) +
+      (pane === "overview" ? topBoxes(p) : "");
+
+    // Rendered after the pane, not before it. The newsletter form is wired by a
+    // delegated submit listener on document, so it keeps working wherever it lands.
+    var articleEnd = pane === "overview"
+      ? '<div class="article-end">' + share + newsletterMarkup() + "</div>"
+      : "";
+
+    var li = learnIndex(p.id);
+    var trailBar = "";
+    if (li && pane === "overview") {
+      var nxt = li.sessions[li.i + 1];
+      trailBar =
+        '<div class="trail-next">' +
+          "<div><div class=\"k\">" + li.label + " " + (li.i + 1) + " of " + li.ids.length + "</div>" +
+          (nxt
+            ? "Next: " + esc(plain(nxt.hook || nxt.title))
+            : (li.label === "Primer"
+              ? "That's the last primer. Day 1 and Day 2 are the ordered basics above."
+              : "That's the last lesson. The primers below go one mechanism deeper.")) +
+          "</div>" +
+          (nxt ? '<a href="' + learnHref(nxt.id) + '">Open next →</a>' : '<a href="#learn">AI basics</a>') +
+        "</div>";
+    }
+
+    $("viewReader").innerHTML = head + meta + trailBar + '<div class="pane" id="pane"></div>' + articleEnd;
+    document.title = plain(p.title) + " — The AI Commit";
+    renderPane(p, pane);
+
+    wireHome("rbrandHome");
+    $("back").addEventListener("click", function () {
+      location.hash = p.kind === "learn" ? "learn" : p.kind === "frontier" ? "frontier" : "";
+    });
+    $("goPrev").addEventListener("click", function () { if (prev) location.hash = sessionHash(prev); });
+    $("goNext").addEventListener("click", function () { if (next) location.hash = sessionHash(next); });
+    $("markRead").addEventListener("click", function () {
+      var on = toggleRead(p.id);
+      this.classList.toggle("on", on);
+      this.textContent = on ? "✓ Read" : "Mark as read";
+      toast(on ? "Marked as read" : "Marked as unread");
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (t) {
+      t.addEventListener("click", function () {
+        location.hash = sessionHash(p.id, t.getAttribute("data-pane"));
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-share-app]"), function (b) {
+      b.addEventListener("click", function () {
+        var app = b.getAttribute("data-share-app");
+        var target = app === "slack" ? "https://app.slack.com/client" : "https://discord.com/channels/@me";
+        // Neither service offers a public prefilled-message web intent. Copy
+        // the complete share text, then open the app so paste is one step.
+        copyText(shareTitle + " " + shareUrl, function () {
+          toast("Copied — paste into " + (app === "slack" ? "Slack" : "Discord"));
+          window.open(target, "_blank", "noopener");
+        });
+      });
+    });
+  }
+
+  function renderPane(p, pane) {
+    var el = $("pane");
+    if (pane === "overview") {
+      var gloss = linkedGlossary(p);
+      var body = gloss ? stripGlossarySection(p.topic) : p.topic;
+      el.innerHTML = '<div class="prose">' + md(body) + "</div>" + glossaryHtml(gloss);
+      linkGlossary(el.querySelector(".prose"), gloss);
+      return;
+    }
+    if (pane === "visualize") { renderVisualize(el, p); return; }
+    if (pane === "diagram") { renderDiagram(el, p); return; }
+    // Opening the Code pane is the strongest signal someone may hit Run, so
+    // start the runtime download now, in the background. Nothing awaits this —
+    // the pane renders immediately with its build-time captured output either
+    // way, and runPython() awaits the same cached promise if Run comes first.
+    if (pane === "code") { ensurePyodide(); renderCode(el, p); return; }
+    renderArticles(el, p);
+  }
+
+  /* interactive artifact: isolated, lazy, and independently scrollable */
+  function visualizeShell(p) {
+    var src = SITE_ROOT + "/" + p.visualize.file;
+    return '<div class="visualize-shell">' +
+        '<iframe class="visualize-frame" id="visualizeFrame" title="Interactive visualization: ' +
+          esc(plain(p.title)) + '" loading="lazy" sandbox="allow-scripts" src="' + esc(src) + '"></iframe>' +
+      "</div>" +
+      '<p class="visualize-note">Runs locally in a restricted sandbox. No account, API key, or external requests.</p>';
+  }
+
+  function renderVisualize(el, p) { el.innerHTML = visualizeShell(p); }
+
+
+
+  /* diagram: build-time SVG in a pan/zoom viewport */
+  function renderDiagram(el, p) {
+    el.innerHTML =
+      '<div class="dgm-tools">' +
+        '<button class="mini" id="zIn">+ zoom</button>' +
+        '<button class="mini" id="zOut">− zoom</button>' +
+        '<button class="mini" id="zFit">fit</button>' +
+        '<a class="mini" href="' + esc(p.diagram.file) + '" download="' + esc(p.id) + '.excalidraw">download .excalidraw</a>' +
+      "</div>" +
+      '<div class="dgm-view" id="dgmView"><div class="dgm-canvas" id="dgmCanvas">' + p.diagram.svg + "</div></div>" +
+      '<p class="dgm-hint">Drag to pan, scroll to zoom. Download and drop the file into excalidraw.com to edit it.</p>';
+
+    var viewEl = $("dgmView"), canvas = $("dgmCanvas");
+    var z = { s: 1, x: 0, y: 0 };
+
+    function apply() { canvas.style.transform = "translate(" + z.x + "px," + z.y + "px) scale(" + z.s + ")"; }
+    function fit() {
+      var pad = 16;
+      z.s = Math.min((viewEl.clientWidth - pad * 2) / p.diagram.width, (viewEl.clientHeight - pad * 2) / p.diagram.height, 1);
+      z.x = (viewEl.clientWidth - p.diagram.width * z.s) / 2;
+      z.y = pad;
+      apply();
+    }
+    // Zoom about a point so the pixel under the cursor stays put.
+    function zoomAt(cx, cy, factor) {
+      var ns = Math.min(6, Math.max(0.1, z.s * factor));
+      z.x = cx - (cx - z.x) * (ns / z.s);
+      z.y = cy - (cy - z.y) * (ns / z.s);
+      z.s = ns;
+      apply();
+    }
+
+    fit();
+    $("zFit").addEventListener("click", fit);
+    $("zIn").addEventListener("click", function () { zoomAt(viewEl.clientWidth / 2, viewEl.clientHeight / 2, 1.25); });
+    $("zOut").addEventListener("click", function () { zoomAt(viewEl.clientWidth / 2, viewEl.clientHeight / 2, 0.8); });
+
+    viewEl.addEventListener("wheel", function (ev) {
+      ev.preventDefault();
+      var r = viewEl.getBoundingClientRect();
+      zoomAt(ev.clientX - r.left, ev.clientY - r.top, ev.deltaY < 0 ? 1.12 : 0.89);
+    }, { passive: false });
+
+    var drag = null;
+    viewEl.addEventListener("pointerdown", function (ev) {
+      drag = { x: ev.clientX - z.x, y: ev.clientY - z.y };
+      viewEl.setPointerCapture(ev.pointerId);
+      viewEl.classList.add("drag");
+    });
+    viewEl.addEventListener("pointermove", function (ev) {
+      if (!drag) return;
+      z.x = ev.clientX - drag.x; z.y = ev.clientY - drag.y; apply();
+    });
+    ["pointerup", "pointercancel"].forEach(function (t) {
+      viewEl.addEventListener(t, function () { drag = null; viewEl.classList.remove("drag"); });
+    });
+  }
+
+  /* code: source in an editable REPL, with captured output as fallback */
+  // A ~40-line Python tokenizer beats pulling in highlight.js (~120KB) for the
+  // one language this site ever shows. One pass, alternation ordered so the
+  // greedy multi-character forms (comments, triple-quoted strings) match before
+  // the shapes nested inside them can — a "#" inside a string must stay string.
+  var PY_KW = /^(False|None|True|and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield|match|case)$/;
+  var PY_BI = /^(abs|all|any|bin|bool|bytes|callable|chr|dict|dir|divmod|enumerate|eval|filter|float|format|frozenset|getattr|hasattr|hex|id|input|int|isinstance|issubclass|iter|len|list|map|max|min|next|object|oct|open|ord|pow|print|range|repr|reversed|round|set|setattr|slice|sorted|staticmethod|str|sum|super|tuple|type|vars|zip|self|cls|Exception|ValueError|TypeError|KeyError|IndexError|RuntimeError|__name__|__main__)$/;
+
+  function pyHighlight(src) {
+    // Trailing newline so a <pre> renders the final line's full height.
+    src = String(src) + "\n";
+    var re = /(#[^\n]*)|("""[\s\S]*?"""|'''[\s\S]*?''')|([rbfuRBFU]{0,2}"(?:\\[\s\S]|[^"\\\n])*"|[rbfuRBFU]{0,2}'(?:\\[\s\S]|[^'\\\n])*')|(\b\d[\d_]*\.?[\d_]*(?:[eE][+-]?\d+)?\b|\b0[xXbBoO][0-9a-fA-F_]+\b)|(@[A-Za-z_]\w*)|(\b[A-Za-z_]\w*\b)/g;
+    var out = "", last = 0, m;
+    while ((m = re.exec(src)) !== null) {
+      out += esc(src.slice(last, m.index));
+      var t = m[0];
+      if (m[1]) out += '<span class="t-com">' + esc(t) + "</span>";
+      else if (m[2] || m[3]) out += '<span class="t-str">' + esc(t) + "</span>";
+      else if (m[4]) out += '<span class="t-num">' + esc(t) + "</span>";
+      else if (m[5]) out += '<span class="t-dec">' + esc(t) + "</span>";
+      else if (PY_KW.test(t)) out += '<span class="t-kw">' + esc(t) + "</span>";
+      else if (PY_BI.test(t)) out += '<span class="t-bi">' + esc(t) + "</span>";
+      else if (src.charAt(m.index + t.length) === "(") out += '<span class="t-fn">' + esc(t) + "</span>";
+      else out += esc(t);
+      last = m.index + t.length;
+    }
+    return out + esc(src.slice(last));
+  }
+
+  function renderCode(el, p) {
+    var run = p.code.run || {};
+    var cmd = "python3 " + p.id + "/code_example.py";
+    var captured = "";
+
+    if (run.ok) {
+      captured = run.stdout || "(the script printed nothing)";
+    } else if (run.skipped) {
+      captured = "Output was not captured at build time (" + (run.reason || "skipped") + ").";
+    } else {
+      captured = (run.stdout ? run.stdout + "\n\n" : "") +
+        (run.stderr || run.note || "No output.") + "\n\n" +
+        "This example did not run cleanly at build time — try running it live above.";
+    }
+
+    var shots = (p.images || []).map(function (name) {
+      return '<img class="shot" src="' + SITE_ROOT + '/assets/' + esc(p.id) + "/" + esc(name) + '" alt="Figure produced by ' + esc(p.id) + '" loading="lazy" />';
+    }).join("");
+
+    var cachedCode = getCodeCache(p.id);
+    var sourceToShow = cachedCode || p.code.source;
+
+    // Wide captured output (ASCII tables, sparkline charts) is unreadable in a
+    // half column, so those sessions stack instead of sitting side by side —
+    // same rule the static-only view used to use.
+    var widest = 0;
+    captured.split("\n").forEach(function (l) { widest = Math.max(widest, l.length); });
+
+    el.innerHTML =
+      '<div class="code-cta">' +
+        '<div class="code-cta-copy">' +
+          "<strong>Run it. Tweak it. Keep it.</strong>" +
+          "<span>Runs in your browser — no API key, nothing to install. " +
+          "One click creates a public repo under your GitHub account (code + README with the output). We never see the files.</span>" +
+        "</div>" +
+        '<button class="btn-publish" id="publishGh" title="' +
+          (ghUser() ? "Publish as " + esc(ghUser().login) : "Sign in with GitHub, then publish") + '">' +
+          '<svg viewBox="0 0 16 16" width="17" height="17" fill="currentColor" aria-hidden="true">' +
+            '<path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>' +
+          "</svg>" +
+          "<span>Publish to GitHub</span>" +
+        "</button>" +
+      "</div>" +
+      '<div class="code-cols' + (widest > 84 ? " stacked" : "") + '">' +
+        '<div class="panel">' +
+          '<div class="panel-head">code_example.py<span class="spacer"></span>' +
+            '<button class="mini" id="copyCode">copy</button></div>' +
+          '<div class="code-editor">' +
+            '<div class="editor-controls">' +
+              '<button class="btn-repl" id="runCode">Run</button>' +
+              '<button class="btn-repl" id="resetCode">Reset</button>' +
+            '</div>' +
+            '<div class="editor-wrap">' +
+              '<pre class="editor-hl" id="codeHl" aria-hidden="true"></pre>' +
+              '<textarea class="editor-textarea" id="codeEditor" spellcheck="false">' + esc(sourceToShow) + '</textarea>' +
+            '</div>' +
+          '</div>' +
+        "</div>" +
+        '<div class="panel">' +
+          '<div class="panel-head">output<span class="spacer"></span>' +
+            '<span class="pyodide-note" id="pyodideNote">' + pyodideNoteText() + '</span></div>' +
+          '<div id="liveOutput" class="terminal-pane">' +
+            '<div class="terminal-output"><span class="terminal-out-run">(click Run to see output here)</span></div>' +
+          '</div>' +
+        "</div>" +
+      "</div>" +
+      "<details class=\"fallback\"><summary>Captured output from build time (fallback)</summary>" +
+        '<pre><span class="out-ok">' + esc(captured) + "</span></pre>" +
+      "</details>" + shots;
+
+    var editorEl = $("codeEditor");
+    var runBtn = $("runCode");
+    var resetBtn = $("resetCode");
+    var copyBtn = $("copyCode");
+    var liveOutputEl = $("liveOutput");
+
+    // Grows the textarea to fit its content (up to the CSS max-height, past
+    // which it scrolls as before) instead of a fixed height that forces
+    // scrolling while reading or typing. "auto" first so shrinking (e.g.
+    // after Reset onto a shorter file) is measured correctly too — scrollHeight
+    // only ever grows unless the height is reset first.
+    function autoGrow() {
+      editorEl.style.height = "auto";
+      editorEl.style.height = editorEl.scrollHeight + "px";
+    }
+
+    // Repaint the layer under the transparent textarea. Cheap enough to run on
+    // every keystroke at these file sizes; no debounce needed.
+    var hlEl = $("codeHl");
+    function paint() {
+      hlEl.innerHTML = pyHighlight(editorEl.value);
+    }
+
+    autoGrow();
+    paint();
+
+    runBtn.addEventListener("click", function () {
+      runBtn.classList.add("running");
+      var code = editorEl.value;
+      runPython(code, liveOutputEl, p.id).finally(function () {
+        runBtn.classList.remove("running");
+      });
+    });
+
+    resetBtn.addEventListener("click", function () {
+      editorEl.value = p.code.source;
+      clearCodeCache(p.id);
+      autoGrow();
+      paint();
+      liveOutputEl.querySelector(".terminal-output").innerHTML = '<span class="terminal-out-run">(output will appear here when you click Run)</span>';
+    });
+
+    copyBtn.addEventListener("click", function () {
+      var b = this;
+      copyText(editorEl.value, function () { b.classList.add("done"); b.textContent = "copied"; });
+    });
+
+    editorEl.addEventListener("input", function () {
+      setCodeCache(p.id, editorEl.value);
+      autoGrow();
+      paint();
+    });
+
+    var ghBtn = $("publishGh");
+
+    function doGhPublish() {
+      ghBtn.disabled = true;
+      // Write to the label span, never the button's textContent — the button
+      // now contains an inline <svg> GitHub mark, and setting textContent
+      // would silently delete it on the first click.
+      var ghLabel = ghBtn.querySelector("span");
+      var original = ghLabel.textContent;
+      ghLabel.textContent = "Publishing…";
+
+      var title = plain(p.title);
+      var codeFilename = "code_example.py";
+
+      var liveText = (liveOutputEl.querySelector(".terminal-output").textContent || "").trim();
+      var hasLiveRun = liveText && liveText.indexOf("(click Run") === -1 && liveText.indexOf("(output will appear") === -1
+        && liveText.indexOf("starting Python") === -1;
+      var outputText = hasLiveRun ? liveText : (captured || "(no output captured)");
+
+      // Repo holds the runnable script as its own file; README carries the
+      // insight, a link back to the session, and the run output so someone
+      // landing on the repo can see the result without cloning.
+      var readme = "# " + title + "\n\n"
+        + "**TL;DR:** " + (p.insight ? plain(p.insight) : "See `" + codeFilename + "`.") + "\n\n"
+        + "Published from [The AI Commit](https://theaicommit.com/#" + p.id + "/code) — "
+        + (p.category ? p.category + ", " : "") + p.date + ".\n\n"
+        + "## Run\n\n"
+        + "```bash\npython3 " + codeFilename + "\n```\n\n"
+        + "## Output\n\n"
+        + "```\n" + outputText.replace(/```/g, "\\`\\`\\`") + "\n```\n\n"
+        + "## Code\n\n"
+        + "See [`" + codeFilename + "`](" + codeFilename + ").\n";
+
+      var repoName = ghRepoName(p.id, title);
+      var description = "The AI Commit — " + title;
+
+      ghPublishRepo(repoName, description, {
+        "README.md": readme,
+        [codeFilename]: editorEl.value,
+      })
+        .then(function (repo) {
+          ghLabel.textContent = "Published ✓";
+          toast("Published — opening your new repo");
+          window.open(repo.html_url, "_blank", "noopener");
+          setTimeout(function () { ghLabel.textContent = original; ghBtn.disabled = false; }, 2500);
+        })
+        .catch(function (err) {
+          ghLabel.textContent = original;
+          ghBtn.disabled = false;
+          var msg = (err && err.message) || String(err);
+          if (msg.indexOf("NEED_REAUTH:") === 0) {
+            // Token is missing public_repo (e.g. signed in under the old gist
+            // scope) — drop it and restart OAuth so the next land publishes.
+            ghSignOut();
+            toast("GitHub needs repo permission — signing in again…");
+            ghSignIn();
+            return;
+          }
+          toast("Publish failed: " + msg);
+        });
+    }
+
+    ghBtn.addEventListener("click", function () {
+      if (!ghToken()) { ghSignIn(); return; }
+      doGhPublish();
+    });
+
+    // Landed back here right after signing in specifically to publish this
+    // session (see ghHandleOAuthReturn) — finish the job without making the
+    // user click twice for what felt like one action.
+    if (ghAutoPublishSession === p.id && ghToken()) {
+      ghAutoPublishSession = null;
+      doGhPublish();
+    }
+  }
+
+  /* articles: link cards, grouped by the headings the session used */
+  function renderArticles(el, p) {
+    el.innerHTML = p.articles.map(function (g) {
+      var items = g.items.map(function (a) {
+        var m = Object.keys(a.meta).map(function (k) { return esc(k) + ": " + esc(a.meta[k]); }).join("  ·  ");
+        var h = a.url ? host(a.url) : "";
+        return '<article class="acard">' +
+          "<h3>" + (a.url
+            ? '<a href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(a.title) + "</a>"
+            : esc(a.title)) + "</h3>" +
+          (m ? '<p class="am">' + m + "</p>" : "") +
+          (a.summary ? '<p class="as">' + inline(a.summary) + "</p>" : "") +
+          (h ? '<p class="am host">' + esc(h) + "</p>" : "") +
+        "</article>";
+      }).join("");
+      return '<section class="agroup">' +
+        (g.heading ? "<h2>" + esc(g.heading) + "</h2>" : "") +
+        (items ? '<div class="alist">' + items + "</div>" : "") +
+        (g.note.trim() ? '<div class="prose">' + md(g.note) + "</div>" : "") +
+      "</section>";
+    }).join("");
+  }
+
+  /* ---- routing --------------------------------------------------------- */
+  // Session ids always start with a date, so the "topic/" and "tag/" prefixes
+  // are unambiguous and are checked first. Both render the GRID (a filtered
+  // view), not the reader — which is why they return a different shape.
+  function parseHash() {
+    var raw = decodeURIComponent(location.hash.replace(/^#/, "")).trim();
+    if (!raw) return null;
+    var parts = raw.split("/");
+    if (parts[0] === "topic") return parts[1] ? { topic: parts[1] } : null;
+    if (parts[0] === "tag") return parts[1] ? { tag: parts[1] } : null;
+    if (parts[0] === "start") return { level: "start-here" };
+    if (parts[0] === "level") return parts[1] ? { level: parts[1] } : null;
+    if (parts[0] === "learn") {
+      if (!parts[1] || parts[1] === "intermediate") return { learnIndex: true, learnBand: parts[1] || "" };
+      return { id: parts[1], pane: parts[2] || "overview" };
+    }
+    // Bare #frontier is the track index. Session ids carry the date as part of
+    // the id (frontier-2026-08-25), so they fall through to the reader below.
+    if (parts[0] === "frontier") return { frontierIndex: true };
+    return { id: parts[0], pane: parts[1] || "overview" };
+  }
+
+  function slugifyCat(s) {
+    return String(s).toLowerCase().replace(/['’‘`]/g, "")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+
+  function categoryFromSlug(slug) {
+    for (var i = 0; i < categories.length; i++) {
+      if (slugifyCat(categories[i]) === slug) return categories[i];
+    }
+    return null;
+  }
+
+  /* The lead story: newest daily session, above the grid. Hidden as soon as any
+     filter or search is active — once the reader is looking for something
+     specific, "today's" is no longer the answer and repeating it as a card in
+     the results below would just be a duplicate. */
+  function renderHero() {
+    var el = $("heroCard");
+    if (!el) return;
+    var filtering = !!(state.q || state.cat || state.tag || state.read || state.level);
+    var lab = labSessions();
+    if (state.learn || state.frontier || filtering || !lab.length) { el.hidden = true; return; }
+    var s = lab.slice().sort(function (a, b) {
+      return String(b.date || "").localeCompare(String(a.date || ""));
+    })[0];
+    if (!s) { el.hidden = true; return; }
+    el.href = SITE_ROOT + "/" + s.slug + "/";
+    el.setAttribute("data-id", s.id);
+    el.setAttribute("data-kind", s.kind || "daily");
+    var read = readSet().has(s.id);
+    /* The grid attaches this per card inside renderGrid; the hero lives outside
+       the grid, so it wires its own. Without it the anchor still works — it is a
+       real href to a real page — it just costs a full page load instead of the
+       instant hash route every other card gets. */
+    if (!el.dataset.wired) {
+      el.dataset.wired = "1";
+      el.addEventListener("click", function (ev) {
+        if (ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
+        ev.preventDefault();
+        location.hash = el.getAttribute("data-id");
+      });
+    }
+    el.innerHTML =
+      '<p class="k">' + (read ? "Latest · read" : "Today's session") + "</p>" +
+      '<p class="t">' + esc(plain(s.title)) + "</p>" +
+      '<p class="d">' + esc(plain(cardBlurb(s))) + "</p>" +
+      '<div class="meta tags">' +
+        (s.level ? '<span class="tag level ' + levelClass(s.level) + '">' + esc(s.level) + "</span>" : "") +
+        (s.category ? '<span class="tag cat ' + famClass(s.category) + '">' + esc(s.category) + "</span>" : "") +
+        '<span class="tag day">' + esc(s.date) + "</span>" +
+        (s.code && s.codeLines ? '<span class="tag day">runnable in ' + s.codeLines + " lines</span>" : "") +
+      "</div>" +
+      '<span class="go">Read it → ~' + s.minutes + " min</span>";
+    el.hidden = false;
+  }
+
+  /* Both brand links point at the site root. On the SPA root that is a wasted
+     page load, so a plain left-click becomes a hash route instead; anywhere else
+     — a standalone session page reached from search, RSS or a shared link — the
+     path itself has to change, so the anchor is left alone. Modified clicks and
+     middle-clicks always fall through to the browser. */
+  function onRootPath() {
+    var p = location.pathname.replace(/\/+$/, "");
+    return p === SITE_ROOT.replace(/\/+$/, "");
+  }
+  function goHome(ev) {
+    if (ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
+    if (!onRootPath()) return;   // let the real navigation happen
+    ev.preventDefault();
+    location.hash = "";
+  }
+  function wireHome(id) {
+    var el = $(id);
+    if (el && !el.dataset.wired) { el.dataset.wired = "1"; el.addEventListener("click", goHome); }
+  }
+
+  function syncChrome() {
+    document.body.classList.toggle("on-learn", !!state.learn);
+    document.body.classList.toggle("on-frontier", !!state.frontier);
+    /* Anything read at all means the orientation copy has done its job. Wrapped
+       because readSet() touches localStorage, which throws in private mode. */
+    try {
+      document.body.classList.toggle("is-returning", readSet().size > 0);
+    } catch (e) { /* treat as a first visit */ }
+    var lab = $("navLab"), course = $("navCourse"), front = $("navFrontier");
+    if (lab) lab.classList.toggle("on", !state.learn && !state.frontier);
+    if (course) course.classList.toggle("on", !!state.learn);
+    if (front) front.classList.toggle("on", !!state.frontier);
+  }
+
+  // The nav pill and the homepage strip only appear once the track has something
+  // in it — an empty tab is worse than no tab.
+  function initFrontierChrome() {
+    var items = frontierSessions();
+    var nav = $("navFrontier");
+    if (nav && items.length) nav.hidden = false;
+    var strip = $("frontierStrip");
+    if (!strip || !items.length) return;
+    var newest = items[0];
+    var meta = [newest.date, newest.codeLines ? "runnable in " + newest.codeLines + " lines" : ""]
+      .filter(Boolean).join(" · ");
+    strip.innerHTML =
+      "<div><p class=\"k\">Frontier · latest</p>" +
+      '<p class="t">' + esc(plain(newest.title)) + "</p>" +
+      '<p class="m">' + esc(meta) + "</p></div>" +
+      '<span class="go">All Frontier →</span>';
+    strip.hidden = false;
+  }
+
+  function renderFrontierIndex() {
+    var items = frontierSessions();
+    if (!items.length) return '<p class="empty">Nothing here yet.</p>';
+    return '<ul class="frontier-list">' + items.map(function (s) {
+      var blurb = plain(s.hook || s.insight || "");
+      var chips = "";
+      if (s.code && s.codeLines) chips += '<span class="frontier-chip run">runs · ' + s.codeLines + " lines</span>";
+      (s.tags || []).slice(0, 2).forEach(function (t) {
+        chips += '<span class="frontier-chip">' + esc(t) + "</span>";
+      });
+      return "<li><a href=\"#" + esc(s.id) + "\">" +
+        '<span class="fd">' + esc(s.date || "") + "</span><div>" +
+        '<p class="ft">' + esc(plain(s.title)) + "</p>" +
+        (blurb ? '<p class="fs">' + esc(blurb) + "</p>" : "") +
+        (chips ? '<p class="fm">' + chips + "</p>" : "") +
+        "</div></a></li>";
+    }).join("") + "</ul>";
+  }
+
+  function route() {
+    var target = parseHash();
+    syncPath(target);
+    var idxEl = $("viewIndex"), rdEl = $("viewReader");
+
+    // #topic/<slug> and #tag/<slug> are filtered GRID views — they preset the
+    // same state the pills and chips already drive, so the filtering itself is
+    // untouched; all that is new is that it now has a shareable address.
+    if (target && (target.topic || target.tag || target.level || target.learnIndex || target.frontierIndex)) {
+      var cat = target.topic ? categoryFromSlug(target.topic) : null;
+      var level = target.level ? levelFromSlug(target.level) : null;
+      if (target.topic && !cat) {
+        location.hash = "";
+        toast("No topic " + target.topic);
+        return;
+      }
+      if (target.level && !level) {
+        location.hash = "";
+        toast("No level " + target.level);
+        return;
+      }
+      view = null;
+      state.cat = cat || "";
+      state.tag = target.tag || "";
+      state.level = level || "";
+      state.learn = !!target.learnIndex;
+      state.frontier = !!target.frontierIndex;
+      syncChrome();
+      rdEl.classList.add("hidden");
+      idxEl.classList.remove("hidden");
+      document.title = (target.frontierIndex ? ((window.FRONTIER && window.FRONTIER.title) || "Frontier")
+        : target.learnIndex ? (LEARN.title || "AI basics")
+        : (level || cat || ("#" + state.tag))) + " — The AI Commit";
+      renderTopicHead(cat, state.tag, level, target.learnIndex, target.frontierIndex);
+      renderStats();
+      renderLevels();
+      renderPills();
+      renderGrid();
+      if (target.learnBand === "intermediate") {
+        var band = $("intermediate");
+        if (band) band.scrollIntoView({ block: "start" });
+        else window.scrollTo(0, 0);
+      } else {
+        window.scrollTo(0, 0);
+      }
+      return;
+    }
+
+    if (!target || !byId(target.id)) {
+      view = null;
+      state.cat = "";
+      state.tag = "";
+      state.level = "";
+      state.learn = false;
+      state.frontier = false;
+      syncChrome();
+      rdEl.classList.add("hidden");
+      idxEl.classList.remove("hidden");
+      document.title = "The AI Commit — Daily AI Engineering Lab for Software Engineers";
+      renderTopicHead(null, "");
+      renderStats();
+      renderLevels();
+      renderPills();
+      renderGrid();
+      if (target) toast("No session " + target.id);
+      return;
+    }
+
+    view = target;
+    idxEl.classList.add("hidden");
+    rdEl.classList.remove("hidden");
+
+    // Cached sessions re-render instantly, so a tab switch is a full re-render
+    // rather than a patch — which keeps the header honest about which pane it
+    // is showing.
+    if (CACHE[target.id]) {
+      renderReader(CACHE[target.id], target.pane);
+      window.scrollTo(0, 0);
+      return;
+    }
+
+    rdEl.innerHTML = '<div class="empty">Loading ' + esc(target.id) + "…</div>";
+    load(target.id).then(function (p) {
+      if (!view || view.id !== p.id) return;   // navigated away while fetching
+      renderReader(p, target.pane);
+      window.scrollTo(0, 0);
+    }).catch(function (err) {
+      rdEl.innerHTML = '<div class="empty">Could not load <code>data/' + esc(target.id) + ".json</code> — " +
+        esc(err.message) + '.<br />If you opened this file directly, serve it instead: <code>make serve</code>.' +
+        '<br /><br /><button class="back" onclick="location.hash=\'\'">← All sessions</button></div>';
+    });
+  }
+
+  /* ---- events ---------------------------------------------------------- */
+  $("q").addEventListener("input", function () { state.q = this.value; renderGrid(); });
+  $("sort").addEventListener("change", function () { state.sort = this.value; renderGrid(); });
+  $("fRead").addEventListener("change", function () { state.read = this.value; renderGrid(); });
+  // Routed rather than applied directly, so a filtered view is shareable and
+  // matches the real /topics/<slug>/ page. route() sets state.cat and renders.
+  $("pills").addEventListener("click", function (ev) {
+    var b = ev.target.closest(".pill-btn");
+    if (!b) return;
+    var cat = b.getAttribute("data-cat");
+    location.hash = cat ? "topic/" + slugifyCat(cat) : "";
+    if (!location.hash) route();   // clearing to "" fires no hashchange from "#"
+  });
+  $("levels").addEventListener("click", function (ev) {
+    var b = ev.target.closest(".pill-btn");
+    if (!b) return;
+    var lv = b.getAttribute("data-level");
+    location.hash = lv ? "level/" + slugifyLevel(lv) : "";
+    if (!location.hash) route();
+  });
+  $("count").addEventListener("click", function (ev) {
+    if (ev.target.id !== "reset") return;
+    state.q = ""; state.read = "";
+    $("q").value = ""; $("fRead").value = "";
+    if (location.hash) { location.hash = ""; return; }
+    state.cat = ""; state.tag = ""; state.level = ""; state.learn = false;
+    renderLevels(); renderPills(); renderGrid();
+  });
+
+  document.addEventListener("keydown", function (ev) {
+    var typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+
+    if (view) {
+      if (typing) return;
+      if (ev.key === "Escape") { location.hash = ""; return; }
+      var p = CACHE[view.id];
+      if (!p) return;
+      var panes = availablePanes(p);
+      if (ev.key >= "1" && ev.key <= "5") {
+        var want = panes[Number(ev.key) - 1];
+        if (want) location.hash = sessionHash(view.id, want);
+        return;
+      }
+      if (ev.key === "[" || ev.key === "]") {
+        var order = DATA.map(function (s) { return s.id; }).sort().reverse();
+        var i = order.indexOf(view.id);
+        var to = ev.key === "[" ? order[i + 1] : order[i - 1];
+        if (to) location.hash = sessionHash(to);
+      }
+      return;
+    }
+
+    if (ev.key === "/" && !typing) { ev.preventDefault(); $("q").focus(); return; }
+    if (ev.key === "Escape" && typing) { document.activeElement.blur(); return; }
+    if (typing && ev.key !== "Enter") return;
+
+    var cards = Array.prototype.slice.call(document.querySelectorAll(".card, .lesson"));
+    if (!cards.length) return;
+    if (ev.key === "ArrowDown" || ev.key === "j") { ev.preventDefault(); kbdIndex = Math.min(cards.length - 1, kbdIndex + 1); }
+    else if (ev.key === "ArrowUp" || ev.key === "k") { ev.preventDefault(); kbdIndex = Math.max(0, kbdIndex - 1); }
+    else if (ev.key === "Enter" && kbdIndex > -1) {
+      location.hash = sessionHash(cards[kbdIndex].getAttribute("data-id"));
+      return;
+    }
+    else return;
+
+    cards.forEach(function (c, i) { c.classList.toggle("kbd", i === kbdIndex); });
+    cards[kbdIndex].scrollIntoView({ block: "nearest", behavior: "smooth" });
+  });
+
+  // Reveal the Frontier pill and the homepage strip only if the track has content.
+  /* The static href is "/" so a crawler sees a real root link; the mirror serves
+     from /aI_daily_run/, where that would leave the site entirely. */
+  (function () {
+    var b = $("brandHome");
+    if (b) b.setAttribute("href", SITE_ROOT + "/");
+    wireHome("brandHome");
+  })();
+
+  initFrontierChrome();
+
+  window.addEventListener("hashchange", route);
+
+  /* ---- theme toggle ------------------------------------------------------
+     No attribute = brand dark. First visit follows the OS (head script).
+     After a click we persist light/dark and stop following the OS. */
+  (function () {
+    var btn = $("themeToggle");
+    function storedTheme() {
+      try { return localStorage.getItem("theme"); } catch (e) { return null; }
+    }
+    function isLight() { return document.documentElement.getAttribute("data-theme") === "light"; }
+    function applyTheme(name) {
+      if (name === "light") document.documentElement.setAttribute("data-theme", "light");
+      else document.documentElement.removeAttribute("data-theme");
+    }
+    function sync() {
+      var light = isLight();
+      var label = light ? "Switch to dark theme" : "Switch to light theme";
+      btn.setAttribute("aria-label", label);
+      btn.setAttribute("title", label);
+      var mc = document.querySelector('meta[name="theme-color"]');
+      if (mc) mc.setAttribute("content", light ? "#faf9f6" : "#111217");
+    }
+    function followOs() {
+      if (storedTheme()) return;
+      var lightOs = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+      applyTheme(lightOs ? "light" : "dark");
+      sync();
+    }
+    btn.addEventListener("click", function () {
+      var next = isLight() ? "dark" : "light";
+      applyTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+      sync();
+    });
+    if (window.matchMedia) {
+      var mq = window.matchMedia("(prefers-color-scheme: light)");
+      if (mq.addEventListener) mq.addEventListener("change", followOs);
+      else if (mq.addListener) mq.addListener(followOs);
+    }
+    sync();
+  })();
+
+  /* ---- newsletter ------------------------------------------------------ */
+  function newsletterMarkup() {
+    return (
+      '<form class="nl nl-article" action="https://theaicommit.com/api/subscribe" method="post">' +
+        '<p class="k">Daily email</p>' +
+        '<p class="lede">One email when the next session ships — the title, the insight, a link.</p>' +
+        '<div class="nl-row">' +
+          '<label class="nl-hp" aria-hidden="true">Leave blank <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>' +
+          '<input type="email" name="email" required placeholder="you@email.com" autocomplete="email" />' +
+          '<button type="submit">Subscribe</button>' +
+        "</div>" +
+        '<p class="nl-status" hidden></p>' +
+      "</form>"
+    );
+  }
+  (function () {
+    var endpoint = (location.hostname === "theaicommit.com" || /\.pages\.dev$/.test(location.hostname))
+      ? "/api/subscribe"
+      : "https://theaicommit.com/api/subscribe";
+
+    document.addEventListener("submit", function (ev) {
+      var form = ev.target;
+      if (!form || !form.classList || !form.classList.contains("nl")) return;
+      ev.preventDefault();
+      var emailEl = form.querySelector('input[type=email]');
+      var btn = form.querySelector("button[type=submit]");
+      var status = form.querySelector(".nl-status");
+      var email = (emailEl && emailEl.value || "").trim();
+      var honey = (form.elements.website && form.elements.website.value) || "";
+      if (!email) return;
+      function show(kind, text) {
+        if (!status) return;
+        status.hidden = false;
+        status.className = "nl-status " + (kind || "");
+        status.textContent = text;
+      }
+      if (btn) btn.disabled = true;
+      show("", "Sending…");
+      fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email, website: honey }),
+      }).then(function (res) { return res.json().then(function (data) { return { res: res, data: data }; }); })
+        .then(function (out) {
+          if (out.res.ok && out.data && out.data.ok) {
+            show("ok", out.data.message || "You're on the list.");
+            form.reset();
+          } else if (out.data && out.data.error === "invalid_email") {
+            show("err", "That doesn't look like an email address.");
+          } else {
+            show("err", "Couldn't subscribe just now. Email theaicommit@gmail.com and we'll add you.");
+          }
+        })
+        .catch(function () {
+          show("err", "Couldn't reach the signup. Try again from theaicommit.com, or email theaicommit@gmail.com.");
+        })
+        .then(function () { if (btn) btn.disabled = false; });
+    });
+  })();
+
+  /* ---- boot ------------------------------------------------------------ */
+  if (!DATA.length) {
+    $("grid").innerHTML = '<div class="empty">No sessions found. Run <code>make build</code> first.</div>';
+  } else {
+    renderPills();
+  }
+
+  // A direct load of a real per-session URL (build.js generates site/<id>/
+  // index.html for exactly this — search engines and shared links land here,
+  // not on a hash) — everything downstream (route(), cards, tabs, the GitHub
+  // OAuth flow) only ever reads location.hash, so translate the real path
+  // into the hash it already expects, once, before anything else runs. A
+  // *hash* already present means real internal navigation, not a fresh
+  // load — never override it.
+  (function () {
+    if (location.hash) return;
+    var seg = location.pathname.replace(/\/+$/, "").split("/").pop();
+    if (!seg) return;
+
+    function go(hash) {
+      history.replaceState(null, "", location.pathname);
+      location.hash = hash;
+    }
+
+    var t = location.pathname.match(/\/topics\/([a-z0-9-]+)\/?$/);
+    if (t) return go("#topic/" + t[1]);
+    if (seg === "frontier") return go("#frontier");
+
+    /* Match against the slug build.js actually generated, on every track. This
+       used to be a regex over the date, which silently matched nothing for any
+       URL not shaped like a daily session: a Frontier slug is
+       /frontier-<date>-<words>/ (the date follows a hyphen, not a slash) and a
+       learn slug carries no date at all. No match meant no hash, so the router
+       fell through to the homepage and the canonical-path sync then rewrote the
+       URL to "/" — the article was reachable only through in-app navigation,
+       never from the sitemap, the feed, or a shared link. sessionHash() knows
+       each track's hash form, so this stays correct as tracks are added. */
+    for (var i = 0; i < DATA.length; i++) {
+      if (DATA[i].slug === seg || DATA[i].id === seg) return go("#" + sessionHash(DATA[i].id));
+    }
+  })();
+
+  // On a plain load this resolves immediately (no ?code= present). Returning
+  // from GitHub's authorize page, it must finish BEFORE route() — it restores
+  // the original hash (GitHub's redirect strips it) that route() reads.
+  ghHandleOAuthReturn().then(route);
+})();
+</script>
+</body>
+</html>

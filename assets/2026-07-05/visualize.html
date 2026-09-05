@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Tool Schema Compatibility Lab</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090d16;--panel:#111827;--line:#29364d;--text:#e8eef9;--muted:#91a0b8;--cyan:#67e8f9;--violet:#c4b5fd;--good:#6ee7b7;--bad:#fb7185;--warn:#fbbf24}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0,#14203b 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.5 ui-sans-serif,system-ui,-apple-system,sans-serif}
+    main{max-width:1120px;margin:auto;padding:clamp(18px,4vw,44px)}h1{font-size:clamp(26px,5vw,46px);line-height:1.05;margin:.15em 0}.eyebrow{color:var(--cyan);font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}.lede{color:var(--muted);max-width:760px;font-size:16px}
+    .lab{display:grid;grid-template-columns:minmax(260px,.8fr) minmax(0,1.5fr);gap:16px;margin-top:26px}.panel{background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 18px 50px #0004}
+    h2{font-size:15px;margin:0 0 14px}label{display:block;color:var(--muted);font-size:12px;font-weight:700;margin:14px 0 6px}select,input[type=text]{width:100%;border:1px solid #3b4b67;border-radius:10px;background:#0a1020;color:var(--text);padding:10px 12px;font:inherit}
+    .toggle{display:flex;align-items:center;gap:9px;margin-top:14px;color:var(--text);font-weight:600}.toggle input{accent-color:var(--cyan);width:18px;height:18px}.buttons{display:flex;gap:9px;margin-top:18px}button{border:1px solid #445471;background:#18243a;color:var(--text);border-radius:10px;padding:10px 14px;font-weight:750;cursor:pointer}button.primary{background:var(--cyan);border-color:var(--cyan);color:#07202a}button:hover{filter:brightness(1.12)}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #67e8f966;outline-offset:2px}
+    .schema-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.badge{font:700 11px/1 ui-monospace,monospace;padding:7px 9px;border:1px solid var(--line);border-radius:999px;color:var(--violet)}pre{margin:12px 0 0;background:#080d18;border:1px solid #243149;border-radius:12px;padding:14px;min-height:210px;overflow:auto;color:#bed1eb;font:12px/1.55 ui-monospace,SFMono-Regular,monospace;white-space:pre-wrap}
+    .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}.step{position:relative;border:1px solid var(--line);border-radius:12px;padding:12px;min-height:92px}.step b{display:block;font-size:12px;margin-bottom:6px}.step span{color:var(--muted);font-size:11px}.step.active{border-color:var(--cyan);background:#123044}.step.good{border-color:var(--good);background:#0d3029}.step.bad{border-color:var(--bad);background:#371522}
+    .result{display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:center;margin-top:12px;padding:14px;border-radius:12px;background:#0a1020;border:1px solid var(--line)}.result-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;font-size:20px;background:#172033}.result strong{display:block}.result small{color:var(--muted)}
+    .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}.fact{border-top:2px solid var(--violet);padding:12px 2px;color:var(--muted)}.fact b{display:block;color:var(--text);font-size:20px}.legend{margin-top:16px;color:var(--muted);font-size:12px}
+    @media(max-width:760px){.lab{grid-template-columns:1fr}.flow{grid-template-columns:1fr 1fr}.facts{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:no-preference){.step,.result{transition:background .2s,border-color .2s,transform .2s}.result.changed{animation:pop .28s ease}@keyframes pop{50%{transform:scale(1.015)}}}
+  </style>
+</head>
+<body>
+<main data-visualizer>
+  <div class="eyebrow">Interactive agent anatomy</div>
+  <h1>The loop is simple.<br>The schema is the trap.</h1>
+  <p class="lede">Change the provider’s learned edit primitive and your third-party tool shape. The edit intent stays identical; strict parsing decides whether the agent can act.</p>
+  <section class="lab">
+    <div class="panel">
+      <h2>Compatibility controls</h2>
+      <label for="provider">Model’s learned “muscle memory”</label>
+      <select id="provider">
+        <option value="claude">Claude-style exact replace</option>
+        <option value="codex">Codex-style apply patch</option>
+        <option value="neutral">Schema-faithful model</option>
+      </select>
+      <label for="shape">Tool exposed by your framework</label>
+      <select id="shape">
+        <option value="flat">edit_file(file_path, old_string, new_string)</option>
+        <option value="batch">apply_edits(file_path, edits[{old,new}])</option>
+        <option value="patch">apply_patch(patch)</option>
+      </select>
+      <label for="toolName">Public tool name</label>
+      <input id="toolName" type="text" value="edit_file" maxlength="28" aria-describedby="nameHint">
+      <div id="nameHint" class="legend">Names also cue behavior learned during tool-use RL.</div>
+      <label class="toggle"><input id="strict" type="checkbox" checked> Reject unknown fields</label>
+      <label class="toggle"><input id="adapter" type="checkbox"> Normalize through provider adapter</label>
+      <div class="buttons"><button class="primary" id="run">Run tool call</button><button id="reset">Reset</button></div>
+    </div>
+    <div>
+      <div class="panel">
+        <div class="schema-head"><h2>Generated arguments</h2><span class="badge" id="coupling">behavioral coupling</span></div>
+        <pre id="payload" aria-live="polite"></pre>
+        <div class="flow" aria-label="Agent loop">
+          <div class="step" id="s0"><b>1 · Prompt</b><span>Fix the off-by-one bug</span></div>
+          <div class="step" id="s1"><b>2 · Tool call</b><span>Model emits arguments</span></div>
+          <div class="step" id="s2"><b>3 · Validate</b><span>Schema accepts or rejects</span></div>
+          <div class="step" id="s3"><b>4 · Observe</b><span>Diff returns to model</span></div>
+        </div>
+        <div class="result" id="result" aria-live="polite"><div class="result-icon" id="resultIcon">→</div><div><strong id="resultTitle">Ready to dispatch</strong><small id="resultText">The chain limit is 10; this simulator runs one deterministic call.</small></div></div>
+      </div>
+      <div class="facts">
+        <div class="fact"><b>~500 lines</b>The minimal <code>llm-coding-agent</code> proves the core loop is commodity code.</div>
+        <div class="fact"><b>6 tools</b>Read, write, edit, search, list, and execute—with mutation approval gates.</div>
+        <div class="fact"><b>1 bad field</b>Correct edit content can still fail before dispatch under strict JSON Schema.</div>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const defaults = {provider:"claude",shape:"flat",name:"edit_file",strict:true,adapter:false};
+  const fields = {
+    flat:new Set(["file_path","old_string","new_string"]),
+    batch:new Set(["file_path","edits"]),
+    patch:new Set(["patch"])
+  };
+  function modelCall(provider, shape) {
+    const intent={file_path:"app.py",old_string:"range(len(items))",new_string:"range(len(items) - 1)"};
+    if(provider==="neutral"){
+      if(shape==="flat") return intent;
+      if(shape==="batch") return {file_path:intent.file_path,edits:[{old:intent.old_string,new:intent.new_string}]};
+      return {patch:"*** Update File: app.py\\n- range(len(items))\\n+ range(len(items) - 1)"};
+    }
+    if(provider==="claude"){
+      if(shape==="flat") return intent;
+      if(shape==="batch") return {file_path:intent.file_path,edits:[{old:intent.old_string,new:intent.new_string,old_string:intent.old_string,new_string:intent.new_string}]};
+      return {patch:"*** Update File: app.py\\n- range(len(items))\\n+ range(len(items) - 1)",file_path:intent.file_path,old_string:intent.old_string,new_string:intent.new_string};
+    }
+    if(shape==="patch") return {patch:"*** Update File: app.py\\n- range(len(items))\\n+ range(len(items) - 1)"};
+    if(shape==="flat") return {...intent,patch:"*** Update File: app.py\\n- range(len(items))\\n+ range(len(items) - 1)"};
+    return {file_path:intent.file_path,edits:[{old:intent.old_string,new:intent.new_string}],patch:"*** Update File: app.py\\n- range(len(items))\\n+ range(len(items) - 1)"};
+  }
+  function normalize(shape){
+    const i={file_path:"app.py",old_string:"range(len(items))",new_string:"range(len(items) - 1)"};
+    return shape==="flat"?i:shape==="batch"?{file_path:i.file_path,edits:[{old:i.old_string,new:i.new_string}]}:{patch:"*** Update File: app.py\\n- range(len(items))\\n+ range(len(items) - 1)"};
+  }
+  function extras(obj,shape){
+    const top=Object.keys(obj).filter(k=>!fields[shape].has(k));
+    if(shape==="batch"&&obj.edits) obj.edits.forEach((e,i)=>Object.keys(e).filter(k=>!["old","new"].includes(k)).forEach(k=>top.push(`edits[${i}].${k}`)));
+    return top;
+  }
+  function render(run=false){
+    const provider=$("provider").value,shape=$("shape").value, adapted=$("adapter").checked;
+    const raw=modelCall(provider,shape), call=adapted?normalize(shape):raw, extra=extras(call,shape);
+    $("payload").textContent=JSON.stringify({tool:$("toolName").value.trim()||"(unnamed)",arguments:call},null,2);
+    $("coupling").textContent=adapted?"canonical adapter":provider==="neutral"?"schema faithful":provider+" prior";
+    document.querySelectorAll(".step").forEach(x=>x.className="step");
+    if(!run) return;
+    $("s0").classList.add("active"); $("s1").classList.add("active");
+    const ok=!$("strict").checked||extra.length===0;
+    $("s2").classList.add(ok?"good":"bad"); $("s3").classList.add(ok?"good":"bad");
+    $("result").classList.remove("changed"); void $("result").offsetWidth; $("result").classList.add("changed");
+    $("resultIcon").textContent=ok?"✓":"×";
+    $("resultIcon").style.color=ok?"var(--good)":"var(--bad)";
+    $("resultTitle").textContent=ok?"Tool call accepted · edit executed":"Tool call rejected before dispatch";
+    $("resultText").textContent=ok?"Exact-match replacement returns a diff observation; the agent loop can continue.":`Unexpected field${extra.length>1?"s":""}: ${extra.join(", ")}. Intent was correct, shape was not.`;
+  }
+  ["provider","shape","toolName","strict","adapter"].forEach(id=>$(id).addEventListener(id==="toolName"?"input":"change",()=>render(false)));
+  $("run").addEventListener("click",()=>render(true));
+  $("reset").addEventListener("click",()=>{ $("provider").value=defaults.provider;$("shape").value=defaults.shape;$("toolName").value=defaults.name;$("strict").checked=defaults.strict;$("adapter").checked=defaults.adapter;render(false);$("resultIcon").textContent="→";$("resultTitle").textContent="Ready to dispatch";$("resultText").textContent="The chain limit is 10; this simulator runs one deterministic call.";document.querySelectorAll(".step").forEach(x=>x.className="step");});
+  render(false);
+  const postHeight=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(postHeight).observe(document.documentElement); postHeight();
+})();
+</script>
+</body>
+</html>
