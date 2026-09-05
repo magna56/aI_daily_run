@@ -186,11 +186,11 @@
 - **Code**: `2026-09-04/code_example.py` — holds one agent fixed and swaps only how many past observations survive to the next step, on a combination-lock task that carries state. Reproduces both published effects: 97.3 points of spread across reasoning-effort settings on the bounded harness against 0.0 on the unbounded one, and an effort knob that runs backwards (low scores 2.7% where off scores 100%) on the bounded harness only. Raise the note budget and the two converge.
 - **Articles**: 5 sources (the benchmark maintainer's own analysis as primary, its verified results page, the open-source repo where both harnesses are implemented, the verified-testing policy, and Simon Willison's practitioner read on the rest of the release)
 
-## 2026-09-05 — How an MCP Tool Puts a Clickable App Inside the Chat
+## 2026-09-05 — How an MCP Tool Sends Back an Image, a File, or Audio
 - **Category**: Building Agents & MCP
-- **Key insight**: A tool has always answered with text, and the model read it. Now it can answer with a small web page that appears in the chat, and the person can click it directly. That page calls your server on its own, so the model is no longer the only thing reaching your tools.
-- **Code**: `2026-09-05/code_example.py` — implements the host-to-app bridge from scratch: JSON-RPC messages over an in-memory channel standing in for postMessage, a host that brokers every call, and a page that calls back. Prints the wire trace, then shows the same six calls under two guards. Four of the six come from the page rather than the model, and a handler that treats the host's one approval as blanket permission lets 3 unauthorized calls through where a handler that checks each call lets 0.
-- **Articles**: 4 sources (the MCP Apps specification as primary, the build guide with the exact field and method names, the eighteen example servers as the hands-on read, and the extensions page for capability negotiation and the text-fallback rule)
+- **Key insight**: A tool answer does not have to be one block of text. It can carry a picture for the person and a sentence of fact for the model, each labeled with who it is for. Most servers only ever use the text block, so people end up reading descriptions of charts instead of seeing them.
+- **Code**: `2026-09-05/code_example.py` — builds typed content blocks with audience annotations and routes them the way a client should, defaulting a missing audience to both readers rather than one. Shows the same tool call answered two ways: a path in a text block leaves the model unable to name the peak region, while an image for the user plus a fact for the model serves both. Then prices the picture: a 180kB chart embedded costs 61,440 context tokens on the turn and 552,960 once eight more turns re-send it, against 63 for a link.
+- **Articles**: 4 sources (the tool-result section of the specification as primary, the resources page where audience and priority are actually defined, the Apps extension as the contrast, and the example servers for the delivery shape)
 
 ## 2026-09-06 — The Two Things Missing From Most Coding Agent Requests
 - **Category**: Coding Agents & Productivity

@@ -10,3 +10,9 @@
 # 2026-09-06 because a Tier A topic does not belong in Frontier. See
 # .claude/skills/ai-daily-learn-feedback/feedback-log.md for that day's note.
 /frontier-2026-09-05-the-two-things-missing-from-most-coding-agent-requests/* /2026-09-06-the-two-things-missing-from-most-coding-agent-requests/ 301
+
+# 2026-09-05: the session was replaced. The original covered the MCP Apps
+# extension and opened on a premise that was simply wrong -- core MCP has
+# carried image, audio and resource content all along -- so it was rewritten
+# around the core protocol instead. Same date, same slot, new slug.
+/2026-09-05-how-an-mcp-tool-puts-a-clickable-app-inside-the-chat/* /2026-09-05-how-an-mcp-tool-sends-back-an-image-a-file-or-audio/ 301

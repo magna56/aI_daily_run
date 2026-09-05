@@ -1,145 +1,142 @@
-"""Two callers, one tool: the MCP Apps bridge, implemented from scratch.
+"""Typed tool results: one call, two readers, and what inlining costs.
 
-A tool used to have exactly one caller, the model. When a tool renders a page in
-the conversation, that page can call the tool too -- so a handler that decided
-what to allow by reasoning about the model's intent is now reasoning about the
-wrong thing.
+Builds MCP tool results the way the core spec allows -- typed content blocks with
+audience annotations -- and routes them the way a client should. No network, no
+SDK, no extension: every shape here is core protocol.
 
-This models the whole path in the standard library: JSON-RPC messages over an
-in-memory channel standing in for postMessage, a host that brokers every call,
-and an app that calls back. Nothing here needs a browser or a network.
+Three things it shows:
+  * a result that answers with a file path leaves the model nothing to reason
+    about and the user nothing to look at
+  * a typed result carries the picture for the person and the fact for the model,
+    and each side gets only its own copy
+  * inlining is not a one-off charge -- an embedded blob is re-sent on every turn
+    for the rest of the session
 
 Run: python3 code_example.py
 
-Set GUARD = "trust_the_host" to ship the common bug and watch an unauthorized
-call succeed because the host already approved a different one.
+Raise ARTIFACT_KB past INLINE_LIMIT_KB and watch deliver() switch to a link.
 """
 
-import json
+import base64
 
 # --- knobs: edit these ---------------------------------------------------
-GUARD = "check_in_handler"     # or "trust_the_host" -- the bug
-SHOW_WIRE = True               # print the JSON-RPC messages as they pass
-
-# Who may see what. The model never sees this table; the server owns it.
-GRANTS = {"alice": {"NA", "EU"}, "bob": {"NA"}}
-SALES = {"NA": 412_000, "EU": 288_000, "APAC": 96_000}
-
-RESOURCE_URI = "ui://pick-region/mcp-app.html"
+ARTIFACT_KB = 180          # the chart you just rendered
+INLINE_LIMIT_KB = 256      # inline below this, link above it
+TURNS_AFTER = 8            # how many more turns the session runs
+BASE64_OVERHEAD = 4 / 3    # base64 costs about a third extra
+BYTES_PER_TOKEN = 4        # rough, and only used to price context
 
 
-class Server:
-    """The MCP server. One tool, declared with a UI, and its own authorization."""
-
-    def __init__(self, guard):
-        self.guard = guard
-        self.calls = []
-
-    def describe_tool(self):
-        # The UI lives in _meta, never in the result -- that is the whole
-        # compatibility story. A host that ignores _meta sees an ordinary tool.
-        return {"name": "pick-region",
-                "description": "Regional sales. Lets the user drill in.",
-                "_meta": {"ui": {"resourceUri": RESOURCE_URI,
-                                 "csp": {"connect-src": []}}}}
-
-    def call_tool(self, name, arguments, ctx):
-        """ctx carries who is asking and how. Both are needed to decide."""
-        self.calls.append((ctx["caller"], arguments.get("region")))
-        region = arguments.get("region", "NA")
-
-        if self.guard == "check_in_handler":
-            # Authorize the request, not the route it arrived on.
-            if region not in GRANTS.get(ctx["user"], set()):
-                return {"content": [{"type": "text",
-                                     "text": "not permitted for this user"}],
-                        "isError": True}
-        # else: trust_the_host -- the bug. The host approved *a* call, so this
-        # handler assumes every later call is equally fine.
-
-        return {"content": [{"type": "text",
-                             "text": "%s sales: $%s" % (region, f"{SALES[region]:,}")}]}
+def text_block(text, audience=("assistant",), priority=0.6):
+    return {"type": "text", "text": text,
+            "annotations": {"audience": list(audience), "priority": priority}}
 
 
-class Host:
-    """Brokers everything. Renders the page, pushes results, forwards calls."""
-
-    def __init__(self, server, user, supports_ui=True):
-        self.server, self.user, self.supports_ui = server, user, supports_ui
-        self.approved = False
-
-    def wire(self, direction, message):
-        if SHOW_WIRE:
-            print("    %-14s %s" % (direction, json.dumps(message)[:96]))
-
-    def model_calls(self, arguments):
-        """Path one: the model decided, and the user approved this call."""
-        self.approved = True
-        self.wire("model -> host", {"method": "tools/call",
-                                    "params": {"name": "pick-region",
-                                               "arguments": arguments}})
-        result = self.server.call_tool("pick-region", arguments,
-                                       {"user": self.user, "caller": "model"})
-        if self.supports_ui:
-            self.wire("host -> app", {"method": "ui/initialize",
-                                      "params": {"resourceUri": RESOURCE_URI}})
-            self.wire("host -> app", {"method": "ui/toolresult",
-                                      "params": {"result": result}})
-        return result
-
-    def app_calls(self, arguments):
-        """Path two: a button. No model turn happened at all."""
-        if not self.supports_ui:
-            raise RuntimeError("this host cannot render an app")
-        self.wire("app -> host", {"method": "tools/call",
-                                  "params": {"name": "pick-region",
-                                             "arguments": arguments}})
-        return self.server.call_tool("pick-region", arguments,
-                                     {"user": self.user, "caller": "app"})
+def image_block(png, mime="image/png", audience=("user",), priority=0.9):
+    return {"type": "image", "data": base64.b64encode(png).decode(), "mimeType": mime,
+            "annotations": {"audience": list(audience), "priority": priority}}
 
 
-def text_of(result):
-    return result["content"][0]["text"]
+def deliver(name, payload, mime, limit_kb=INLINE_LIMIT_KB):
+    """Inline what is small, link what is not. The whole size policy, one place.
+
+    An embedded blob lands in the conversation and is re-sent on every later
+    turn; a link is a URI the client fetches only if it needs to.
+    """
+    if len(payload) <= limit_kb * 1024:
+        return {"type": "resource",
+                "resource": {"uri": "file:///tmp/" + name, "mimeType": mime,
+                             "blob": base64.b64encode(payload).decode()}}
+    return {"type": "resource_link", "uri": "file:///tmp/" + name,
+            "name": name, "mimeType": mime}
 
 
-def scenario(label, user, supports_ui, clicks):
-    print("\n%s (user=%s, ui=%s)" % (label, user, supports_ui))
-    server = Server(GUARD)
-    host = Host(server, user, supports_ui)
-    first = host.model_calls({"region": "NA"})
-    print("    model result  %s" % text_of(first))
-    leaked = 0
-    for region in clicks:
-        if not supports_ui:
-            print("    (no app, so no second caller exists)")
-            break
-        result = host.app_calls({"region": region})
-        ok = not result.get("isError")
-        print("    click %-5s   %s" % (region, text_of(result)))
-        if ok and region not in GRANTS.get(user, set()):
-            leaked += 1
-    return leaked, server.calls
+def route(content):
+    """The client side. A missing audience means BOTH, never one or the other.
+
+    Defaulting to "user" silently hides results from the model, which looks like
+    the model being stupid rather than like a bug in your client.
+    """
+    to_screen, to_model = [], []
+    for block in content:
+        who = (block.get("annotations") or {}).get("audience") or ["user", "assistant"]
+        if "user" in who:
+            to_screen.append(block)
+        if "assistant" in who:
+            to_model.append(block)
+    return to_screen, to_model
+
+
+def context_tokens(blocks):
+    """What the model's context pays for these blocks, this turn."""
+    total = 0
+    for b in blocks:
+        if b["type"] == "text":
+            total += len(b["text"])
+        elif b["type"] in ("image", "audio"):
+            total += len(b["data"])
+        elif b["type"] == "resource":
+            r = b["resource"]
+            total += len(r.get("blob") or r.get("text") or "")
+        elif b["type"] == "resource_link":
+            total += len(b["uri"]) + len(b.get("name", ""))
+    return round(total / BYTES_PER_TOKEN)
+
+
+def describe(blocks):
+    out = []
+    for b in blocks:
+        if b["type"] == "text":
+            out.append("text(%d chars)" % len(b["text"]))
+        elif b["type"] == "image":
+            out.append("image(%s, %dkB)" % (b["mimeType"], len(b["data"]) // 1024))
+        elif b["type"] == "resource":
+            out.append("resource(inline %dkB)" % (len(b["resource"]["blob"]) // 1024))
+        elif b["type"] == "resource_link":
+            out.append("resource_link(%s)" % b["name"])
+    return ", ".join(out) or "nothing"
+
+
+def can_answer(to_model, question_needs):
+    """Could the model answer from what it was actually given?"""
+    return any(b["type"] == "text" and question_needs in b["text"] for b in to_model)
 
 
 def main():
-    print("MCP Apps: one tool, two callers.  GUARD = %s\n" % GUARD)
-    print("  The model calls the tool once. Then the rendered page calls it")
-    print("  directly, with regions the user never asked for.")
+    png = b"\x89PNG" + b"\x00" * (ARTIFACT_KB * 1024 - 4)
 
-    leaked_a, calls_a = scenario("Alice, allowed NA and EU", "alice", True, ["EU", "APAC"])
-    leaked_b, calls_b = scenario("Bob, allowed NA only", "bob", True, ["EU", "APAC"])
-    scenario("A host with no app support", "bob", False, ["EU"])
+    # 1. What most tools return today.
+    naive = {"content": [{"type": "text", "text": "Chart saved to /tmp/plot.png"}]}
+    # 2. What the protocol has always allowed.
+    typed = {"content": [
+        image_block(png),
+        text_block("Revenue by region. Peak: EU at $288k across 5 regions."),
+    ]}
 
-    total = len(calls_a) + len(calls_b)
-    by_app = sum(1 for c, _ in calls_a + calls_b if c == "app")
-    print("\n  %d calls reached the tool, %d of them from the page, not the model."
-          % (total, by_app))
-    print("  unauthorized calls that succeeded: %d" % (leaked_a + leaked_b))
-    if leaked_a + leaked_b:
-        print("  The host approved one call and the handler trusted the rest.")
-    else:
-        print("  The handler checked each call on its own merits, so the route")
-        print("  it arrived on stopped mattering.")
+    print("Two results for the same tool call\n")
+    for label, result in (("answers with a path", naive), ("typed blocks", typed)):
+        screen, model = route(result["content"])
+        print("  %-20s" % label)
+        print("     user sees      %s" % describe(screen))
+        print("     model receives %s" % describe(model))
+        print("     model can name the peak region: %s\n"
+              % ("yes" if can_answer(model, "EU") else "no"))
+
+    # 3. Inlining is charged again on every later turn.
+    print("What the picture costs the conversation (%dkB artifact)\n" % ARTIFACT_KB)
+    inline = deliver("plot.png", png, "image/png", limit_kb=10_000)   # force inline
+    linked = deliver("plot.png", png, "image/png", limit_kb=1)        # force link
+    print("  %-16s %10s %14s %16s" % ("delivery", "this turn", "after %d turns" % TURNS_AFTER, "what arrives"))
+    for label, block in (("embedded", inline), ("resource_link", linked)):
+        first = context_tokens([block])
+        print("  %-16s %9s %13s   %s"
+              % (label, "{:,}".format(first), "{:,}".format(first * (TURNS_AFTER + 1)),
+                 describe([block])))
+
+    chosen = deliver("plot.png", png, "image/png")
+    print("\n  at INLINE_LIMIT_KB=%d, deliver() chose: %s" % (INLINE_LIMIT_KB, describe([chosen])))
+    print("\n  Base64 adds about a third before any of this, and an embedded blob")
+    print("  is re-sent with the whole transcript on every turn that follows it.")
 
 
 if __name__ == "__main__":
