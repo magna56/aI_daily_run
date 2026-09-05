@@ -1260,3 +1260,44 @@ reached it for free — the real gap was that nothing *gated* the live push.
   were removed by hand from both 2026-09-02 articles because they read badly in context. Removing
   one is a fine editorial call; it is not a rule, and it should not be reinstated as one without
   fresh evidence.
+
+## 2026-09-05 — a title word that already means something else in code
+
+**The note.** A proposed title, `How an MCP Tool Returns an Interface Instead of Text`, came back
+with the single word "confusing". The rewrite he approved was
+`How an MCP Tool Puts a Clickable App Inside the Chat`, and he then asked for the rule to be
+written into the skill rather than applied once.
+
+**The diagnosis.** The rejected title was not vague, which is why the existing placeholder-word
+rule did not catch it. It was precise about the wrong thing. **Interface** means a type or an API
+contract to a software engineer, so the title read as a change to a return type, when the article
+is about a chart appearing inside the conversation that the user can click. Every word was
+concrete; one of them was concrete about the wrong domain.
+
+**What changed.**
+- `ai-daily-learn/SKILL.md` — a fourth bullet in the placeholder-word list under the title rules,
+  naming the failure and listing the words that carry a competing technical meaning (*interface,
+  resource, handler, context, adapter, client, runtime, provider*), with the worked before/after
+  pair and the five-second check: could an engineer read this word as a type, a field, or a
+  protocol? It also records that the rule now says to state **where the thing appears**, because
+  "Inside the Chat" is what turned the approved title from a claim into a picture.
+- `ai-daily-learn-pick/SKILL.md` — the compressed title rule in the agreement checklist now points
+  at that check. This is the skill that puts candidate titles in front of him, so it is where the
+  rule has to fire; the fuller version stays in one place rather than being duplicated.
+
+**Deliberately not automated.** There is no `build.js --check` warning for this and there should
+not be. Any word list broad enough to catch *interface* also fires on legitimate uses — an article
+genuinely about API contracts should say interface — and a lint that cries wolf gets switched off.
+That reasoning is already the stated basis for keeping identical-in-both-spellings words out of the
+British-spelling list. This one stays a judgement call with a worked example attached.
+
+**Pattern worth naming, because it has now happened twice.** This is the same shape as the
+2026-09-04 note on `Why GPT-6 Astra Scores 63% and 99% on One Benchmark`, where "scores 63% and 99%"
+read as though one run produced both numbers. Both arrived as a one-word complaint that did not
+name the offending phrase, and both were fixed by replacing an ambiguous construction with the
+literal situation. When a title is called confusing, hunt for the word or phrase with a second
+reading before reaching for brevity or punch — shortening an ambiguous title keeps the ambiguity.
+
+**Not changed, on purpose.** The Cursor twin at `.cursor/skills/ai-daily-learn/SKILL.md` is a
+54-line pointer that reads the Claude spec, so it carries no title rules to drift. Checked rather
+than assumed.

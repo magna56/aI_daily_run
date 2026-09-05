@@ -142,7 +142,11 @@ The choice covers the article's content too. Before anything is written, settle 
 and read back:
 
 - **Title** — one clause, one subject; explanatory, and readable by an engineer who has only used
-  Cursor.
+  Cursor. Before you put one in front of him, run the overloaded-word check from
+  `ai-daily-learn/SKILL.md`: a word that already means something else in a codebase (*interface*,
+  *resource*, *handler*, *context*, *client*) will be read in its code sense first, and comes back
+  as the one-word verdict "confusing" without naming the word. Name the physical thing the reader
+  would point at, and say where it appears.
 - **The angle** — which of the possible articles this is, and which reader it is aimed at.
 - **What `## Implementing It` shows** — the roles covered and the code for each. This is the
   longest section and the reason the reader stays; agreeing it here is worth more than agreeing

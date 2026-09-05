@@ -570,6 +570,20 @@ what makes it land:
   → `How to Turn AI Code Review Comments Into a CI Gate` reads better for one reason: "a CI Gate"
   replaced "Something," and a CI gate is the literal thing `Implementing It` teaches the reader
   to build.
+- **A word that already means something else in a codebase.** Added 2026-09-05, and it is the
+  subtlest of these, because the title is not vague at all — it is precise about the wrong thing.
+  *"Interface"* reads to an engineer as a type or an API contract, not a screen. *"Resource,"
+  "handler," "context," "adapter," "client," "runtime"* and *"provider"* all carry a second meaning
+  the reader reaches for first, and they reach for it before they reach for yours. When a plain
+  physical noun exists, use that instead, and say **where the thing appears** so the reader can
+  picture it rather than decode it.
+  - ✗ `How an MCP Tool Returns an Interface Instead of Text` — reads as a change to a return type.
+    Nothing in it tells you that a chart shows up inside the conversation and you can click it.
+    → ✓ `How an MCP Tool Puts a Clickable App Inside the Chat`
+  The check takes five seconds and is worth running on every title: **could an engineer think this
+  word means a type, a field, or a protocol?** If yes, name the thing they would point at on the
+  screen. The owner's one-word verdict on the rejected version was "confusing", which is what this
+  failure always sounds like — not "wrong", and never accompanied by which word did it.
 - Weak or passive verbs: *"becomes," "involves," "relates to," "is about"* — find the verb an
   engineer would actually use in a standup. "Turn X into Y" beats "X becomes Y" because turning
   something into something is an action the reader pictures doing, and becoming is a thing that
