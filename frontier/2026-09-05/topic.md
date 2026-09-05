@@ -40,9 +40,9 @@ So when the same underlying bugs and the same fixes are rewritten the way people
 resolution rates fall by 6.4 points on average, and one model climbs from fourth place to second.
 Part of the leaderboard order was an artifact of how the prompts were typed.
 
-**The fix costs you one line: say what you want to be true when it is done, and say why you want
-it.** Those two are worth almost all of the gap, and the details you were trained to include turn
-out not to be.
+**The two things are the desired behavior and the motivation.** Say what should be true once the
+task is done, and say why you want it. That is one extra line each, they are worth almost all of the
+gap, and the details you were trained to include instead turn out not to be.
 
 ## The Fix: Say What You Want to Be True, and Why
 
@@ -52,16 +52,16 @@ writing.
 
 ### What did they actually vary?
 
-Two axes, kept separate on purpose. The **information** in the request was split into named parts:
-for a bug, the problem statement, the desired behavior, reproduction steps, environment details and
-anything extra; for a feature, the problem statement, the motivation and anything extra.
+Two axes, kept apart on purpose. The **information** was split into named parts: for a bug, the
+problem statement, the desired behavior, reproduction steps and environment details; for a feature,
+the problem statement and the motivation.
 
 The **style** was varied along four dimensions: formality, imperative against declarative, confident
 against hedged, and first person against not.
 
 ### Which parts were worth anything?
 
-The result is lopsided:
+The result is lopsided, and the two fields the title promised are the top two rows:
 
 | What you remove | What it costs |
 | --- | --- |

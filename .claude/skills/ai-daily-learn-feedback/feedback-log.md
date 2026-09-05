@@ -1301,3 +1301,41 @@ reading before reaching for brevity or punch — shortening an ambiguous title k
 **Not changed, on purpose.** The Cursor twin at `.cursor/skills/ai-daily-learn/SKILL.md` is a
 54-line pointer that reads the Claude spec, so it carries no title rules to drift. Checked rather
 than assumed.
+
+## 2026-09-05 — a weak Frontier pick, and a title whose promise was never paid
+
+**The note.** Two criticisms of the published `frontier/2026-09-05` session: it "felt weak for
+frontier category", and it "say[s] 2 things but never explicitly states them."
+
+**Both were right, and the second was checkable in seconds.** The word "two" appeared eight times in
+the article and never as a named pair. The nearest the body came was "say what you want to be true
+when it is done, and say why you want it" — a prose restatement that avoids *desired behavior* and
+*motivation*, the exact terms used by the payoff table, the glossary and `Implementing It`. The only
+place the pair was named together was a caption most of the way down the page.
+
+**The Frontier miss had a mechanical tell nobody looked at.** The session was filed under **Coding
+Agents & Productivity** — a **Tier A** category, the ship-it-this-week tier. Frontier exists so
+frontier-lab research stops competing for the daily slot, so a piece whose honest category is Tier A
+is in the wrong track by definition. The selection failure underneath: the shortlist came from a
+papers feed and was then ranked by usefulness to the reader, which is the right ranking for the
+daily lab and the wrong one here, because it promotes the *least* frontier-like paper on the list.
+Frontier is a sourcing lane, not a difficulty setting.
+
+**What changed.**
+- `ai-daily-learn/selection.md` — a new "The Tier A tell" section before "Where a Frontier session
+  goes", stating the rule, naming the ranking failure, and pointing at the cadence rule that makes
+  skipping cheap.
+- `ai-daily-learn/SKILL.md` — a new rule above the title guidance: a title promising a count pays it
+  in the body's own vocabulary, near the top, and scattering the items does not count.
+- `frontier/2026-09-05/topic.md` — fixed in place. `The Problem` now states "**The two things are the
+  desired behavior and the motivation**" where the fix is first named, and the payoff table is
+  introduced as "the two fields the title promised are the top two rows".
+
+**Deliberately not automated.** Neither rule is a `--check` warning. A linter cannot know which two
+things a title means, and a Tier-A-category check would have to fire on every Frontier session to be
+safe, which makes it noise rather than signal. Both stay judgement calls with worked examples.
+
+**Left open for the owner.** The article stays on the Frontier track for now. Moving it would break
+a published URL that is already in the sitemap and the feed, and the 2026-09-05 daily slot is taken,
+so there is nowhere to move it to without a redirect. Whether to pull it from the track is his call,
+not a thing to decide silently.

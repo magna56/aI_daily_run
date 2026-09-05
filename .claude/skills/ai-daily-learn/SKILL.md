@@ -550,6 +550,16 @@ patterns that produce padding, and each one is a cut, not a rewrite:
   first, how many stars the repo has.
 - Any sentence you could delete without changing what the reader does. Delete it.
 
+**A title that promises a count must pay it explicitly.** Added 2026-09-05: a session titled
+*"The Two Things Missing From Most Coding Agent Requests"* used the word "two" eight times and never
+once named the pair. The closest the body came was a prose restatement that avoided the two terms
+the table, the glossary and `Implementing It` all used. A title makes a contract, and the body pays
+it **in the body's own vocabulary, near the top** — normally in the sentence in `The Problem` that
+states the fix, and always before the mechanism section starts explaining the items one at a time.
+Scattering them across a table, a heading and a code caption does not count; the reader who came for
+the promise should not have to assemble it. Watch for this whenever the title is agreed before the
+article is drafted, which is exactly when it happens.
+
 **The title says what the reader will understand.** This is the whole article for everyone who
 only sees a link — on the card grid, in Slack, on Hacker News. Write it for a curious software
 engineer scrolling past, including someone who has only used Cursor and has never read a paper.

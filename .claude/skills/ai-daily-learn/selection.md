@@ -262,6 +262,27 @@ you write for this track; refuse it every time. An article that assumes fluency 
 readers who already have it — the smallest audience and the one that needs this site least. Depth
 is earned in the back half of a piece, never bought by cutting the front.
 
+### The Tier A tell — check this before you write
+
+**If the candidate's honest category is Tier A, it is not a Frontier piece.** Added 2026-09-05,
+after a Frontier session built on a university benchmark paper was filed under **Coding Agents &
+Productivity** and the owner reported it as "weak for frontier category". The category was the
+evidence, sitting in the file the whole time: Tier A is the *ship it this week* tier, the reader
+changes how they work tomorrow. Frontier exists so frontier-lab research stops competing for the
+daily slot, so a piece whose natural home is Tier A is by definition in the wrong track. Hold it
+for a daily slot instead.
+
+The selection failure underneath is worth naming, because it feels like good judgement while you
+are doing it: you arrive at a shortlist through a papers feed, then rank the candidates by how
+useful each is to the reader. That ranking is right for the daily lab and **wrong here**, because
+it systematically promotes the least frontier-like paper on the list. **Frontier is a sourcing
+lane, not a difficulty setting.** The question is whether the work is frontier-lab research, not
+whether it arrived as a paper — an arXiv link is not a qualification.
+
+The cadence rule makes the right answer cheap: Frontier skips a thin day, and a run that publishes
+nothing is a successful run. There is never a reason to promote a daily-lab topic into this slot
+to avoid an empty one.
+
 ### Where a Frontier session goes
 
 `frontier/YYYY-MM-DD/` — same five files. Not `YYYY-MM-DD/`, not `learn/`. It never enters the
