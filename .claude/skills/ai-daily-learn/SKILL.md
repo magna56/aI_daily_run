@@ -771,6 +771,22 @@ topic from feeling like showing off.
   past releases, and who publicly praised it are facts about a market, not about a system. A
   named person's quote earns its place only when it carries a technical claim the reader can go
   check; never as an endorsement.
+- **Verify the baseline against the core spec, never against the new thing's own description.**
+  Added 2026-09-05. `The Problem` states what was true *before* the change, and that sentence is the
+  one most likely to be wrong, because the easiest place to get it is the source document — and a
+  release note, an extension overview or a launch post always describes the gap it closes in the
+  most flattering terms available. Take that framing and you publish the vendor's marketing as your
+  premise.
+  - ✗ *"A tool returns text. That is the whole contract."* — written from the MCP Apps overview,
+    which opens "Text responses can only go so far". Core MCP has carried `image`, `audio`,
+    `resource_link` and embedded `resource` content all along, so the contract was never text-only
+    and the extension adds *interactive* results, not *non-text* ones.
+  - ✓ *"A tool can already return an image or a file. What it cannot return is something the user
+    can click."*
+  The check is one fetch: before writing the "before" sentence, open the **core** reference for the
+  thing being extended and confirm the limitation you are about to assert is real. A reader who
+  knows the platform spots an overstated baseline instantly, and it costs more credibility than any
+  detail you might get wrong later in the piece.
 - **Never cite another vendor's changelog as proof the topic matters.** That someone else shipped
   a comparable feature says the category is popular, which the reader already assumed by clicking.
   It says nothing about the mechanism, and it is the exact sentence that makes a session read like

@@ -1339,3 +1339,35 @@ safe, which makes it noise rather than signal. Both stay judgement calls with wo
 a published URL that is already in the sitemap and the feed, and the 2026-09-05 daily slot is taken,
 so there is nowhere to move it to without a redirect. Whether to pull it from the track is his call,
 not a thing to decide silently.
+
+## 2026-09-05 — 2026-09-05 (How an MCP Tool Puts a Clickable App Inside the Chat)
+
+- **Note**: "there could have been interesting spin how to make MCP get media other than text"
+- **Verdict**: one-off (a future session topic) **plus** a standing rule surfaced while checking it,
+  **plus** a factual error in the published article.
+
+**What checking the note turned up.** The suggested spin is not just a missed angle — it is a
+capability the article implicitly denied. Core MCP tool results already carry `image` (base64 +
+`mimeType`), `audio`, `resource_link`, and embedded `resource` content, all with
+`annotations.audience` of `["user"]` or `["assistant"]`. No extension required. The published
+article opens `The Problem` with "A tool returns text. That is the whole contract", which is wrong:
+MCP Apps adds *interactive* results, not *non-text* ones.
+
+**Where the error came from, and the rule that follows.** The baseline sentence was written from the
+MCP Apps overview, whose own first line is "Text responses can only go so far." A source document
+always describes the gap it closes in the most flattering terms available, so taking its framing
+makes the vendor's marketing into the article's premise. `SKILL.md` gains a rule in the
+`## The Problem` section: verify the baseline against the **core** spec of the thing being extended,
+never against the new thing's description, with this article as the worked ✗/✓ pair. One fetch
+before writing the "before" sentence.
+
+- **Changed**: `.claude/skills/ai-daily-learn/SKILL.md` — new bullet under the `## The Problem`
+  rules, above the vendor-changelog rule.
+- **Not changed**: no rule was added saying "consider more interesting angles". That is not
+  actionable in the sense this skill requires, and the concrete version of the note is better served
+  as a future session than as a constraint on every session.
+- **Open**: the published article still carries the inaccurate baseline sentence. Offered to the
+  owner as a correction rather than edited silently, since the published record is a dated log.
+- **Future session candidate**: "How an MCP tool returns an image, a file, or audio" — core protocol
+  rather than an extension, wider client support than MCP Apps, and `annotations.audience` is a real
+  mechanism worth teaching (mark a result for the user, the model, or both).
