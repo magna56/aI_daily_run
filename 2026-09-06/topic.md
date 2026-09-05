@@ -2,7 +2,7 @@
 
 **Category**: Coding Agents & Productivity
 **Tags**: benchmarks, prompt-engineering, paper
-**Date**: 2026-09-05
+**Date**: 2026-09-06
 **Level**: Start here
 **For**: Using tools
 **Hook**: The field worth eight points appears in one request out of twenty, and the fields people carefully fill in are worth almost nothing.

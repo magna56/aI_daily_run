@@ -51,7 +51,12 @@ site: prune build ## Assemble the publishable site/ folder
 	cp -R functions $(OUTPUT_DIR)/
 	@echo "note: functions/ (OAuth + newsletter) only run on Cloudflare Pages — GitHub Pages has no serverless functions; the signup form posts to theaicommit.com"
 	touch $(OUTPUT_DIR)/.nojekyll
-	printf '%s\n' '/api/*  /api/:splat  200' '/*  /index.html  200' > $(OUTPUT_DIR)/_redirects
+	# Order matters: the api rule, then any hand-written permanent redirects from
+	# ./redirects, then the SPA catch-all. A moved URL must be answered before the
+	# catch-all serves the app shell with a 200 and a "No session" screen.
+	printf '%s\n' '/api/*  /api/:splat  200' > $(OUTPUT_DIR)/_redirects
+	@if [ -f redirects ]; then grep -v '^[[:space:]]*#' redirects | grep -v '^[[:space:]]*$$' >> $(OUTPUT_DIR)/_redirects || true; fi
+	printf '%s\n' '/*  /index.html  200' >> $(OUTPUT_DIR)/_redirects
 	# data/index.js is the manifest the reader resolves every session id against, so a
 	# stale copy makes a just-published article render as "No session <id>" even though
 	# its payload is live. Cloudflare's zone default Browser Cache TTL (4h) applies to

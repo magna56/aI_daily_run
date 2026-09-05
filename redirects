@@ -1,0 +1,12 @@
+# Permanent redirects for URLs that were published and then moved. One rule per
+# line, Cloudflare Pages _redirects syntax: <from> <to> <status>.
+#
+# These are prepended to the generated _redirects, ahead of the SPA catch-all
+# (/* /index.html 200) — order matters, because the catch-all would otherwise
+# answer 200 with the app shell and the reader would render "No session <id>".
+# GitHub Pages ignores this file entirely; the mirror will 404 on these.
+
+# 2026-09-05: published to the Frontier track, then moved to the daily lab as
+# 2026-09-06 because a Tier A topic does not belong in Frontier. See
+# .claude/skills/ai-daily-learn-feedback/feedback-log.md for that day's note.
+/frontier-2026-09-05-the-two-things-missing-from-most-coding-agent-requests/* /2026-09-06-the-two-things-missing-from-most-coding-agent-requests/ 301
