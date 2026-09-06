@@ -285,17 +285,17 @@ always a path that ends in publishing:
 ## Scheduling
 
 This skill runs unattended at 11:00 every day via a macOS LaunchAgent
-(`com.<user>.ai-daily-learn`) that invokes `scripts/run_daily.sh`. Logs land in
+(`com.<user>.ai-daily-learn`) that invokes `.claude/skills/ai-daily-learn-publish/scripts/run_daily.sh`. Logs land in
 `~/ai_learning/.logs/` (gitignored).
 
-Manage it with `scripts/install_schedule.sh` — never hand-edit the plist, since the script
+Manage it with `.claude/skills/ai-daily-learn-publish/scripts/install_schedule.sh` — never hand-edit the plist, since the script
 regenerates it:
 
 ```bash
-bash scripts/install_schedule.sh              # install / reinstall at 11:00
-bash scripts/install_schedule.sh --time 09:30 # different time
-bash scripts/install_schedule.sh --status     # is it registered? when does it fire?
-bash scripts/install_schedule.sh --uninstall  # remove it
+bash .claude/skills/ai-daily-learn-publish/scripts/install_schedule.sh              # install / reinstall at 11:00
+bash .claude/skills/ai-daily-learn-publish/scripts/install_schedule.sh --time 09:30 # different time
+bash .claude/skills/ai-daily-learn-publish/scripts/install_schedule.sh --status     # is it registered? when does it fire?
+bash .claude/skills/ai-daily-learn-publish/scripts/install_schedule.sh --uninstall  # remove it
 ```
 
 Once installed:

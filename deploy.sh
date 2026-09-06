@@ -71,8 +71,15 @@ elif ! command -v npx >/dev/null 2>&1; then
   echo "==> WARN: npx not found — skipping Cloudflare Pages"
 else
   echo "==> Publishing $COUNT session(s) to Cloudflare Pages ($CF_PROJECT)"
+  # --branch=main is explicit on purpose. Without it wrangler infers the branch
+  # from git, so a deploy from any working branch silently becomes a PREVIEW
+  # deployment: it reports success, theaicommit.com never changes, and the
+  # newsletter then goes out for an article that is not live. That happened on
+  # 2026-09-04 and again on 2026-09-05 while a feature branch was checked out.
+  # Production is main, always, whatever this checkout happens to be on.
   if CLOUDFLARE_API_TOKEN="$CF_TOKEN" CLOUDFLARE_ACCOUNT_ID="$CF_ACCOUNT_ID" \
-      npx --yes wrangler pages deploy site --project-name="$CF_PROJECT" --commit-dirty=true >/dev/null 2>&1; then
+      npx --yes wrangler pages deploy site --project-name="$CF_PROJECT" \
+      --branch=main --commit-dirty=true >/dev/null 2>&1; then
     echo "==> Cloudflare Pages done:"
     echo "    https://theaicommit.com  (https://$CF_PROJECT.pages.dev)"
 
