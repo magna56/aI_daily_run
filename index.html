@@ -536,7 +536,10 @@
   .fig-leader { fill: none; stroke: var(--line); stroke-width: 1.4; }
   .fig-arrowhead { fill: var(--line); stroke: none; }
   .fig-dot { fill: var(--line); stroke: none; }
-  .fig-via { fill: var(--card); stroke: var(--line); }
+  /* Opaque on purpose: this pill's job is to punch a hole in the wire it sits on.
+     --card is a 3% translucent wash, so the edge showed straight through the label
+     and struck the text out wherever an edge ran horizontally. */
+  .fig-via { fill: var(--bg); stroke: var(--line); }
   .fig-viatext { fill: var(--muted); font-family: var(--mono); }
   /* The Diagram tab, for sessions with figures: a readable stack, not a poster.
      Slightly wider than the reading column because the tab has the room. */

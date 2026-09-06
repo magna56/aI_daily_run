@@ -30,6 +30,27 @@ wrong. They were unrepresentative.
 
 Coding agent benchmarks are that fixture set.
 
+```figure
+{ "kind": "system",
+  "title": "The whole argument: one bug, two ways of asking, two scores",
+  "lanes": [
+    { "t": "the same bug", "nodes": [
+        { "id": "task", "t": "one task, one correct patch" } ] },
+    { "t": "asked as", "nodes": [
+        { "id": "bench", "t": "a benchmark issue", "s": "ok" },
+        { "id": "real",  "t": "what people type", "s": "bad" } ] },
+    { "t": "and it scores", "nodes": [
+        { "id": "high", "t": "the leaderboard number", "s": "ok" },
+        { "id": "low",  "t": "6.4 points lower", "s": "bad" } ] }
+  ],
+  "edges": [
+    { "from": "task",  "to": "bench", "t": "written out in full", "s": "ok" },
+    { "from": "task",  "to": "real",  "t": "88% statement only", "s": "bad" },
+    { "from": "bench", "to": "high" },
+    { "from": "real",  "to": "low",   "t": "no desired behavior", "s": "bad" } ],
+  "note": "Same bug, same correct fix. Only the wording changes, so the whole gap belongs to the writing." }
+```
+
 They are built from curated bug reports, and curated bug reports are unusually good. Researchers at
 Sungkyunkwan University compared them against 718 real requests pulled from over six thousand
 developer sessions with agents. **88% of the real requests are a problem statement and nothing
@@ -61,14 +82,19 @@ against hedged, and first person against not.
 
 ### Which parts were worth anything?
 
-The result is lopsided, and the two fields the title promised are the top two rows:
+The result is lopsided, and the two fields the title promised are the top two bars:
 
-| What you remove | What it costs |
-| --- | --- |
-| Desired behavior | 7.1 to 8.9 points, on every model tested |
-| Motivation | 3.4 points |
-| Reproduction steps and environment details, together | about 1.8 points |
-| Any of the four style dimensions | small, and it varies by model |
+```figure
+{ "kind": "bars",
+  "title": "Points of resolution rate lost when you remove each part",
+  "bars": [
+    { "label": "Desired behavior", "v": 8.0, "d": "7.1\u20138.9 pts", "s": "new" },
+    { "label": "Motivation", "v": 3.4, "d": "3.4 pts", "s": "new" },
+    { "label": "Repro steps + environment", "v": 1.8, "d": "~1.8 pts", "s": "neutral" },
+    { "label": "Formality, hedging, person", "v": 0.5, "d": "small, varies", "s": "neutral" }
+  ],
+  "note": "Desired behavior holds on every model tested; the style dimensions vary by model." }
+```
 
 Style barely registers. Writing casually, hedging, or using the imperative does not meaningfully
 change whether the agent fixes your bug, which means the effort many people put into sounding
@@ -130,6 +156,30 @@ sends partial files on purpose and we cannot reject their whole batch.
 Two sentences after the problem statement. The first is desired behavior, the second is motivation.
 Nothing about the environment, nothing about repro steps, and by the study's numbers that is the
 right trade.
+
+```figure
+{ "kind": "anatomy",
+  "title": "Where the points sit in that request",
+  "lines": [
+    "The importer crashes on rows where",
+    "the date column is empty.",
+    "",
+    "When this is fixed, an empty date",
+    "should be treated as unknown and the",
+    "row kept, rather than the whole",
+    "import failing.",
+    "",
+    "We need it because a supplier sends",
+    "partial files on purpose and we",
+    "cannot reject their whole batch."
+  ],
+  "callouts": [
+    { "line": 0, "t": "Problem statement. This is all that 88% of real requests contain.", "s": "neutral" },
+    { "line": 3, "t": "Desired behavior. One sentence, worth 7.1 to 8.9 points, and present in 5% of requests.", "s": "new" },
+    { "line": 8, "t": "Motivation. Worth 3.4 points, and it is what stops the agent fixing a neighboring problem.", "s": "new" }
+  ],
+  "note": "Three of the eleven lines carry almost all of the value. None of them are repro steps or environment detail." }
+```
 
 *Your project's instructions file.* Make it the default rather than a thing you remember:
 

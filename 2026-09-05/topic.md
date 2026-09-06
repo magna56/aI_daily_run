@@ -138,7 +138,7 @@ result has carried these types all along, and most servers only ever use the fir
    "s": "ok"
   }
  ],
- "note": "Top path: everything becomes a string, so the person reads a description and the model gets a path it cannot open. Bottom path: the same chart typed and addressed, and each reader gets only what it can use."
+ "note": "Top path: everything becomes a string, so the person reads a description and the model gets a path it cannot open. Bottom path: the same chart, typed and addressed."
 }
 ```
 
@@ -233,7 +233,7 @@ assistant. One tool call, one result, two readers, and neither gets the other's 
    "s": "ok"
   }
  ],
- "note": "The annotation is the whole mechanism. Drop it and both blocks travel to both places, so the model pays for pixels it cannot read."
+ "note": "The annotation is the whole mechanism. Drop it and both blocks go to both readers."
 }
 ```
 

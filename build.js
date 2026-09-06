@@ -185,7 +185,7 @@ const IMPLEMENT_SECTION_SINCE = "2026-08-25";
 // grid, a flow strip) could only arrange keywords, never draw a mechanism.
 // Date-gated like every other contract change: the back catalog keeps its
 // poster and still renders it.
-const FIGURES_SINCE = "2026-09-07";
+const FIGURES_SINCE = "2026-09-06";
 
 // The artifact contract — the visualizer's CSP/Reset/height handshake, the 150-line
 // cap on code_example.py, and "Why It Matters" carrying no momentum reporting — was
