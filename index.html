@@ -538,6 +538,13 @@
   .fig-dot { fill: var(--line); stroke: none; }
   .fig-via { fill: var(--card); stroke: var(--line); }
   .fig-viatext { fill: var(--muted); font-family: var(--mono); }
+  /* The Diagram tab, for sessions with figures: a readable stack, not a poster.
+     Slightly wider than the reading column because the tab has the room. */
+  .dgm-stack { max-width: 860px; margin: 0 auto; padding: 8px 0 4px; }
+  .dgm-stack .fig { max-width: 860px; margin: 26px auto; }
+  .dgm-stack .fig + .fig { border-top: 1px solid var(--line); padding-top: 26px; }
+  .fig-lane { fill: var(--muted); font-family: var(--mono); font-weight: 700;
+              letter-spacing: .08em; text-transform: uppercase; }
   /* Four states, and only four: something works, something does not, something
      is new in this step, or it is scenery. */
   .fig-neutral { fill: rgba(127,127,127,.10); }
@@ -2388,6 +2395,18 @@
 
   /* diagram: build-time SVG in a pan/zoom viewport */
   function renderDiagram(el, p) {
+    /* Sessions that author inline figures get the figures here, stacked and read
+       at 1:1 — no pan, no zoom, no fitting a poster into a pane. The poster path
+       below stays for the 62 published sessions that predate figures, so the tab
+       keeps working for the whole back catalog. */
+    if (p.figures && p.figures.length) {
+      el.innerHTML = '<div class="dgm-stack">' + p.figures.join("") +
+        '<p class="dgm-hint">Each figure carries one step of the argument. ' +
+        (p.diagram ? '<a class="mini" href="' + esc(p.diagram.file) + '" download="' + esc(p.id) +
+          '.excalidraw">download the old .excalidraw</a>' : "") + "</p></div>";
+      return;
+    }
+    if (!p.diagram) { el.innerHTML = '<div class="empty">No diagram for this session.</div>'; return; }
     el.innerHTML =
       '<div class="dgm-tools">' +
         '<button class="mini" id="zIn">+ zoom</button>' +

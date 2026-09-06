@@ -47,6 +47,101 @@ or all three, and each block can be addressed to the person, the model, or both.
 This is core protocol, not an extension. Nothing to negotiate, no opt-in on either side: a tool
 result has carried these types all along, and most servers only ever use the first.
 
+```figure
+{
+ "kind": "system",
+ "title": "The whole argument: one chart, two ways to hand it back",
+ "lanes": [
+  {
+   "t": "the tool produces",
+   "nodes": [
+    {
+     "id": "chart",
+     "t": "a rendered chart"
+    }
+   ]
+  },
+  {
+   "t": "you return it as",
+   "nodes": [
+    {
+     "id": "one",
+     "t": "one text block",
+     "s": "bad"
+    },
+    {
+     "id": "img",
+     "t": "an image block",
+     "s": "new"
+    },
+    {
+     "id": "txt",
+     "t": "a text block",
+     "s": "ok"
+    }
+   ]
+  },
+  {
+   "t": "who ends up served",
+   "nodes": [
+    {
+     "id": "person",
+     "t": "the person",
+     "s": "new"
+    },
+    {
+     "id": "model",
+     "t": "the model",
+     "s": "ok"
+    }
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "from": "chart",
+   "to": "one",
+   "s": "bad"
+  },
+  {
+   "from": "chart",
+   "to": "img",
+   "s": "new"
+  },
+  {
+   "from": "chart",
+   "to": "txt",
+   "s": "ok"
+  },
+  {
+   "from": "one",
+   "to": "person",
+   "t": "a sentence",
+   "s": "bad"
+  },
+  {
+   "from": "one",
+   "to": "model",
+   "t": "a file path",
+   "s": "bad"
+  },
+  {
+   "from": "img",
+   "to": "person",
+   "t": "“user”",
+   "s": "new"
+  },
+  {
+   "from": "txt",
+   "to": "model",
+   "t": "“assistant”",
+   "s": "ok"
+  }
+ ],
+ "note": "Top path: everything becomes a string, so the person reads a description and the model gets a path it cannot open. Bottom path: the same chart typed and addressed, and each reader gets only what it can use."
+}
+```
+
 ### What can a block actually be?
 
 Five types, and the first is the only one most tools use:
