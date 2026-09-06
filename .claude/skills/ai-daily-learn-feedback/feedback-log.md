@@ -1371,3 +1371,46 @@ before writing the "before" sentence.
 - **Future session candidate**: "How an MCP tool returns an image, a file, or audio" — core protocol
   rather than an extension, wider client support than MCP Apps, and `annotations.audience` is a real
   mechanism worth teaching (mark a result for the user, the model, or both).
+
+## 2026-09-05 — the diagram format (site-wide, not one session)
+
+- **Note**: "the excalidraw we have is hard to read even on computer… what other blogs do a more
+  svg like diagram in the article"; then, mid-work: "not just the render, the quality of things
+  inside is poor, it doesn't add much value in explaining"; then "keep the tab but the content
+  needs to show what the article explains in block diagrammatic terms not just key words and block
+  texts"; then "is it possible for the diagram to explain the article as a whole not in pieces".
+- **Verdict**: standing rule, and a tooling change without which the rule could not be obeyed.
+
+**The second note is the one that mattered.** The rendering was genuinely bad — one 1200x1700
+poster carrying every visual a session had, scaled into a pane until 13px labels rendered at about
+six. But the content was worse, and `SKILL.md` had *already* forbidden it: "never a picture of the
+sentence above it". The rule was unobeyable. The generator could express `--concepts` (a definition
+grid), `--flow` (a strip of labels), `rows` (a table) and `bars` (a chart), and **none of those can
+draw a mechanism** — they only arrange keywords. So every session drew its own prose in boxes and
+passed every check. The vocabulary was the bug, not the discipline.
+
+**What changed.**
+- `lib/figure-svg.js` (new) — four kinds that can only draw structure: `system` (lanes, nodes,
+  labelled edges — the whole-argument kind), `anatomy` (a real specimen with callouts on the exact
+  lines), `route` (one thing splitting, with the deciding field on the connector), `bars` (measured
+  quantities only). Deliberately no concepts grid: a list of definitions is the glossary.
+- `build.js` — ```figure fences in `topic.md` render to SVG and leave a `%%FIG<n>%%` marker;
+  `FIGURES_SINCE = 2026-09-07` makes at least one figure required and retires the
+  "no diagram.excalidraw" warning from that date. Gate tested by moving the date and confirming it
+  fires, not by assuming.
+- `index.html` — figures render inline in the prose and stack in the Diagram tab at 1:1; the tab
+  falls back to the poster for the 62 sessions that predate this.
+- `SKILL.md` Step 7 — rewritten from "generate the poster" to "draw the figures", with the kind
+  table, the states, the worked example, and the two rules that keep it honest: **lead with one
+  figure that carries the whole argument**, and **ten nodes is the cap** because a figure must read
+  at 860px without zooming. That cap is what stops this becoming the poster again.
+- `contract.md`, `CLAUDE.md`, and the feedback skill's own routing table brought in line.
+
+**Bug this surfaced.** The glossary auto-linker walks the rendered DOM, and an SVG `<text>` node is
+an ordinary text node to a TreeWalker. Linking a term inside a figure injects an HTML `<a>` into the
+SVG namespace, where it renders as nothing — "audience" and "priority" silently vanished from a
+figure's JSON specimen while the surrounding quotes stayed. Anything under an `ownerSVGElement` is
+now skipped.
+
+- **Not changed**: the back catalog. 62 sessions keep their poster and the tab still renders it,
+  per the standing rule that old sessions are a dated log rather than a backlog.

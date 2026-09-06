@@ -93,7 +93,7 @@ inventing one.
 | The interactive visualizer — what it must model, controls, contract | `visualize.md` |
 | A file becoming required, a metadata key, section order, anything `--check` should catch | `contract.md` |
 | `code_example.py` — length, style, what it must print, dependency line | `SKILL.md` Step 6 |
-| Diagram panels, what the Excalidraw must show | `SKILL.md` Step 7 + the docstring in `scripts/generate_excalidraw.py` |
+| Figures — what a diagram must show, the kinds, the node cap | `SKILL.md` Step 7 + the header comment in `lib/figure-svg.js` |
 | `articles.md` — count, source mix, summary style | `SKILL.md` Step 9 |
 | A new **tag**, category, Level or For value | `build.js` (`TAGS` / `CATEGORIES` / `LEVELS` / `JOBS`) **first**, then the spec — see Step 6 |
 | How the article *renders* — reader layout, buttons, colours, tabs, SEO markup | `index.html` (this is a site change, not a spec change) |

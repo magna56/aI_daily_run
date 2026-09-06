@@ -4,7 +4,7 @@ description: >
   Daily 30-minute AI learning session for software engineers learning AI — from people who
   have used Claude or Cursor, to people who have shipped a small agent, to readers further
   ahead. Searches latest AI news/research, picks a focused topic, and produces five
-  artifacts: an interactive visualizer (required), an Excalidraw diagram, a runnable
+  artifacts: an interactive visualizer (required), inline block diagrams, a runnable
   pure-Python code example, and curated articles with summaries — the same five files
   the reader shows as Overview / Visualize / Diagram / Code / Articles.
   Saves everything locally to
@@ -103,13 +103,15 @@ on the legacy path"), and then say what it decides.
   two-day track (`#learn`). Daily sessions cite those chapters instead of
   re-teaching the whole on-ramp. Never pick a Learn slug as "today's article."
 - **Artifacts**: all 5 files, every session — `topic.md`, `visualize.html` (required,
-  not a nice-to-have), `diagram.excalidraw`, `code_example.py`, `articles.md`. Read
+  not a nice-to-have), inline ```figure fences in `topic.md` (Step 7), `code_example.py`,
+  `articles.md`. Read
   [contract.md](contract.md) before writing. A folder that is only a write-up is not done.
 - **Visualizer**: read [visualize.md](visualize.md) and match the newest existing
   `visualize.html` in this repo. The Visualize tab is empty without this file.
 - **Journal**: `~/ai_learning/journal.md` tracks all sessions
 - **Code**: Pure Python only — no API keys, no external services. Self-contained demos.
-- **Excalidraw**: Open at excalidraw.com (drag & drop)
+- **Figures**: authored inline in `topic.md`; `diagram.excalidraw` is legacy and not needed for
+  a new session
 - **Cursor twin**: `.cursor/skills/ai-daily-learn/SKILL.md` runs this same spec from Cursor.
   Edit this file (and visualize.md / contract.md) when the format changes.
 - **Feedback loop**: this spec is meant to change. When a session comes back with a note — a
@@ -447,7 +449,7 @@ four things:
    block. The caps are deliberately loose — they do not make prose good, they only catch the wall
    of text nobody finishes. A reader gives up *inside* a paragraph, never between two.
 4. **Let the diagram carry a step of the argument.** Theirs are load-bearing: the pipeline, then
-   the same pipeline as a control loop. Ours (`diagram.excalidraw`, `visualize.html`) should be
+   the same pipeline as a control loop. Ours (the inline figures, `visualize.html`) should be
    the thing that makes a step click, never a picture of the sentence above it.
 
 **What we do not borrow, because it is the reason this site exists:** ByteByteGo's AI pieces
@@ -1091,57 +1093,61 @@ article because this file contains it all, the article has not done its.
   numbers. "Analysis code" still has to be code they can point at their own situation.
 - **Library dependencies**: if the script needs numpy, matplotlib, or other packages, add a **`# REQUIRES: numpy==1.24.3, matplotlib==3.7.1`** line in the first few comments (exact versions, comma-separated). The reader uses this to auto-install libraries when running the code in the browser. Prefer stdlib whenever possible; use external packages only when essential.
 
-### Step 7: Generate diagram.excalidraw
+### Step 7: Draw the figures
 
-Run the generator script:
+**Figures live in `topic.md`, inline, as ```figure fences.** `build.js` renders each to SVG at
+build time, drops it into the prose where you put it, and the Diagram tab shows the same figures
+stacked. There is no separate poster to generate any more, and `diagram.excalidraw` is legacy —
+the back catalog still has one and still renders it, but a new session does not need it.
 
-```bash
-# Resolve the generator wherever this skill is installed from. The plugin copy is
-# authoritative; the others cover a personal install or a direct repo checkout.
-GEN=""
-for CAND in \
-  ./.claude/skills/ai-daily-learn/scripts/generate_excalidraw.py \
-  "${AI_LEARNING_DIR:-$HOME/ai_learning}/.claude/skills/ai-daily-learn/scripts/generate_excalidraw.py" \
-  ~/.claude/plugins/tp-mcp-config/skills/ai-daily-learn/scripts/generate_excalidraw.py \
-  ~/tp_claude/plugins/tp-mcp-config/skills/ai-daily-learn/scripts/generate_excalidraw.py \
-  ~/.claude/skills/ai-daily-learn/scripts/generate_excalidraw.py ; do
-  [ -f "$CAND" ] && { GEN="$CAND"; break; }
-done
-[ -n "$GEN" ] || { echo "generate_excalidraw.py not found; use the Step 7 JSON fallback"; }
-
-python3 "$GEN" \
-  --title "Topic Title" \
-  --subtitle "Brief subtitle" \
-  --concepts '["Concept 1|Description 1", "Concept 2|Description 2", ...]' \
-  --flow '["Step A", "Step B", "Step C"]' \
-  --visuals '[{"type": "stack", ...}, {"type": "rows", ...}]' \
-  --category "Category Name" \
-  --output ~/ai_learning/YYYY-MM-DD/diagram.excalidraw
+```figure
+{ "kind": "system",
+  "title": "The whole argument: one chart, two ways to hand it back",
+  "lanes": [
+    { "t": "the tool produces", "nodes": [{ "id": "chart", "t": "a rendered chart" }] },
+    { "t": "you return it as",  "nodes": [{ "id": "one", "t": "one text block", "s": "bad" },
+                                          { "id": "img", "t": "an image block", "s": "new" }] },
+    { "t": "who ends up served", "nodes": [{ "id": "person", "t": "the person", "s": "new" }] }
+  ],
+  "edges": [ { "from": "chart", "to": "one", "s": "bad" },
+             { "from": "img", "to": "person", "t": "\u201cuser\u201d", "s": "new" } ],
+  "note": "One line on what the shape is saying." }
 ```
 
-Provide 4-8 concepts as `"Name|Description"` pairs. Provide 3-6 flow steps if applicable.
+**Lead with one figure that carries the WHOLE argument, then add pieces only if they earn it.**
+A reader who looks at nothing else should be able to follow the article from the first figure:
+the wrong path and the right path, side by side, ending in what each one costs. Supporting
+figures explain a step of that spine; they never replace it.
 
-**`--visuals` is the part that makes the diagram worth opening, so always provide 2-3 panels.**
-`--concepts` is a terse grid and `--flow` is a pipeline strip; neither shows a *mechanism*. A
-visual panel does, by making the shape of the thing carry the argument — a quantity compounding
-across steps is drawn as a growing stack, a change that cascades is drawn as coloured segments
-where the damage spreads, a counterintuitive ranking is drawn as bars you can compare by length.
-Run the generator with `--help`, or read its module docstring, for the three panel types and
-their exact JSON.
+**Four kinds, and the choice is the design decision.** Each draws structure the prose cannot hand
+the reader in one glance:
 
-Pick the panels from *what the article argues*, and pull the numbers from the ones
-`code_example.py` actually prints, so the diagram and the code agree.
+| kind | draws | reach for it when |
+| --- | --- | --- |
+| `system` | lanes as columns, nodes inside them, labelled edges between | the article is about how parts connect — this is the whole-argument kind |
+| `anatomy` | a real specimen (JSON, a request, a config) with callouts on the exact lines that matter | the payload *is* the lesson |
+| `route` | one thing splitting into parts that go to different places, with the deciding field on the connector | something is dispatched, filtered, or addressed |
+| `bars` | genuine quantities | you have measured numbers, and only then |
 
-**Never render a paragraph of prose into the diagram.** A wall of sentences inside a rectangle
-is not a diagram — if a point cannot be drawn, it belongs in `topic.md`, which already explains
-the article at length. The reader should understand the mechanism from the shapes before
-reading a single label.
+States are `ok`, `bad`, `new` and `neutral`, and they mean something: what works, what does not,
+what this step introduces, and scenery. Do not colour for decoration.
 
-If the script fails, generate the Excalidraw JSON directly using this element format:
-- Rectangle: `{"id":"r1","type":"rectangle","x":100,"y":100,"width":300,"height":80,"strokeColor":"#1e1e1e","backgroundColor":"#a5d8ff","fillStyle":"solid","strokeWidth":2,"roughness":0,"opacity":100,"roundness":{"type":3},...}`
-- Text: `{"id":"t1","type":"text","x":110,"y":120,"text":"Content","fontSize":20,"fontFamily":5,"textAlign":"center","containerId":"r1",...}`
-- Arrow: `{"id":"a1","type":"arrow","points":[[0,0],[100,0]],"startBinding":{"elementId":"r1"},"endBinding":{"elementId":"r2"},"endArrowhead":"arrow",...}`
-- Wrapper: `{"type":"excalidraw","version":2,"source":"https://excalidraw.com","elements":[...],"appState":{"viewBackgroundColor":"#ffffff"},"files":{}}`
+**Ten nodes is the cap, and it is what keeps this from becoming the old poster.** A figure must
+read at 860px without zooming. The 2026-09-05 whole-argument figure has six nodes. If yours needs
+more, it is two figures — never a bigger canvas. This is the rule the previous format had no way
+to enforce, and the reason its diagrams were unreadable: one 1200x1700 poster carrying every
+visual a session had, scaled into a pane until 13px labels rendered at six.
+
+**If the figure is a list of definitions, it is not a figure.** The old format's `--concepts`
+grid was the glossary drawn twice, and its `--flow` strip was a row of keywords. Both are gone on
+purpose. The glossary already exists at the foot of the article.
+
+**Never render a paragraph of prose into a figure.** A wall of sentences inside a rectangle is not
+a diagram. If a point cannot be drawn, it belongs in `topic.md`, which explains the article at
+length already. The reader should understand the mechanism from the shapes before reading a single
+label.
+
+Pull any numbers from what `code_example.py` actually prints, so the figures and the code agree.
 
 ### Step 8: Generate visualize.html (required)
 

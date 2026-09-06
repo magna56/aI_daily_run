@@ -179,6 +179,14 @@ const TAGS = [
 // to ignore the warnings that matter.
 const IMPLEMENT_SECTION_SINCE = "2026-08-25";
 
+// Inline ```figure fences replaced the single diagram.excalidraw poster. The
+// poster carried every visual a session had and was then scaled into a pane,
+// so its labels rendered at about six pixels; worse, its vocabulary (a concept
+// grid, a flow strip) could only arrange keywords, never draw a mechanism.
+// Date-gated like every other contract change: the back catalog keeps its
+// poster and still renders it.
+const FIGURES_SINCE = "2026-09-07";
+
 // The artifact contract — the visualizer's CSP/Reset/height handshake, the 150-line
 // cap on code_example.py, and "Why It Matters" carrying no momentum reporting — was
 // written down long before anything enforced it, and a session shipped breaking all
@@ -1241,8 +1249,14 @@ function compile(id, journal, runner, opts) {
     } catch (e) {
       warn(`${id}: could not render diagram.excalidraw — ${e.message}`);
     }
-  } else {
+  } else if (date < FIGURES_SINCE) {
     warn(`${id}: no diagram.excalidraw.`);
+  }
+
+  /* From FIGURES_SINCE the visual requirement is inline figures, not a poster. */
+  if ((kind === "daily" || kind === "frontier") && date >= FIGURES_SINCE && !figures.length) {
+    warn(`${id}: no inline figures — add a \`\`\`figure fence to topic.md (SKILL.md Step 7). ` +
+      `Lead with one that carries the whole argument.`);
   }
 
   /* code + captured output */

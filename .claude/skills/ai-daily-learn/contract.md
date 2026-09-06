@@ -8,6 +8,10 @@ material is sourced, where the folder lives, and that a thin Frontier day is ski
 filled. Frontier sessions do not get a `journal.md` block.
 
 A daily session is incomplete until all five files exist **and** `journal.md` is updated.
+From 2026-09-07 a session must carry at least one inline figure, and `--check` warns when it
+does not. Lead with one figure that carries the whole argument; ten nodes is the cap, because a
+figure has to read at 860px without zooming.
+
 `build.js --check` only *warns* on a missing visualizer or diagram so old folders still
 build. **New sessions may not ship that way.** Do not stop after `topic.md`.
 
@@ -17,7 +21,9 @@ build. **New sessions may not ship that way.** Do not stop after `topic.md`.
 YYYY-MM-DD/                 # or YYYY-MM-DD-s2 if today already has a session
   topic.md                  # required
   visualize.html            # required — Visualize tab; see visualize.md
-  diagram.excalidraw        # required — Diagram tab
+  # figures live inline in topic.md as ```figure fences (SKILL.md Step 7);
+  # they render in the prose AND stack in the Diagram tab. diagram.excalidraw
+  # is legacy: the back catalog still has one, a new session does not need one.
   code_example.py           # required — Code tab; stdlib, no agent frameworks
   articles.md               # required — Articles tab
 ```

@@ -11,7 +11,7 @@ site — containing up to five peer files:
 ```
 topic.md            # H1 title, **Key**: value metadata block, then ## sections
 visualize.html       # standalone interactive model, lazy-loaded in a restricted iframe
-diagram.excalidraw   # Excalidraw scene JSON
+diagram.excalidraw   # Excalidraw scene JSON (legacy; see figures below)
 code_example.py       # runnable, pure Python, no API keys
 articles.md          # 3-5 curated sources with summaries
 ```
@@ -93,7 +93,16 @@ repo), with a 60s timeout, `MPLBACKEND=Agg`, and prefers `.venv/bin/python3` ove
 Results are cached by source hash across builds; a run's own images (e.g. a saved PNG) are copied
 into `site/assets/<id>/` and cache-invalidated if those copies go missing.
 
-**`lib/excalidraw-svg.js`** renders `.excalidraw` scene JSON to a standalone, byte-deterministic
+**`lib/figure-svg.js`** renders the inline article figures. A ```figure fence in `topic.md` carries
+a small JSON spec; `build.js` renders it to SVG, replaces the fence with a `%%FIG<n>%%` marker, and
+the reader substitutes the SVG after escaping (the same trick code blocks use). Four kinds —
+`system`, `anatomy`, `route`, `bars` — all of which draw structure rather than arrange keywords.
+Figures render inline in the prose *and* stack in the Diagram tab. They replaced a single
+1200x1700 Excalidraw poster that carried every visual a session had and was then scaled into a
+pane, where its labels rendered at about six pixels. Required from 2026-09-07 (`FIGURES_SINCE`);
+colour lives in `index.html` so figures follow the reader's theme.
+
+**`lib/excalidraw-svg.js`** (legacy, still needed for the 62 sessions that predate figures) renders `.excalidraw` scene JSON to a standalone, byte-deterministic
 SVG string at build time — no browser, no Excalidraw runtime dependency. It only understands the
 element shapes the generator script (`.claude/skills/ai-daily-learn/scripts/generate_excalidraw.py`)
 actually emits (rectangle/text/arrow, roughness 0); anything else is skipped rather than
