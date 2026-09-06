@@ -170,6 +170,15 @@ additionally commits and pushes straight to `main` on the GitHub remote (no bran
 this is a personal notes repo). Both skills, by design, never touch this repo's own git state
 except through those two explicit publish paths.
 
+Two more skills wrap the same workflow for when the topic is chosen *with* the user rather than
+for him. `/ai-daily-learn-pick` researches the day, puts **three worked proposals** up, stops for
+the decision, shapes the article in that conversation, locks a brief in `.briefs/YYYY-MM-DD.md`
+and writes the session — then stops without publishing. `/ai-daily-learn-discuss-publish` is that
+same conversation with the publish step attached, for when the user is at the keyboard and wants
+the result live in the same sitting; it composes the other two rather than restating either, and
+overrides exactly one rule — pick's "this skill never publishes" — because agreeing the brief is
+the authorization. All four take an optional argument and `--frontier`.
+
 All session prose is **plain American English** — American spelling, and sentences carrying one
 idea each; `make check` warns on a British spelling anywhere in the write-up or the metadata boxes
 and on a mean sentence above 18 words, for sessions dated 2026-09-03 or later. `## The Problem` is
