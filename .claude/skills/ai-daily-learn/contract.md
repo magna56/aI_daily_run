@@ -151,7 +151,13 @@ topic twice); `Why It Matters` (its significance argument belongs in `The Proble
 momentum-reporting check moved with it); `How It Connects to What You Know` (its analogy was the
 same move as `For a Software Engineer`, done twice — what survives is a one-line pointer into the
 `learn/` track, in the body, not a heading); `Try It Yourself` (a pointer to a tab the reader can
-already see); `Glossary`.
+already see).
+
+`Glossary` was on this list and **came off it on 2026-09-02.** `build.js` treats it as retired only
+for sessions dated before `GLOSSARY_SINCE`, because what was retired was an unlinked appendix that
+repeated the prose, and what came back is a linked lookup — a different artifact. For any session
+written today it is required, as section 7 above. Do not read the retirement note in the history
+below as current.
 
 **Per-section word bands**, fenced code excluded, warned by `--check`:
 `Explain Like I'm 5` 60-120 · `The Problem` 190-320 · mechanism section cap 370 (no floor) ·

@@ -1414,3 +1414,29 @@ now skipped.
 
 - **Not changed**: the back catalog. 62 sessions keep their poster and the tab still renders it,
   per the standing rule that old sessions are a dated log rather than a backlog.
+
+## 2026-09-07 — spec drift, not a session
+- **Note**: "SKILL.md says the Glossary doesn't exist in three places while contract.md requires
+  it as fixed section 7 ... a plausible cause of the malformed session that was on disk this
+  morning."
+- **Verdict**: compliance gap — the rule was already correct in `build.js`, and the prose that
+  the generator reads had not caught up.
+- **Changed**: `.claude/skills/ai-daily-learn/SKILL.md` — four edits. The article template gained
+  `## Glossary` as section 7, which it had been missing entirely; the mechanism note "there is no
+  Glossary" became "the Glossary is a pointer back to that definition, never a substitute for it";
+  "Three older sections are gone" became "Two", with an explicit line saying the Glossary is not
+  one of them; and the define-inline rule stopped justifying itself with "There is no Glossary any
+  more".
+- **Changed**: `.claude/skills/ai-daily-learn/contract.md` — `Glossary` removed from the
+  **Retired** list at the foot of the section-order block, where it directly contradicted section
+  7 of the same file, with a note that it came off that list on 2026-09-02 and that `build.js`
+  gates the retirement on `GLOSSARY_SINCE`.
+- **Not changed**: `build.js`. It was already right and already carried the reasoning in a
+  comment — the retirement applies only to sessions before `GLOSSARY_SINCE`, because what was
+  retired was an unlinked appendix and what returned is a linked lookup.
+- **Why this is worth reading later**: the memory note `ai-learning-glossary-is-back` exists
+  precisely because this reversal is easy to re-reverse from a stale sentence. When a section is
+  retired and later returns, the retirement text does not delete itself; four separate passages
+  and one template survived the 2026-09-02 change and went on instructing the generator for five
+  days. A returning rule needs a sweep of every place the retirement was justified, not just the
+  place it was declared.

@@ -363,7 +363,7 @@ Mature Project's Test Suite", not "## How a Borrowed Test Suite Works". Use "## 
 an explainer whose payoff is understanding. Then the mechanism, shallow to deep in ONE pass. Prefer ###
 sub-headings phrased as the reader's own question at that moment (### Why not just split on
 spaces?). Define every term in the sentence that first
-needs it; there is no Glossary.]
+needs it — the Glossary is a pointer back to that definition, never a substitute for it.]
 
 ## What This Means for You
 [Three labelled parts — When this matters / How it affects you / What to do about it. The FIRST
@@ -380,6 +380,12 @@ See the rules below.]
 what this costs in complexity, latency, money or operational surface, and what you checked if
 the answer is genuinely "nothing". Close on the two or three questions a reader should ask
 before adopting it.]
+
+## Glossary
+[FIXED, and always last. Five or six entries as `- **Term** — definition`, 20 words at most
+each. Write each term exactly as the prose writes it, because the reader links in from its
+first appearance and `--check` warns on a term the body never uses. Gloss what a reader could
+stall on, not every noun.]
 
 ```
 
@@ -402,13 +408,14 @@ the middle is the part that reads well, because it alternates modes — mechanis
 translation into something already shipped, then what to do. The lesson kept is the inverse:
 **readability comes from more small units with figures, never from merging sections.**
 
-**Three older sections are gone, and one line replaces them.** If this daily piece assumes
+**Two older sections are gone, and one line replaces them.** If this daily piece assumes
 a chapter (tokens, the agent loop, RAG, the harness), put a single sentence in `The Problem` or
 the mechanism section linking the matching `learn/<slug>` page — *"New to this? Start at AI
 basics → [Context and the harness](#learn/context-and-harness)."* That is what survived of `How
 It Connects to What You Know`; its analogy half was always the engineer anchor's job, done
-twice. `Try It Yourself` pointed at a tab the reader can already see. `Glossary` is replaced by
-defining terms where they are used.
+twice. `Try It Yourself` pointed at a tab the reader can already see. **`Glossary` is not one of
+them — it was retired and then returned on 2026-09-02 as a linked lookup, and it is required.**
+See the `## Glossary` rules below and section 7 of `contract.md`.
 
 **The acceptance test — apply it to the whole document, not just one section.**
 
@@ -859,8 +866,9 @@ the mechanism, so a reader scanning the headings meets the fix instead of a desc
     everything downstream depends on it. The other six are in the paper."
   The ✓ version is shorter, names the same source, and every noun in it does work later in the
   article. If a term never appears again after you define it, it should never have been defined.
-- **Define every term in the sentence that first needs it.** There is no Glossary any more, so a
-  proper noun the reader has not met (NaViT, DeepStack, M-RoPE) gets a four-word gloss on the
+- **Define every term in the sentence that first needs it.** The Glossary is a lookup the reader
+  jumps to, not the place a term gets explained for the first time, so a proper noun the reader
+  has not met (NaViT, DeepStack, M-RoPE) gets a four-word gloss on the
   spot — "NaViT's patch-n-pack (packing many images into one sequence)". A term that cannot be
   glossed in a clause without derailing the sentence is a term this article should not be using.
 - **Lead each point with what it means, then give the constants.** "One visual token is a 28×28
