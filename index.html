@@ -2199,7 +2199,11 @@
   function availablePanes(p) {
     return PANES.filter(function (name) {
       if (name === "visualize") return !!p.visualize;
-      if (name === "diagram") return !!p.diagram;
+      /* Figures alone are enough. `diagram.excalidraw` is legacy, so gating the
+         tab on it hid the Diagram tab for every session authored after figures
+         replaced the poster — 2026-09-06 kept its tab only because it still had
+         the old file lying around. */
+      if (name === "diagram") return !!(p.diagram || (p.figures && p.figures.length));
       if (name === "code") return !!p.code;
       if (name === "articles") return !!(p.articles && p.articles.length);
       return true;
