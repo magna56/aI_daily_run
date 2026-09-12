@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>When 80% should mean 80%</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090c12;--card:#121821;--line:#2a3544;--ink:#edf4ff;--muted:#95a4b8;--cyan:#55e6d2;--amber:#ffd166}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif}
+    main{max-width:980px;margin:auto;padding:clamp(16px,3vw,32px)}
+    header{display:flex;justify-content:space-between;gap:16px;margin-bottom:16px}
+    h1{font-size:clamp(22px,4vw,34px);line-height:1.1;margin:0 0 6px}
+    p{margin:0;color:var(--muted);max-width:540px}
+    button{font:inherit;color:var(--ink);background:#192231;border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer}
+    label{display:block;color:var(--muted);font-size:12px;margin:0 0 6px}
+    input[type=range]{width:100%;accent-color:var(--cyan)}
+    .grid{display:grid;grid-template-columns:260px 1fr;gap:14px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+    canvas{width:100%;height:280px;display:block;background:#0b1018;border-radius:10px}
+    .stat strong{display:block;font-size:28px;color:var(--cyan);font-variant-numeric:tabular-nums}
+    .stat span{font-size:12px;color:var(--muted)}
+    @media(max-width:720px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<main data-visualizer="calibration">
+  <header>
+    <div>
+      <h1>The diagonal is honest. The banana is a liar.</h1>
+      <p>Each dot is a confidence bin. Drag temperature — T&gt;1 softens logits. ECE is the average gap to the diagonal.</p>
+    </div>
+    <button type="button" id="reset">Reset</button>
+  </header>
+  <section class="grid">
+    <div class="card">
+      <label for="t">Temperature T <b id="tlab">1.0</b></label>
+      <input id="t" type="range" min="0.5" max="3" step="0.1" value="1">
+      <div class="stat" style="margin-top:16px"><span>Expected calibration error</span><strong id="ece"></strong></div>
+      <p style="margin-top:12px">Fit T on held-out data. This slider is the same knob, live.</p>
+    </div>
+    <div class="card"><canvas id="plot" aria-label="Reliability diagram"></canvas></div>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const BINS = [
+    { conf: 0.15, acc: 0.22 },
+    { conf: 0.35, acc: 0.38 },
+    { conf: 0.55, acc: 0.48 },
+    { conf: 0.75, acc: 0.58 },
+    { conf: 0.92, acc: 0.64 }
+  ];
+  const $ = (id) => document.getElementById(id);
+  const canvas = $("plot"), ctx = canvas.getContext("2d");
+  function scaled(t) {
+    return BINS.map((b) => {
+      const logit = Math.log(b.conf / (1 - b.conf));
+      const conf = 1 / (1 + Math.exp(-logit / t));
+      return { conf, acc: b.acc };
+    });
+  }
+  function draw(rows) {
+    const w = canvas.width = canvas.clientWidth * 2;
+    const h = canvas.height = 560;
+    const p = 50;
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = "#2a3544";
+    ctx.strokeRect(p, p, w - 2 * p, h - 2 * p);
+    ctx.beginPath();
+    ctx.strokeStyle = "#3d4d62";
+    ctx.moveTo(p, h - p);
+    ctx.lineTo(w - p, p);
+    ctx.stroke();
+    ctx.fillStyle = "#55e6d2";
+    rows.forEach((r) => {
+      const x = p + r.conf * (w - 2 * p);
+      const y = h - p - r.acc * (h - 2 * p);
+      ctx.beginPath();
+      ctx.arc(x, y, 10, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.fillStyle = "#95a4b8";
+    ctx.font = "20px ui-sans-serif";
+    ctx.fillText("confidence →", w / 2 - 60, h - 12);
+  }
+  function render() {
+    const t = +$("t").value;
+    $("tlab").textContent = t.toFixed(1);
+    const rows = scaled(t);
+    const ece = rows.reduce((s, r) => s + Math.abs(r.acc - r.conf), 0) / rows.length;
+    $("ece").textContent = ece.toFixed(3);
+    draw(rows);
+    reportHeight();
+  }
+  function reportHeight() {
+    parent.postMessage({ type: "adl-visualize-height", height: document.documentElement.scrollHeight }, "*");
+  }
+  $("t").addEventListener("input", render);
+  $("reset").onclick = () => { $("t").value = 1; render(); };
+  addEventListener("load", () => { render(); reportHeight(); });
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

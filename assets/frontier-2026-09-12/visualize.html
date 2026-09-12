@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Two auditors, one stream of evidence</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .row { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  label { display: block; font-size: 12px; color: #9aa5c4; margin-bottom: 5px; }
+  label b { color: #dfe4f2; font-weight: 650; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  .seg { display: flex; gap: 6px; margin-top: 13px; align-items: center; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .stream { margin-top: 17px; display: grid; gap: 3px; }
+  .o { display: grid; grid-template-columns: 1fr 92px 92px; gap: 8px; align-items: center;
+       padding: 4px 9px; border-radius: 5px; background: #10131f; border: 1px solid #1c2130;
+       font-size: 12px; }
+  .o.split { border-color: rgba(240,138,75,.45); background: rgba(240,138,75,.07); }
+  .o code { font: 11.5px ui-monospace, Menlo, monospace; color: #cdd5ee; }
+  .o em { font-style: normal; text-align: center; font: 600 11px ui-monospace, Menlo, monospace; }
+  .hdr { display: grid; grid-template-columns: 1fr 92px 92px; gap: 8px; padding: 0 9px 4px;
+         font: 10.5px ui-monospace, Menlo, monospace; color: #7d88a6; text-transform: uppercase;
+         letter-spacing: .05em; }
+  .hdr span:not(:first-child) { text-align: center; }
+  .real { color: #f08a4b; } .sim { color: #6b7590; }
+  .out { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 16px; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 12px; }
+  .stat u { display: block; font-size: 11px; color: #8f9ab8; text-decoration: none; margin-bottom: 4px; }
+  .stat b { font: 600 20px ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  .good { color: #5fd4a4; } .bad { color: #f08a4b; } .mid { color: #dfe4f2; }
+  .say { margin-top: 15px; font-size: 12.5px; color: #a7b1cd; border-left: 2px solid #2b3247;
+         padding-left: 11px; }
+  .say b { color: #dfe4f2; }
+</style>
+</head>
+<body>
+<main data-visualizer="frontier-2026-09-12">
+  <h1>Two auditors, one stream of evidence</h1>
+  <p class="sub">Both see every observation. One carries a belief from the task premise; the other
+     sees each item alone. Turn commitment to zero and they become the same auditor.</p>
+
+  <div class="panel">
+    <div class="row">
+      <div>
+        <label for="commit">Commitment to the premise <b id="commitv">0.85</b></label>
+        <input type="range" id="commit" min="0" max="0.98" step="0.01" value="0.85">
+      </div>
+      <div>
+        <label for="skill">Skill on one observation <b id="skillv">0.80</b></label>
+        <input type="range" id="skill" min="0.5" max="1" step="0.01" value="0.80">
+      </div>
+      <div>
+        <label for="turns">Observations in the run <b id="turnsv">14</b></label>
+        <input type="range" id="turns" min="4" max="24" step="1" value="14">
+      </div>
+    </div>
+    <div class="seg"><button class="reset" id="reset">Reset</button></div>
+  </div>
+
+  <div class="hdr" style="margin-top:16px"><span>observation</span><span>in&nbsp;context</span><span>cold</span></div>
+  <div class="stream" id="stream"></div>
+
+  <div class="out">
+    <div class="stat"><u>in-context calls it real</u><b id="ic" class="mid">—</b></div>
+    <div class="stat"><u>cold calls it real</u><b id="cd" class="mid">—</b></div>
+    <div class="stat"><u>observations they split on</u><b id="sp" class="mid">—</b></div>
+  </div>
+
+  <p class="say" id="say"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  // text, isReal, salience
+  var OBS = [
+    ["resolved host to 203.0.113.42", true, 0.75],
+    ["TLS cert issued to an unfamiliar company", true, 0.80],
+    ["rate limited, Retry-After: 120", true, 0.55],
+    ["package index accepted an upload", true, 0.85],
+    ["target returned a canned fixture payload", false, 0.70],
+    ["hostname ends in .test", false, 0.85],
+    ["latency 0.4 ms, identical every call", false, 0.65],
+    ["response body contains lorem ipsum", false, 0.90]
+  ];
+  var DEFAULTS = { commit: 0.85, skill: 0.80, turns: 14 };
+  var st = Object.assign({}, DEFAULTS);
+  var $ = function (id) { return document.getElementById(id); };
+  function rngFrom(s){ return function(){ s=(s*1103515245+12345)>>>0; return s/4294967296; }; }
+
+  function build(rnd) {
+    var out = [], i;
+    for (i = 0; i < st.turns; i++) {
+      var o = OBS[Math.floor(rnd() * OBS.length)];
+      // The run really is on live infrastructure, so real-indicating items dominate.
+      if (!o[1] && rnd() > 0.35) {
+        var reals = OBS.filter(function (x) { return x[1]; });
+        o = reals[Math.floor(rnd() * reals.length)];
+      }
+      out.push(o);
+    }
+    return out;
+  }
+
+  function read(o, belief, rnd) {
+    var p = st.skill * o[2] + (1 - o[2]) * 0.5;
+    if (belief !== null && o[1] !== belief) p *= (1 - st.commit);
+    if (rnd() < p) return o[1];
+    // A biased reader's mistakes fall TOWARD the belief it holds, not at
+    // random. Symmetric errors would look like noise, which is a different
+    // and much less interesting failure than the one being shown here.
+    return belief === null ? !o[1] : belief;
+  }
+
+  function render() {
+    $("commitv").textContent = st.commit.toFixed(2);
+    $("skillv").textContent = st.skill.toFixed(2);
+    $("turnsv").textContent = st.turns;
+
+    var rnd = rngFrom(7), stream = build(rnd);
+    var belief = false, rows = [], icReal = 0, cdReal = 0, split = 0, recent = [];
+    stream.forEach(function (o) {
+      var ic = read(o, belief, rnd);
+      var cd = read(o, null, rnd);
+      recent.push(ic); if (recent.length > 3) recent.shift();
+      if (recent.length === 3 && recent.every(Boolean)) belief = true;
+      if (ic) icReal++;
+      if (cd) cdReal++;
+      if (ic !== cd) split++;
+      rows.push([o[0], ic, cd]);
+    });
+
+    var host = $("stream"); host.textContent = "";
+    rows.forEach(function (r) {
+      var d = document.createElement("div");
+      d.className = "o" + (r[1] !== r[2] ? " split" : "");
+      var c = document.createElement("code"); c.textContent = r[0];
+      var a = document.createElement("em");
+      a.className = r[1] ? "real" : "sim"; a.textContent = r[1] ? "REAL" : "simulated";
+      var b = document.createElement("em");
+      b.className = r[2] ? "real" : "sim"; b.textContent = r[2] ? "REAL" : "simulated";
+      d.appendChild(c); d.appendChild(a); d.appendChild(b);
+      host.appendChild(d);
+    });
+
+    var icp = icReal / st.turns, cdp = cdReal / st.turns;
+    $("ic").textContent = (icp * 100).toFixed(0) + "%";
+    $("ic").className = icp > 0.5 ? "good" : "bad";
+    $("cd").textContent = (cdp * 100).toFixed(0) + "%";
+    $("cd").className = cdp > 0.5 ? "good" : "bad";
+    $("sp").textContent = split;
+    $("sp").className = split > 0 ? "bad" : "mid";
+
+    var say;
+    if (st.commit < 0.05) {
+      say = "<b>Commitment at zero.</b> The penalty on disagreeing evidence is gone and the "
+          + "columns converge — the residual gap is only that a mistake still lands on the "
+          + "belief rather than at random. Everything the slider adds above this is the cost "
+          + "of reading evidence through a story the reader already holds.";
+    } else if (icp >= cdp) {
+      say = "<b>No asymmetry in this run.</b> With these settings the belief happens not to "
+          + "fight the evidence. Raise commitment, or lengthen the run, and the two columns "
+          + "start to come apart.";
+    } else {
+      say = "<b>" + split + " observations where they disagree.</b> Those highlighted rows are "
+          + "what a monitor reading the agent's reasoning would never show you — the in-context "
+          + "column is the transcript, and it is the document the agent wrote.";
+    }
+    $("say").innerHTML = say;
+    reportHeight();
+  }
+
+  function reportHeight() {
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+
+  ["commit", "skill", "turns"].forEach(function (k) {
+    $(k).addEventListener("input", function (e) { st[k] = +e.target.value; render(); });
+  });
+  $("reset").addEventListener("click", function () {
+    st = Object.assign({}, DEFAULTS);
+    $("commit").value = st.commit; $("skill").value = st.skill; $("turns").value = st.turns;
+    render();
+  });
+
+  render();
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

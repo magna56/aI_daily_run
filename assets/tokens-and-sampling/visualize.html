@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Temperature is a knob, not a personality</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090c12;--panel:#121821;--edge:#2a3544;--ink:#edf4ff;--muted:#95a4b8;--lime:#bef264;--blue:#60a5fa;--orange:#fb923c;--pink:#f472b6}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#101928 0,#090c12 42%);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,sans-serif}
+    main{max-width:980px;margin:auto;padding:clamp(18px,4vw,36px)}
+    header{display:flex;justify-content:space-between;align-items:end;gap:22px;margin-bottom:18px}
+    h1{font-size:clamp(24px,4.4vw,40px);line-height:1.08;margin:6px 0}
+    .kicker{font:800 11px ui-monospace,monospace;letter-spacing:.16em;color:var(--lime);text-transform:uppercase}
+    .intro{max-width:440px;color:var(--muted)}
+    button{border:1px solid #435168;border-radius:9px;background:#192231;color:var(--ink);padding:9px 13px;font-weight:750;cursor:pointer}
+    button:hover{border-color:var(--lime)}
+    button:focus-visible,input:focus-visible{outline:3px solid #bef26466;outline-offset:2px}
+    label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}
+    input[type=range]{width:100%;accent-color:var(--lime)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .panel{border:1px solid var(--edge);border-radius:16px;background:var(--panel);padding:16px}
+    .panel h2{font-size:13px;margin:0 0 10px}
+    .chips{display:flex;flex-wrap:wrap;gap:6px}
+    .chip{border-radius:8px;padding:6px 8px;font:700 12px ui-monospace,monospace;background:#172438;border:1px solid #3c506b}
+    .chip:nth-child(odd){border-color:#5b7;}
+    .row{display:grid;grid-template-columns:88px 1fr 56px;align-items:center;gap:8px;margin:7px 0}
+    .bar{height:18px;border-radius:6px;background:#1b2432;overflow:hidden}
+    .bar>i{display:block;height:100%;background:var(--blue)}
+    .meta{display:flex;justify-content:space-between;color:var(--muted);font:12px ui-monospace,monospace;margin-top:8px}
+    .draws{font:700 13px ui-monospace,monospace;min-height:2.4em}
+    .callout{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+    .callout div{padding:11px;border-radius:10px;background:#111925;color:var(--muted)}
+    .callout b{color:var(--ink);display:block}
+    @media(max-width:720px){header{display:block}.grid,.callout{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:no-preference){.bar>i{transition:width .18s}}
+  </style>
+</head>
+<body>
+<main data-visualizer="tokens-and-sampling">
+  <header>
+    <div>
+      <div class="kicker">Codec, then a die</div>
+      <h1>Tokens cut the text.<br>Temperature loads the dice.</h1>
+    </div>
+    <p class="intro">Pick a phrase to tokenize. Drag temperature. The logits never change — only the softmax and the draws do.</p>
+  </header>
+  <div class="grid">
+    <section class="panel">
+      <h2>1. Tokenizer (toy splits, not a vendor codec)</h2>
+      <div class="chips" id="phrases"></div>
+      <p class="meta" id="tokmeta"></p>
+      <div class="chips" id="tokens" style="margin-top:10px"></div>
+    </section>
+    <section class="panel">
+      <h2>2. Same logits, slider is temperature</h2>
+      <label for="temp">Temperature <span id="tlabel">0.7</span></label>
+      <input id="temp" type="range" min="0.1" max="1.8" step="0.1" value="0.7">
+      <div id="bars"></div>
+      <div class="meta">
+        <span>20 draws</span>
+        <button type="button" id="redraw">Resample</button>
+      </div>
+      <p class="draws" id="draws"></p>
+    </section>
+  </div>
+  <div class="callout">
+    <div><b>Words ≠ tokens</b>A long identifier is many pieces. A leading space is often its own story.</div>
+    <div><b>Softmax first</b>Raw scores can be any real number. Probabilities have to add to 1.</div>
+    <div><b>T is not IQ</b>Low T ≈ greedy. High T flattens the tail. Neither adds a fact.</div>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const phrases = {
+    "retry timeout": ["retry"," timeout"],
+    "getUserByEmail": ["get","User","By","Email"],
+    "unbelievable": ["un","believ","able"],
+    " hello": [" hello"]
+  };
+  const names = ["return","raise","retry","rm"];
+  const logits = [3.4, 1.1, 0.6, -0.8];
+  let phrase = "getUserByEmail";
+  const $ = (id) => document.getElementById(id);
+  function softmax(temp) {
+    const scaled = logits.map((z) => z / temp);
+    const m = Math.max.apply(null, scaled);
+    const exps = scaled.map((z) => Math.exp(z - m));
+    const s = exps.reduce((a,b) => a+b, 0);
+    return exps.map((e) => e / s);
+  }
+  function renderPhrases() {
+    $("phrases").innerHTML = Object.keys(phrases).map((p) =>
+      `<button type="button" data-p="${p}"${p===phrase?' style="border-color:var(--lime)"':""}>${JSON.stringify(p)}</button>`
+    ).join(" ");
+    $("phrases").querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", () => { phrase = btn.getAttribute("data-p"); render(); });
+    });
+    const toks = phrases[phrase];
+    $("tokens").innerHTML = toks.map((t) => `<span class="chip">${JSON.stringify(t)}</span>`).join("");
+    $("tokmeta").textContent = `chars=${phrase.length}  tokens=${toks.length}  chars/token=${(phrase.length/toks.length).toFixed(2)}`;
+  }
+  function renderBars() {
+    const t = Number($("temp").value);
+    $("tlabel").textContent = t.toFixed(1);
+    const p = softmax(t);
+    $("bars").innerHTML = names.map((n,i) => {
+      const pct = Math.round(p[i]*100);
+      return `<div class="row"><span>${n}</span><div class="bar"><i style="width:${pct}%"></i></div><span>${pct}%</span></div>`;
+    }).join("");
+    const counts = {return:0,raise:0,retry:0,rm:0};
+    for (let i=0;i<20;i++) {
+      const r = Math.random();
+      let acc = 0, pick = names[0];
+      for (let j=0;j<names.length;j++) { acc += p[j]; if (r <= acc) { pick = names[j]; break; } }
+      counts[pick]++;
+    }
+    $("draws").textContent = names.map((n) => n+"="+counts[n]).join("  ");
+  }
+  function render(){ renderPhrases(); renderBars(); }
+  $("temp").addEventListener("input", renderBars);
+  $("redraw").addEventListener("click", renderBars);
+  render();
+  const postHeight=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(postHeight).observe(document.documentElement);postHeight();
+})();
+</script>
+</body>
+</html>

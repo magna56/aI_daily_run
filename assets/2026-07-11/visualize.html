@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>LUMI Prediction-to-Compression Explorer</title>
+  <style>
+    :root{color-scheme:dark;--bg:#071311;--panel:#0d1d1a;--line:#254139;--text:#effcf7;--muted:#9bb9ae;--lime:#a8f06a;--mint:#4ee0b2;--amber:#ffc65c;--red:#ff7185}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#0d2923 0,var(--bg) 45%);color:var(--text);font:15px/1.45 system-ui,sans-serif}#data-visualizer{max-width:1080px;margin:auto;padding:clamp(16px,3vw,32px)}
+    header{max-width:780px;margin-bottom:20px}.tag{display:inline-block;border:1px solid #3d675b;color:var(--mint);border-radius:99px;padding:4px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.1em}h1{font-size:clamp(27px,5vw,46px);line-height:1.04;letter-spacing:-.04em;margin:12px 0 6px}header p,.muted{color:var(--muted)}
+    .controls{display:grid;grid-template-columns:1fr 1fr auto;gap:14px;align-items:end;border:1px solid var(--line);background:#0a1815;border-radius:14px;padding:14px}label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}select,input,button{font:inherit}select,button{border:1px solid #416157;background:#122a25;color:var(--text);border-radius:9px;padding:9px 12px;width:100%}input{width:100%;accent-color:var(--lime)}button:hover{border-color:var(--lime)}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #a8f06a44;outline-offset:2px}
+    .score{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 0}.card,.panel{border:1px solid var(--line);background:#0c1d19dd;border-radius:14px}.card{padding:14px}.card b{font-size:clamp(20px,3vw,28px);display:block;color:var(--lime);font-variant-numeric:tabular-nums}.card span{font-size:12px;color:var(--muted)}
+    .pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:14px 0}.step{padding:10px 8px;text-align:center;border-radius:9px;background:#132822;border:1px solid #2c4a41;font-size:12px}.arrow{color:var(--mint)}
+    .layout{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}.panel{padding:16px;min-width:0}.panel h2{font-size:17px;margin:0 0 4px}.pixels{display:grid;grid-template-columns:repeat(12,1fr);gap:5px;margin:15px 0}.pixel{aspect-ratio:1;border:2px solid transparent;border-radius:6px;cursor:pointer;position:relative}.pixel[aria-current=true]{border-color:white;box-shadow:0 0 0 2px var(--mint)}.pixel:focus-visible{outline:3px solid var(--lime)}
+    .prob-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.prob-head b{font-size:21px;color:var(--amber)}.probabilities{height:160px;display:flex;align-items:end;gap:2px;margin-top:10px;border-bottom:1px solid #48645c}.pbar{flex:1;min-width:1px;background:#31554a;position:relative}.pbar.actual{background:var(--amber);box-shadow:0 0 10px #ffc65c55}.pbar.near{background:var(--mint)}
+    .bitrow{display:grid;grid-template-columns:24px 1fr 55px;gap:8px;align-items:center;margin:5px 0;font:12px ui-monospace,monospace}.bittrack{height:10px;background:#162e28;border-radius:4px;overflow:hidden}.bitfill{height:100%;background:linear-gradient(90deg,var(--mint),var(--amber));border-radius:4px}.selected .bitfill{background:var(--red)}.selected{color:#fff}
+    .interval{margin-top:14px;background:#06100e;border-radius:10px;padding:12px}.interval-track{height:32px;position:relative;background:#17312a;border-radius:5px;overflow:hidden}.interval-used{height:100%;background:linear-gradient(90deg,var(--mint),var(--lime));min-width:2px}.equation{font:13px ui-monospace,monospace;color:#d8f7ea;margin-top:10px}.note{border-left:3px solid var(--lime);padding-left:10px;color:var(--muted);font-size:13px;margin-top:14px}
+    @media(max-width:720px){.controls{grid-template-columns:1fr 1fr}.controls button{grid-column:1/-1}.layout{grid-template-columns:1fr}.pipeline{grid-template-columns:1fr}.arrow{display:none}}
+    @media(max-width:430px){.controls,.score{grid-template-columns:1fr}.controls button{grid-column:auto}.pixels{grid-template-columns:repeat(8,1fr)}}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+<main id="data-visualizer">
+  <header><span class="tag">LUMI · lossless coding</span><h1>Every probability has a price in bits.</h1><p>A frozen LLM predicts the next pixel; an arithmetic coder turns its confidence into a compact, exactly reversible message.</p></header>
+  <section class="controls" aria-label="Model controls">
+    <div><label for="model">Pixel predictor</label><select id="model"><option value="uniform">Uniform · knows nothing</option><option value="hist">Histogram · global frequency</option><option value="neighbor" selected>Neighbor-aware · LUMI-style</option></select></div>
+    <div><label for="smooth">Image smoothness: <b id="smoothValue">72%</b></label><input id="smooth" type="range" min="10" max="95" value="72"></div>
+    <button id="reset" type="button">Reset</button>
+  </section>
+  <section class="score" aria-live="polite">
+    <div class="card"><b id="idealBits">—</b><span>ideal arithmetic-coded bits</span></div>
+    <div class="card"><b id="ratio">—</b><span>size vs raw 8-bit pixels</span></div>
+    <div class="card"><b id="selectedCost">—</b><span>selected pixel cost</span></div>
+  </section>
+  <div class="pipeline" aria-label="LUMI pipeline"><div class="step">raw pixel + channel</div><div class="step"><span class="arrow">→ </span>pixel embedding</div><div class="step"><span class="arrow">→ </span>frozen LLM</div><div class="step"><span class="arrow">→ </span>256-way head</div><div class="step"><span class="arrow">→ </span>arithmetic bits</div></div>
+  <section class="layout">
+    <article class="panel"><h2>Deterministic scan line</h2><p class="muted">Select a pixel. Its already-seen neighbor is the model context.</p><div id="pixels" class="pixels" role="list" aria-label="Pixel sequence"></div><div class="prob-head"><span>256-way probability distribution</span><b id="actualProb">—</b></div><div class="probabilities" id="probabilities" aria-label="Probability distribution chart"></div><div class="equation" id="equation"></div><div class="note">The decoder re-runs the identical deterministic model on decoded context. It reconstructs this same distribution, so no probability table travels in the file.</div></article>
+    <article class="panel"><h2>Bit bill, pixel by pixel</h2><p class="muted">A high-probability actual value costs fewer bits. Arithmetic coding combines fractional costs without rounding each symbol.</p><div id="bitRows"></div><div class="interval"><b>Conceptual interval remaining</b><p class="muted">Each observed symbol keeps its probability-sized slice.</p><div class="interval-track"><div class="interval-used" id="intervalUsed"></div></div><div class="equation" id="intervalText"></div></div></article>
+  </section>
+</main>
+<script>
+(() => {
+  'use strict';
+  const $=id=>document.getElementById(id), N=24;let selected=8;
+  function makePixels(){
+    const smooth=+$('smooth').value/100;let v=128,out=[];
+    for(let i=0;i<N;i++){const structured=Math.round(9*Math.sin(i/3.2)+((i*17)%5-2));const jump=((i*29)%17===0?34:0);v=Math.max(0,Math.min(255,Math.round(smooth*v+(1-smooth)*(128+structured*5)+structured-jump)));out.push(v)}
+    return out;
+  }
+  function frequencies(mode,ctx,seen){
+    if(mode==='uniform')return Array(256).fill(1);
+    if(mode==='hist'){const f=Array(256).fill(1);seen.forEach(v=>f[v]+=8);return f}
+    const f=Array(256).fill(1),spread=6;
+    for(let d=-18;d<=18;d++){const v=ctx+d;if(v>=0&&v<256)f[v]+=Math.floor(400*Math.exp(-(d*d)/(2*spread*spread)))}
+    return f;
+  }
+  function analyze(){
+    const px=makePixels(),mode=$('model').value,costs=[],probs=[],seen=[];let ctx=128;
+    for(const sym of px){const f=frequencies(mode,ctx,seen),tot=f.reduce((a,b)=>a+b,0),p=f[sym]/tot;costs.push(-Math.log2(p));probs.push({f,tot,p,ctx});seen.push(sym);ctx=sym}
+    return {px,costs,probs,total:costs.reduce((a,b)=>a+b,0)};
+  }
+  function render(){
+    const a=analyze();$('smoothValue').textContent=$('smooth').value+'%';$('idealBits').textContent=a.total.toFixed(1);$('ratio').textContent=(a.total/(N*8)*100).toFixed(1)+'%';$('selectedCost').textContent=a.costs[selected].toFixed(2)+' bits';
+    $('pixels').innerHTML=a.px.map((v,i)=>'<button type="button" class="pixel" role="listitem" data-i="'+i+'" aria-label="Pixel '+(i+1)+', value '+v+'" aria-current="'+(i===selected)+'" style="background:rgb('+v+','+v+','+v+')"></button>').join('');
+    const info=a.probs[selected],actual=a.px[selected],max=Math.max(...info.f);
+    $('actualProb').textContent='P('+actual+') = '+(info.p*100).toFixed(2)+'%';
+    $('probabilities').innerHTML=info.f.map((f,i)=>'<i class="pbar '+(i===actual?'actual':Math.abs(i-info.ctx)<=6?'near':'')+'" style="height:'+Math.max(1,f/max*100)+'%" title="value '+i+': '+(f/info.tot*100).toFixed(2)+'%"></i>').join('');
+    $('equation').textContent='−log₂('+info.p.toFixed(5)+') = '+a.costs[selected].toFixed(3)+' bits for pixel '+actual;
+    const maxCost=Math.max(8,...a.costs);$('bitRows').innerHTML=a.costs.map((c,i)=>'<div class="bitrow '+(i===selected?'selected':'')+'"><span>'+String(i+1).padStart(2,'0')+'</span><div class="bittrack"><div class="bitfill" style="width:'+Math.min(100,c/maxCost*100)+'%"></div></div><span>'+c.toFixed(2)+' b</span></div>').join('');
+    const log10=-a.total*Math.LOG10E*Math.LN2;$('intervalUsed').style.width=Math.max(.3,100*Math.pow(2,-Math.min(a.total,15)))+'%';$('intervalText').textContent='interval width = 2^−'+a.total.toFixed(1)+'  (log₁₀ width ≈ '+log10.toFixed(1)+')';
+  }
+  $('pixels').addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(b){selected=+b.dataset.i;render()}});
+  $('model').addEventListener('change',render);$('smooth').addEventListener('input',render);$('reset').addEventListener('click',()=>{$('model').value='neighbor';$('smooth').value=72;selected=8;render()});
+  render();
+  const post=()=>parent.postMessage({type:'adl-visualize-height',height:document.documentElement.scrollHeight},'*');
+  new ResizeObserver(post).observe(document.documentElement);post();
+})();
+</script>
+</body>
+</html>

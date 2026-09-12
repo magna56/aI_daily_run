@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>BitNet on a 6502</title>
+  <style>
+    :root{color-scheme:dark;--bg:#100d18;--panel:#1b1726;--line:#3c3451;--text:#fff8e9;--muted:#b7abc8;--cream:#ffe08a;--blue:#6dd5fa;--magenta:#ff78b7;--green:#70e39e;--zero:#332d43}
+    *{box-sizing:border-box}body{margin:0;background:repeating-linear-gradient(0deg,#ffffff05 0 1px,transparent 1px 4px),radial-gradient(circle at 90% 0,#3b1741 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}#data-visualizer{max-width:1100px;margin:auto;padding:clamp(16px,3vw,32px)}
+    header{display:flex;justify-content:space-between;align-items:start;gap:18px;margin-bottom:18px}.chip{border:2px solid var(--cream);padding:8px 11px;box-shadow:4px 4px 0 #ffe08a33;color:var(--cream);white-space:nowrap}h1{font:800 clamp(27px,5vw,46px)/1 system-ui,sans-serif;letter-spacing:-.04em;margin:0 0 8px}header p{max-width:700px;color:var(--muted);margin:0}
+    .controls{display:grid;grid-template-columns:1fr 1fr auto;gap:14px;align-items:end;background:#171221;border:1px solid var(--line);padding:14px;box-shadow:4px 4px 0 #0006}label{display:block;color:var(--muted);font-size:12px;margin-bottom:7px}input{width:100%;accent-color:var(--magenta)}button{font:inherit;color:var(--text);background:#292139;border:1px solid #5c4c74;padding:9px 14px}button:hover{border-color:var(--cream)}button:focus-visible,input:focus-visible{outline:3px solid #6dd5fa55;outline-offset:2px}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}.stat,.panel{background:#191523e8;border:1px solid var(--line);box-shadow:4px 4px 0 #0005}.stat{padding:13px}.stat b{display:block;color:var(--cream);font-size:20px;font-variant-numeric:tabular-nums}.stat span{color:var(--muted);font-size:11px}
+    .layout{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}.panel{padding:16px;min-width:0}h2{font:700 17px system-ui,sans-serif;margin:0 0 4px}.kicker{color:var(--magenta);font-size:11px;letter-spacing:.12em;text-transform:uppercase}.muted{color:var(--muted)}
+    .matrix{display:grid;grid-template-columns:repeat(28,1fr);gap:2px;aspect-ratio:2/1;margin:14px 0}.cell{min-width:2px;background:var(--zero)}.cell.pos{background:var(--blue)}.cell.neg{background:var(--magenta)}.legend{display:flex;gap:16px;font-size:11px;color:var(--muted)}.key{display:inline-block;width:9px;height:9px;margin-right:5px}
+    .ops{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}.op{background:#0e0b14;padding:11px;border-left:3px solid var(--blue)}.op.tern{border-color:var(--green)}.op b{display:block;font-size:18px}.code{font-size:12px;background:#0b0910;padding:11px;margin-top:10px;color:#d9cfeb;overflow:auto}
+    .memory{margin-top:15px}.ram{height:34px;background:#0b0910;border:1px solid #493d5e;display:flex;overflow:hidden}.segment{height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;white-space:nowrap;overflow:hidden}.model{background:var(--magenta);color:#211}.state{background:var(--green);color:#132}.free{background:#292238;color:var(--muted)}.kv{background:var(--blue);color:#123}
+    .compare{display:grid;gap:12px;margin-top:12px}.row{display:grid;grid-template-columns:90px 1fr 62px;gap:8px;align-items:center;font-size:11px}.track{height:18px;background:#0b0910;position:relative}.fill{height:100%;min-width:2px}.fixed{background:var(--green)}.growing{background:var(--blue)}.warning{color:var(--cream);border-left:3px solid var(--cream);padding:9px;margin-top:12px;background:#2c2416}
+    @media(max-width:760px){header{display:block}.chip{display:inline-block;margin-top:14px}.controls{grid-template-columns:1fr 1fr}.controls button{grid-column:1/-1}.stats{grid-template-columns:1fr 1fr}.layout{grid-template-columns:1fr}}
+    @media(max-width:430px){.controls{grid-template-columns:1fr}.controls button{grid-column:auto}.stats{grid-template-columns:1fr 1fr}.matrix{gap:1px}}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+<main id="data-visualizer">
+  <header><div><div class="kicker">Hardware-aware language modeling</div><h1>No multiply. No KV cache.</h1><p>See how ternary weights and a fixed recurrent state turn impossible operations into 6502-friendly shifts, adds, and bytes.</p></div><div class="chip">6502<br>32 KB RAM<br>NO FPU</div></header>
+  <section class="controls" aria-label="Simulation controls">
+    <div><label for="threshold">Ternary threshold: <b id="thresholdValue"></b> × absmean</label><input id="threshold" type="range" min="35" max="100" value="50"></div>
+    <div><label for="tokens">Generated tokens: <b id="tokenValue"></b></label><input id="tokens" type="range" min="1" max="220" value="64"></div>
+    <button id="reset" type="button">Reset</button>
+  </section>
+  <section class="stats" aria-live="polite">
+    <div class="stat"><b id="zeroRate">—</b><span>zero weights skipped</span></div>
+    <div class="stat"><b>0</b><span>multiplies per ternary matvec</span></div>
+    <div class="stat"><b>16×</b><span>packed 2-bit vs float32</span></div>
+    <div class="stat"><b id="cycleRatio">~5×</b><span>6502 operation speedup claim</span></div>
+  </section>
+  <section class="layout">
+    <article class="panel"><div class="kicker">BitNet b1.58 representation</div><h2>56 × 56 weight slice</h2><p class="muted">absmean scale <b id="scale"></b>; each cell becomes −1, 0, or +1. The threshold control exposes the sparsity/accuracy tradeoff.</p><div id="matrix" class="matrix" role="img" aria-label="Ternary weight matrix"></div><div class="legend"><span><i class="key" style="background:var(--magenta)"></i>−1 subtract</span><span><i class="key" style="background:var(--zero)"></i>0 skip</span><span><i class="key" style="background:var(--blue)"></i>+1 add</span></div><div class="ops"><div class="op"><span>ordinary 56×56</span><b>3,136 multiplies</b><small>~150 cycles per 8×8 MAC</small></div><div class="op tern"><span>ternary 56×56</span><b id="ternOps">—</b><small>~30 cycles per add/sub accumulate</small></div></div><div class="code">W = 0 ? skip : W = +1 ? acc += x : acc -= x<br>packed code = (byte &gt;&gt; 2i) &amp; 3</div></article>
+    <article class="panel"><div class="kicker">Architecture is memory policy</div><h2>Context memory as generation grows</h2><p class="muted">The recurrent core overwrites one 56-byte int8 state. For comparison, the blue estimate stores one layer's int8 key + value vectors: 2 × 56 × tokens.</p><div class="compare"><div class="row"><span>recurrent</span><div class="track"><div class="fill fixed" id="stateBar"></div></div><b>56 B</b></div><div class="row"><span>KV, 1 layer</span><div class="track"><div class="fill growing" id="kvBar"></div></div><b id="kvBytes">—</b></div></div><div class="memory"><p>Illustrative 25 KB working-RAM budget</p><div class="ram"><div class="segment model" style="width:52%">13 KB model</div><div class="segment state" id="ramState">state</div><div class="segment free">remaining workspace</div></div></div><div class="warning" id="warning"></div><p class="muted">The reported full model is 52K parameters packed into 13 KB, hidden dimension 56, with a 27-character vocabulary. Fixed state means token 220 costs the same recurrent memory as token 1.</p></article>
+  </section>
+</main>
+<script>
+(() => {
+  'use strict';
+  const $=id=>document.getElementById(id),COUNT=56*56;
+  function weight(i){return Math.sin(i*12.9898+6502)*.78+Math.cos(i*3.117)*.31}
+  const raw=Array.from({length:COUNT},(_,i)=>weight(i)),absmean=raw.reduce((a,v)=>a+Math.abs(v),0)/COUNT;
+  function render(){
+    const threshold=+$('threshold').value/100,tokens=+$('tokens').value;
+    const q=raw.map(v=>Math.abs(v)<absmean*threshold?0:(v<0?-1:1)),zeros=q.filter(v=>v===0).length,active=COUNT-zeros;
+    $('thresholdValue').textContent=threshold.toFixed(2);$('tokenValue').textContent=tokens;$('scale').textContent=absmean.toFixed(3);$('zeroRate').textContent=(zeros/COUNT*100).toFixed(0)+'%';
+    $('ternOps').textContent=active.toLocaleString()+' add/sub';$('matrix').innerHTML=q.map(v=>'<i class="cell '+(v>0?'pos':v<0?'neg':'')+'"></i>').join('');
+    const kv=2*56*tokens,cap=25*1024;$('kvBytes').textContent=kv>=1024?(kv/1024).toFixed(1)+' KB':kv+' B';
+    $('stateBar').style.width=Math.max(1,56/cap*100)+'%';$('kvBar').style.width=Math.min(100,kv/cap*100)+'%';
+    $('warning').textContent=kv>cap?'At this context, even one illustrative KV layer exceeds the entire 25 KB working budget.':'One illustrative KV layer uses '+(kv/cap*100).toFixed(1)+'% of 25 KB; recurrent state stays at 0.2%.';
+    $('ramState').style.width=Math.max(.3,56/cap*100)+'%';
+  }
+  $('threshold').addEventListener('input',render);$('tokens').addEventListener('input',render);$('reset').addEventListener('click',()=>{$('threshold').value=50;$('tokens').value=64;render()});
+  render();
+  const post=()=>parent.postMessage({type:'adl-visualize-height',height:document.documentElement.scrollHeight},'*');
+  new ResizeObserver(post).observe(document.documentElement);post();
+})();
+</script>
+</body>
+</html>

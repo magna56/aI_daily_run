@@ -1,0 +1,173 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Pseudo-Label Router Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#141821;--line:#303747;--text:#f4f6fb;--muted:#929db1;--bad:#f97316;--ok:#34d399;--acc:#818cf8;--warn:#facc15;--dim:#252b38}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111827,var(--bg) 48%);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:24px}
+.kicker{font:800 .75rem ui-monospace;color:var(--warn);letter-spacing:.13em}
+h1{font-size:clamp(1.7rem,4.4vw,2.9rem);line-height:1.08;margin:.4rem 0}
+.lede{max-width:790px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.panel h2{margin:0 0 12px;font-size:1rem}
+label{display:block;font:700 .78rem ui-monospace;color:var(--muted);margin-bottom:8px}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.ctl+.ctl{margin-top:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:680px){.grid2{grid-template-columns:1fr}}
+.stat{background:#0c1018;border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font:900 2.1rem ui-monospace;line-height:1.1}
+.stat small{color:var(--muted);font-size:.78rem;display:block;margin-top:4px}
+.paper{color:var(--muted);font:600 .72rem ui-monospace;margin-top:6px}
+.verdict{margin-top:16px;padding:14px;border-radius:12px;border:1px solid var(--line);background:#0c1018}
+.verdict b{display:block;font:900 1.1rem ui-monospace}
+.verdict p{margin:.4rem 0 0;color:var(--muted);font-size:.88rem}
+.verdict.router b{color:var(--ok)} .verdict.trust b{color:var(--acc)} .verdict.dead b{color:var(--bad)}
+.buckets{display:flex;align-items:flex-end;gap:12px;height:170px;margin-top:10px;overflow-x:auto}
+.bk{flex:1 0 58px;min-width:58px;display:flex;flex-direction:column-reverse;gap:3px}
+.bk .cap{flex:none;text-align:center;font:700 .7rem ui-monospace;color:var(--muted);margin-top:7px}
+.dot{height:15px;border-radius:4px}
+.crown{outline:2px solid var(--warn);outline-offset:2px;border-radius:6px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;color:var(--muted);font-size:.78rem}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+#reset{width:100%;margin-top:16px;background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:10px;cursor:pointer;font-weight:700}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main class="wrap" data-visualizer="frontier-2026-08-29">
+<header>
+<div class="kicker">TTPO &middot; ARXIV:2608.27448</div>
+<h1>An answer key that's wrong 85% of the time still sorts your rollouts.</h1>
+<p class="lede">Same sampler as <code>code_example.py</code>: correct answers concentrate, wrong ones scatter, and one attractive distractor competes with the truth. Move per-rollout accuracy and watch the vote become trustworthy exactly as the asymmetry that TTPO runs on disappears.</p>
+</header>
+
+<section class="panel">
+<div class="ctl">
+<label for="acc">Per-rollout accuracy on this prompt: <span id="accOut" style="color:var(--acc)">15%</span></label>
+<input type="range" id="acc" min="5" max="60" step="1" value="15">
+</div>
+<div class="ctl">
+<label for="kk">Rollouts sampled per prompt (K): <span id="kOut" style="color:var(--acc)">12</span></label>
+<input type="range" id="kk" min="4" max="32" step="2" value="12">
+</div>
+<div class="ctl">
+<label for="dist">Pull of the most attractive wrong answer: <span id="distOut" style="color:var(--acc)">30%</span></label>
+<input type="range" id="dist" min="5" max="45" step="1" value="30">
+</div>
+</section>
+
+<section class="panel">
+<h2>Over 4,000 simulated hard prompts — the same run as the Code tab</h2>
+<div class="grid2">
+<div class="stat"><b id="voteOut" style="color:var(--bad)">86.4%</b>
+  <small>of majority votes are WRONG</small><div class="paper">paper reports ~85%</div></div>
+<div class="stat"><b id="disOut" style="color:var(--ok)">80.5%</b>
+  <small>of rollouts disagreeing with a wrong vote are ALSO wrong</small><div class="paper">paper reports ~79%</div></div>
+</div>
+<div class="verdict" id="verdict"><b id="vHead"></b><p id="vBody"></p></div>
+</section>
+
+<section class="panel">
+<h2>One prompt, clustered</h2>
+<div class="buckets" id="buckets"></div>
+<div class="legend">
+<span><i style="background:var(--ok)"></i>correct answer</span>
+<span><i style="background:var(--bad)"></i>a wrong answer</span>
+<span><i style="background:transparent;outline:2px solid var(--warn)"></i>wins the vote &rarr; becomes the pseudo-label</span>
+</div>
+<button id="reset" type="button" aria-label="Reset to the paper's regime">Reset</button>
+</section>
+</main>
+<script>
+(()=>{"use strict";
+const $=s=>document.querySelector(s);
+const N=4000, WRONG_MODES=6;
+
+// Deterministic PRNG so every reader sees identical numbers for identical inputs.
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+// Mirrors sample_rollouts() in code_example.py exactly.
+function draw(rnd,p,top){
+  const u=rnd();
+  if(u<p) return "C";
+  if(u<p+top) return "W0";
+  return "W"+(1+Math.floor(rnd()*WRONG_MODES));
+}
+
+function simulate(p,K,top){
+  const rnd=mulberry32(20260829);
+  let votesWrong=0, disTotal=0, disWrong=0;
+  for(let i=0;i<N;i++){
+    const counts={}; const all=[];
+    for(let j=0;j<K;j++){const a=draw(rnd,p,top); all.push(a); counts[a]=(counts[a]||0)+1;}
+    let label=null,best=-1;
+    for(const a in counts){if(counts[a]>best){best=counts[a];label=a;}}
+    if(label!=="C"){
+      votesWrong++;
+      for(const a of all){ if(a!==label){ disTotal++; if(a!=="C") disWrong++; } }
+    }
+  }
+  return {voteWrong:100*votesWrong/N, disWrong:disTotal?100*disWrong/disTotal:0};
+}
+
+function samplePrompt(p,K,top){
+  const rnd=mulberry32(99); const counts={};
+  for(let j=0;j<K;j++){const a=draw(rnd,p,top); counts[a]=(counts[a]||0)+1;}
+  let label=null,best=-1;
+  for(const a in counts){if(counts[a]>best){best=counts[a];label=a;}}
+  return {counts:counts,label:label};
+}
+
+function render(){
+  const p=+$("#acc").value/100, K=+$("#kk").value, top=+$("#dist").value/100;
+  $("#accOut").textContent=$("#acc").value+"%";
+  $("#kOut").textContent=K;
+  $("#distOut").textContent=$("#dist").value+"%";
+
+  const r=simulate(p,K,top);
+  $("#voteOut").textContent=r.voteWrong.toFixed(1)+"%";
+  $("#disOut").textContent=r.disWrong.toFixed(1)+"%";
+
+  const v=$("#verdict");
+  if(r.voteWrong>60 && r.disWrong>65){
+    v.className="verdict router";
+    $("#vHead").textContent="Router regime — this is where TTPO pays";
+    $("#vBody").textContent="The vote is useless as a training target and reliable as a sorter. Penalising the disagreeing rollouts is well-aimed "+r.disWrong.toFixed(0)+"% of the time, even though the label that flagged them is wrong "+r.voteWrong.toFixed(0)+"% of the time.";
+  }else if(r.voteWrong<=25){
+    v.className="verdict trust";
+    $("#vHead").textContent="The vote is trustworthy — just supervise on it";
+    $("#vBody").textContent="At this accuracy the majority is usually right, so plain majority-vote pseudo-labelling works and the asymmetric objective is complexity you are not being paid for. TTPO targets the hard regime, not this one.";
+  }else{
+    v.className="verdict dead";
+    $("#vHead").textContent="Weak signal in both directions";
+    $("#vBody").textContent="The vote is wrong often enough to poison supervision, but disagreement is only "+r.disWrong.toFixed(0)+"% reliable — not enough separation to spend a penalty on. Measure this on your own data before training anything.";
+  }
+
+  const sp=samplePrompt(p,K,top);
+  const keys=Object.keys(sp.counts).sort((a,b)=>sp.counts[b]-sp.counts[a]);
+  const maxC=Math.max.apply(null,keys.map(k=>sp.counts[k]));
+  $("#buckets").innerHTML=keys.map(k=>{
+    const isC=(k==="C");
+    const dots=Array.from({length:sp.counts[k]},()=>
+      '<div class="dot" style="background:var('+(isC?'--ok':'--bad')+')"></div>').join("");
+    return '<div class="bk'+(k===sp.label?' crown':'')+'" style="max-height:'+(20+maxC*18)+'px">'
+      +'<div class="cap">'+(isC?"correct":k)+'</div>'+dots+'</div>';
+  }).join("");
+  report();
+}
+
+function report(){parent.postMessage({type:"adl-visualize-height",
+  height:document.documentElement.scrollHeight},"*");}
+
+["acc","kk","dist"].forEach(id=>$("#"+id).addEventListener("input",render));
+$("#reset").addEventListener("click",()=>{
+  $("#acc").value=15; $("#kk").value=12; $("#dist").value=30; render();
+});
+
+render();
+addEventListener("load",report);
+new ResizeObserver(report).observe(document.documentElement);
+})();
+</script>
+</body></html>

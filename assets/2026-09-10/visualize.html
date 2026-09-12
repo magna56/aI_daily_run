@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Merge gate: what your rules actually assert</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .cols { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 9px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  .opt { display: flex; align-items: center; gap: 8px; font-size: 12.5px; margin-bottom: 7px;
+         color: #cdd5ee; cursor: pointer; }
+  .opt input { accent-color: #7c8cf8; width: 15px; height: 15px; cursor: pointer; }
+  .opt code { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; color: #8f9ab8; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed=true] { background: #2a3566; border-color: #4b5ba8; color: #fff; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .bar { display: flex; gap: 6px; margin-top: 13px; flex-wrap: wrap; }
+  .chip { font: 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 4px 9px;
+          border-radius: 6px; border: 1px solid #2b3247; background: #171b2b; color: #9aa5c4; }
+  .chip.on { border-color: rgba(124,140,248,.5); background: rgba(124,140,248,.14); color: #cdd5ee; }
+  .verdict { margin-top: 16px; padding: 14px; border-radius: 10px; border: 1px solid;
+             display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .verdict b { font: 600 18px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .merge { background: rgba(240,138,75,.10); border-color: rgba(240,138,75,.42); }
+  .merge b { color: #f4b083; }
+  .block { background: rgba(95,212,164,.09); border-color: rgba(95,212,164,.35); }
+  .block b { color: #8fe3c0; }
+  .verdict span { font-size: 12.5px; color: #a7b1cd; }
+  .rules { margin-top: 14px; display: grid; gap: 5px; }
+  .rule { display: grid; grid-template-columns: 22px 1fr; gap: 9px; font-size: 12.5px;
+          align-items: baseline; }
+  .rule i { font-style: normal; font-family: ui-monospace, Menlo, monospace; }
+  .pass { color: #5fd4a4; } .fail { color: #f08a4b; } .na { color: #6b7590; }
+  .rule em { font-style: normal; color: #a7b1cd; }
+  .say { margin-top: 15px; font-size: 12.5px; color: #a7b1cd; border-left: 2px solid #2b3247;
+         padding-left: 11px; }
+  .say b { color: #dfe4f2; }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-10">
+  <h1>What your merge gate actually asserts</h1>
+  <p class="sub">Pick who approved and which rules are on. The interesting configurations are the
+     ones that say <em>merge</em> for a reason you did not intend.</p>
+
+  <div class="panel">
+    <div class="cols">
+      <div>
+        <h2>Who approved</h2>
+        <div id="who"></div>
+      </div>
+      <div>
+        <h2>Rules in force</h2>
+        <div id="rulesin"></div>
+      </div>
+      <div>
+        <h2>The path</h2>
+        <div class="seg" id="paths"></div>
+        <h2 style="margin-top:14px">Last pusher</h2>
+        <div class="seg" id="pushers"></div>
+      </div>
+    </div>
+    <div class="seg" style="margin-top:14px"><button class="reset" id="reset">Reset</button></div>
+  </div>
+
+  <div class="bar" id="chips"></div>
+  <div class="verdict" id="verdict"></div>
+  <div class="rules" id="evald"></div>
+  <p class="say" id="say"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var OWNERS = { dana: 1, sam: 1 };            // CODEOWNERS members of @payments-team
+  var REVIEWERS = [
+    { id: "dana", label: "dana (code owner)", type: "User", owner: true },
+    { id: "rio", label: "rio (teammate)", type: "User", owner: false },
+    { id: "copilot", label: "Copilot", type: "Bot", owner: false }
+  ];
+  var RULES = [
+    { id: "count1", label: "required approvals: 1", code: "count>=1" },
+    { id: "count2", label: "required approvals: 2", code: "count>=2" },
+    { id: "owner", label: "require code owner review", code: "require_code_owner_review" },
+    { id: "push", label: "approval of most recent push", code: "require_last_push_approval" },
+    { id: "human", label: "CI: at least one human approval", code: "user.type == User" }
+  ];
+  var DEFAULTS = { who: { copilot: true }, rules: { count1: true }, owned: true, pusher: "rio" };
+  var st = JSON.parse(JSON.stringify(DEFAULTS));
+  var $ = function (id) { return document.getElementById(id); };
+
+  function approvals() {
+    return REVIEWERS.filter(function (r) { return st.who[r.id]; });
+  }
+
+  // Each rule as a predicate, plus whether it even applies.
+  function evaluate() {
+    var a = approvals(), out = [];
+    function add(id, applies, pass, why) { out.push({ id: id, applies: applies, pass: pass, why: why }); }
+
+    add("count1", true, a.length >= 1, a.length + " approving review" + (a.length === 1 ? "" : "s"));
+    add("count2", true, a.length >= 2, a.length + " of 2 needed");
+    if (st.owned) {
+      var byOwner = a.some(function (r) { return OWNERS[r.id]; });
+      add("owner", true, byOwner, byOwner ? "a code owner approved" : "no code owner approved");
+    } else {
+      add("owner", false, true, "path has no owner — passes vacuously");
+    }
+    var indep = a.some(function (r) { return r.id !== st.pusher; });
+    add("push", true, indep, indep ? "an approver is not the last pusher"
+                                   : "only the last pusher approved");
+    var human = a.some(function (r) { return r.type === "User"; });
+    add("human", true, human, human ? "a human account approved" : "all approvals are bots");
+    return out;
+  }
+
+  function checkbox(host, items, bag, render) {
+    host.textContent = "";
+    items.forEach(function (it) {
+      var lab = document.createElement("label"); lab.className = "opt";
+      var box = document.createElement("input"); box.type = "checkbox";
+      box.checked = !!bag[it.id];
+      box.addEventListener("change", function () {
+        if (box.checked) bag[it.id] = true; else delete bag[it.id];
+        render();
+      });
+      var span = document.createElement("span"); span.textContent = it.label;
+      lab.appendChild(box); lab.appendChild(span);
+      if (it.code) {
+        var c = document.createElement("code"); c.textContent = it.code; lab.appendChild(c);
+      }
+      host.appendChild(lab);
+    });
+  }
+
+  function seg(host, opts, get, set) {
+    host.textContent = "";
+    opts.forEach(function (o) {
+      var b = document.createElement("button");
+      b.textContent = o.label;
+      b.setAttribute("aria-pressed", String(get() === o.value));
+      b.addEventListener("click", function () { set(o.value); render(); });
+      host.appendChild(b);
+    });
+  }
+
+  function render() {
+    checkbox($("who"), REVIEWERS, st.who, render);
+    checkbox($("rulesin"), RULES, st.rules, render);
+    seg($("paths"), [{ label: "owned (src/billing)", value: true },
+                     { label: "unowned (generated)", value: false }],
+        function () { return st.owned; }, function (v) { st.owned = v; });
+    seg($("pushers"), REVIEWERS.filter(function (r) { return r.type === "User"; })
+          .map(function (r) { return { label: r.id, value: r.id }; }),
+        function () { return st.pusher; }, function (v) { st.pusher = v; });
+
+    var chips = $("chips"); chips.textContent = "";
+    approvals().forEach(function (r) {
+      var c = document.createElement("span");
+      c.className = "chip on";
+      c.textContent = r.id + " (" + r.type + ")";
+      chips.appendChild(c);
+    });
+    if (!approvals().length) {
+      var c0 = document.createElement("span");
+      c0.className = "chip"; c0.textContent = "no approvals";
+      chips.appendChild(c0);
+    }
+
+    var ev = evaluate(), active = ev.filter(function (e) { return st.rules[e.id]; });
+    var merges = active.every(function (e) { return e.pass; }) && approvals().length > 0;
+    if (!active.length) merges = true;
+
+    var v = $("verdict");
+    v.className = "verdict " + (merges ? "merge" : "block");
+    v.innerHTML = "<b>" + (merges ? "MERGES" : "BLOCKED") + "</b><span>"
+      + (active.length ? active.length + " rule" + (active.length === 1 ? "" : "s") + " in force"
+                       : "no rules in force") + "</span>";
+
+    var host = $("evald"); host.textContent = "";
+    RULES.forEach(function (R) {
+      if (!st.rules[R.id]) return;
+      var e = ev.filter(function (x) { return x.id === R.id; })[0];
+      var row = document.createElement("div"); row.className = "rule";
+      var mark = document.createElement("i");
+      mark.className = !e.applies ? "na" : e.pass ? "pass" : "fail";
+      mark.textContent = !e.applies ? "–" : e.pass ? "ok" : "x";
+      var txt = document.createElement("em");
+      txt.textContent = R.label + " — " + e.why;
+      row.appendChild(mark); row.appendChild(txt);
+      host.appendChild(row);
+    });
+
+    var onlyBots = approvals().length > 0 && approvals().every(function (r) { return r.type === "Bot"; });
+    var say;
+    /* Order matters: the unowned case is also all-bots, and it is the more useful
+       reading of the two, so it has to be tested first. */
+    if (merges && !st.owned && st.rules.owner) {
+      say = "<b>An unowned path.</b> The code-owner rule passes vacuously because nobody owns "
+          + "this directory, which is what makes generated files the case this feature is "
+          + "genuinely good at.";
+    } else if (merges && onlyBots) {
+      say = "<b>This is the case worth seeing.</b> The gate is satisfied and no person read "
+          + "the diff. Nothing is misconfigured — the rules in force only count approvals, "
+          + "and counting was never the property you wanted.";
+    } else if (!merges && st.rules.owner && st.owned) {
+      say = "<b>The owner rule is what stopped it.</b> It names accounts from CODEOWNERS rather "
+          + "than counting, so a reviewer that is not in that file cannot satisfy it — no "
+          + "matter how many approvals arrive.";
+    } else if (merges && approvals().some(function (r) { return r.owner; })) {
+      say = "<b>A named code owner approved.</b> This is the outcome the original rule was "
+          + "written to produce; the count just never guaranteed it.";
+    } else if (merges) {
+      say = "<b>A human approved, but not an owner.</b> Worth separating from the case above: "
+          + "\u201ca person looked\u201d is a weaker claim than \u201cthe person responsible "
+          + "for this code agreed\u201d, and only the rules naming accounts can tell them apart.";
+    } else {
+      say = "<b>Blocked.</b> Read the failing line — a gate is only as strong as the weakest "
+          + "property it actually asserts, which is rarely the one in the policy document.";
+    }
+    $("say").innerHTML = say;
+    reportHeight();
+  }
+
+  function reportHeight() {
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+
+  $("reset").addEventListener("click", function () {
+    st = JSON.parse(JSON.stringify(DEFAULTS)); render();
+  });
+
+  render();
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

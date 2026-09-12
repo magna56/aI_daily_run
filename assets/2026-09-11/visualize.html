@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Every name that reaches a protected table</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .seg + .seg { margin-top: 12px; }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 8px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed=true] { background: #2a3566; border-color: #4b5ba8; color: #fff; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .opt { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #cdd5ee;
+         cursor: pointer; margin-bottom: 6px; }
+  .opt input { accent-color: #7c8cf8; width: 15px; height: 15px; cursor: pointer; }
+  .opt code { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; color: #8f9ab8; }
+  .grid { margin-top: 16px; display: grid; gap: 4px; }
+  .r { display: grid; grid-template-columns: 210px 1fr 96px; gap: 10px; align-items: center;
+       padding: 5px 9px; border-radius: 6px; background: #10131f; border: 1px solid #1c2130; }
+  .r.leak { border-color: rgba(240,138,75,.45); background: rgba(240,138,75,.09); }
+  .r code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: #dfe4f2; }
+  .r span { font-size: 12px; color: #8f9ab8; }
+  .r em { font-style: normal; text-align: right; font: 600 11.5px ui-monospace, Menlo, monospace; }
+  .ok { color: #5fd4a4; } .bad { color: #f08a4b; }
+  .out { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 16px; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 12px; }
+  .stat u { display: block; font-size: 11px; color: #8f9ab8; text-decoration: none; margin-bottom: 4px; }
+  .stat b { font: 600 20px ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  .say { margin-top: 15px; font-size: 12.5px; color: #a7b1cd; border-left: 2px solid #2b3247;
+         padding-left: 11px; }
+  .say b { color: #dfe4f2; }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-11">
+  <h1>Every name that reaches a protected table</h1>
+  <p class="sub">The policy denies <code>Secrets</code>. Turn the three fixes on one at a time and
+     watch which spellings stop reaching it.</p>
+
+  <div class="panel">
+    <h2>Fixes applied</h2>
+    <div id="fixes"></div>
+    <div class="seg" style="margin-top:12px">
+      <span style="font-size:12px;color:#9aa5c4">Actor</span>
+      <div class="seg" id="actors"></div>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="grid" id="rows"></div>
+
+  <div class="out">
+    <div class="stat"><u>names that reach the data</u><b id="leaks" class="bad">—</b></div>
+    <div class="stat"><u>aliases checked</u><b id="total" class="mid">—</b></div>
+    <div class="stat"><u>aliases in the policy</u><b id="listed" class="mid">—</b></div>
+  </div>
+
+  <p class="say" id="say"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var PRIVATE = { anon: ["Secrets", "Customers"], staff: ["Secrets"] };
+  var FIXES = [
+    { id: "fold", label: "match names case-insensitively", code: "casefold()" },
+    { id: "derive", label: "an index inherits its source table", code: "source_of()" },
+    { id: "internal", label: "deny sqlite_* by default", code: "deny-by-default" }
+  ];
+  var DEFAULTS = { fixes: {}, actor: "anon" };
+  var st = JSON.parse(JSON.stringify(DEFAULTS));
+  var $ = function (id) { return document.getElementById(id); };
+
+  function candidates() {
+    var out = [];
+    PRIVATE[st.actor].forEach(function (t) {
+      out.push({ name: t, why: "the name in the policy", kind: "exact", src: t });
+      out.push({ name: t.toLowerCase(), why: "same table, folded case", kind: "case", src: t });
+      out.push({ name: t.toUpperCase(), why: "same table, folded case", kind: "case", src: t });
+      out.push({ name: t + "_fts", why: "search index over " + t, kind: "derived", src: t });
+      out.push({ name: t + "_fts_data", why: "search index over " + t, kind: "derived", src: t });
+    });
+    ["sqlite_stat1", "sqlite_stat4", "sqlite_schema"].forEach(function (n) {
+      out.push({ name: n, why: "describes every table", kind: "internal", src: null });
+    });
+    return out;
+  }
+
+  function sourceOf(name) {
+    var sfx = ["_fts_data", "_fts_idx", "_fts"];
+    for (var i = 0; i < sfx.length; i++) {
+      if (name.slice(-sfx[i].length) === sfx[i]) return name.slice(0, -sfx[i].length);
+    }
+    return name;
+  }
+
+  // allowed = not denied. Public unless the policy holds it back.
+  function reaches(name) {
+    if (st.fixes.internal && name.toLowerCase().indexOf("sqlite_") === 0) return false;
+    var probe = st.fixes.derive ? sourceOf(name) : name;
+    var denied = PRIVATE[st.actor];
+    for (var i = 0; i < denied.length; i++) {
+      var d = denied[i];
+      var hit = st.fixes.fold ? probe.toLowerCase() === d.toLowerCase() : probe === d;
+      if (hit) return false;
+    }
+    return true;
+  }
+
+  function render() {
+    var host = $("fixes"); host.textContent = "";
+    FIXES.forEach(function (f) {
+      var lab = document.createElement("label"); lab.className = "opt";
+      var box = document.createElement("input"); box.type = "checkbox";
+      box.checked = !!st.fixes[f.id];
+      box.addEventListener("change", function () {
+        if (box.checked) st.fixes[f.id] = true; else delete st.fixes[f.id];
+        render();
+      });
+      var sp = document.createElement("span"); sp.textContent = f.label;
+      var c = document.createElement("code"); c.textContent = f.code;
+      lab.appendChild(box); lab.appendChild(sp); lab.appendChild(c);
+      host.appendChild(lab);
+    });
+
+    var ah = $("actors"); ah.textContent = "";
+    ["anon", "staff"].forEach(function (a) {
+      var b = document.createElement("button");
+      b.textContent = a;
+      b.setAttribute("aria-pressed", String(st.actor === a));
+      b.addEventListener("click", function () { st.actor = a; render(); });
+      ah.appendChild(b);
+    });
+
+    var cands = candidates(), rows = $("rows"); rows.textContent = "";
+    var leaks = 0;
+    cands.forEach(function (c) {
+      var open = reaches(c.name);
+      if (open) leaks++;
+      var r = document.createElement("div");
+      r.className = "r" + (open ? " leak" : "");
+      var n = document.createElement("code"); n.textContent = c.name;
+      var w = document.createElement("span"); w.textContent = c.why;
+      var v = document.createElement("em");
+      v.className = open ? "bad" : "ok";
+      v.textContent = open ? "REACHES" : "denied";
+      r.appendChild(n); r.appendChild(w); r.appendChild(v);
+      rows.appendChild(r);
+    });
+
+    $("leaks").textContent = leaks;
+    $("leaks").className = leaks ? "bad" : "ok";
+    $("total").textContent = cands.length;
+    $("listed").textContent = PRIVATE[st.actor].length;
+
+    var f = st.fixes, say;
+    if (!f.fold && !f.derive && !f.internal) {
+      say = "<b>The shipped bug.</b> The policy names " + PRIVATE[st.actor].length
+          + " table" + (PRIVATE[st.actor].length === 1 ? "" : "s") + " and the check compares "
+          + "raw strings, so every other spelling falls through. Nothing here is a logic "
+          + "error — the check is correct about the name it was given.";
+    } else if (leaks === 0) {
+      say = "<b>All three fixes on.</b> Every alias now resolves to the same answer as the "
+          + "table it reaches. Keep the property, not the list: a test asserting that all "
+          + "aliases of a table agree will fail for the next name nobody thought of.";
+    } else if (f.fold && !f.derive) {
+      say = "<b>Casing fixed, index tables still open.</b> A search index is a separate table "
+          + "holding the same content, so folding case does nothing for it. This is the one "
+          + "that survives the obvious fix.";
+    } else if (f.internal && !f.fold) {
+      say = "<b>Internal tables closed.</b> That was the easy one — they were never in the "
+          + "policy, so denying by default covers them. The aliases of tables you did list "
+          + "are still reachable.";
+    } else {
+      say = "<b>Partly fixed.</b> Read the highlighted rows: each is a name that reaches data "
+          + "the policy says is private, under a spelling the policy never wrote down.";
+    }
+    $("say").innerHTML = say;
+    reportHeight();
+  }
+
+  function reportHeight() {
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+
+  $("reset").addEventListener("click", function () {
+    st = JSON.parse(JSON.stringify(DEFAULTS)); render();
+  });
+
+  render();
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

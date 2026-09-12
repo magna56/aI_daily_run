@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>ContextSniper Pipeline Explorer</title>
+  <style>
+    :root{color-scheme:dark;--bg:#081019;--panel:#101b28;--line:#26394c;--text:#e8f1fa;--muted:#91a6ba;--cyan:#53d8fb;--green:#68e0a8;--amber:#ffca68;--red:#ff7c8c}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0,#112b3c 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.45 ui-sans-serif,system-ui,-apple-system,sans-serif}
+    [data-visualizer]{max-width:1120px;margin:auto;padding:clamp(18px,4vw,42px)}
+    h1{font-size:clamp(25px,4vw,42px);line-height:1.08;margin:0 0 8px}h2{font-size:15px;margin:0}.eyebrow{color:var(--cyan);font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+    .lede,.hint{color:var(--muted)}.lede{max-width:760px;margin:9px 0 24px}.controls{display:grid;grid-template-columns:1fr 1fr auto;gap:16px;align-items:end;background:#0c1723;border:1px solid var(--line);border-radius:14px;padding:16px}
+    label{display:block;font-weight:700}output{float:right;color:var(--cyan);font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:var(--cyan);margin-top:9px}.reset{background:transparent;color:var(--text);border:1px solid #52677b;border-radius:9px;padding:9px 14px;font-weight:700;cursor:pointer}.reset:hover,.reset:focus-visible{border-color:var(--cyan);outline:none}
+    .pipeline{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:20px 0}.stage{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;min-height:100px}.stage:not(:last-child):after{content:"›";position:absolute;right:-9px;top:34px;z-index:2;color:var(--cyan);font-size:24px}.num{display:inline-grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#18374a;color:var(--cyan);font-weight:800;margin-bottom:9px}.stage strong{display:block}.stage span{font-size:12px;color:var(--muted)}
+    .workbench{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(240px,.7fr);gap:16px}.panel{background:#0c1723;border:1px solid var(--line);border-radius:14px;padding:16px}.panel-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}.badge{font-size:12px;padding:4px 8px;border-radius:99px;background:#18374a;color:var(--cyan)}
+    .packets{display:grid;gap:8px}.packet{display:grid;grid-template-columns:9px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:9px;background:#101d2b;transition:opacity .18s,transform .18s}.packet.drop{opacity:.3;filter:grayscale(1)}.signal{width:9px;height:100%;min-height:44px;border-radius:8px;background:var(--green)}.drop .signal{background:#52677b}.file{font:700 13px ui-monospace,SFMono-Regular,monospace}.why{font-size:12px;color:var(--muted)}.score{font-variant-numeric:tabular-nums;color:var(--green);font-weight:800}
+    .meter{height:14px;border-radius:99px;background:#192837;overflow:hidden;margin:8px 0}.fill{height:100%;background:linear-gradient(90deg,var(--green),var(--cyan));transition:width .25s}.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.stat{padding:12px;background:#101d2b;border-radius:9px}.stat b{display:block;font-size:22px}.stat small{color:var(--muted)}.warning{color:var(--amber);font-size:13px;margin-top:12px}.packet code{color:#c2d2e2;font-size:11px}
+    @media(max-width:760px){.controls,.workbench{grid-template-columns:1fr}.pipeline{grid-template-columns:1fr 1fr}.stage:nth-child(2):after{display:none}}@media(max-width:440px){.pipeline{grid-template-columns:1fr}.stage:after{display:none}.stats{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer>
+  <div class="eyebrow">Evidence, not whole files</div>
+  <h1>ContextSniper pipeline explorer</h1>
+  <p class="lede">Tune the context gate for the ownership bug. Retrieval casts a wide net; hybrid ranking and intention-aware filtering decide which recoverable line ranges earn space in the final evidence packet.</p>
+  <section class="controls" aria-label="Pipeline controls">
+    <label>Token budget <output id="budgetOut" for="budget">180</output><input id="budget" type="range" min="60" max="360" step="20" value="180"></label>
+    <label>Relevance threshold <output id="thresholdOut" for="threshold">45%</output><input id="threshold" type="range" min="0" max="90" step="5" value="45"></label>
+    <button class="reset" id="reset" type="button">Reset</button>
+  </section>
+  <section class="pipeline" aria-label="ContextSniper stages">
+    <div class="stage"><div class="num">1</div><strong>Retrieve</strong><span id="retrieved">0 keyword candidates</span></div>
+    <div class="stage"><div class="num">2</div><strong>Rank</strong><span>BM25 + same-error-file + function signals</span></div>
+    <div class="stage"><div class="num">3</div><strong>Filter</strong><span id="filtered">0 pass intention gate</span></div>
+    <div class="stage"><div class="num">4</div><strong>Package</strong><span id="packaged">0 compact ranges</span></div>
+  </section>
+  <div class="workbench">
+    <section class="panel">
+      <div class="panel-head"><h2>Ranked candidates</h2><span class="badge">fix_bug · delete ownership</span></div>
+      <div class="packets" id="packets" aria-live="polite"></div>
+    </section>
+    <aside class="panel">
+      <h2>Context budget</h2>
+      <div class="meter" aria-hidden="true"><div class="fill" id="fill"></div></div>
+      <div id="budgetText" class="hint"></div>
+      <div class="stats">
+        <div class="stat"><b id="used">0</b><small>tokens packaged</small></div>
+        <div class="stat"><b id="reduction">0%</b><small>vs all 4 files</small></div>
+      </div>
+      <p class="warning" id="warning"></p>
+      <p class="hint">The demo uses the session’s word-based token approximation. Rejected evidence remains recoverable by file and line metadata.</p>
+    </aside>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const query = new Set("delete user ownership check permission 403 unauthorized".split(" "));
+  const intention = ["delete","bug","assert","error","fail","owner","check","permission","user_id"];
+  const candidates = [
+    {file:"test_server.py",range:"10–19",text:"test_delete_user_no_ownership_check FAILS user A can delete user B assert resp.status == 403",code:"assert resp.status == 403",full:88},
+    {file:"server.py",range:"28–36",text:"def handle_delete_user token validate user_id BUG should check ownership before delete",code:"delete_user(self.db_pool, user_id)",full:174},
+    {file:"database.py",range:"21–27",text:"def delete_user db_pool user_id DELETE FROM users WHERE id",code:"DELETE FROM users WHERE id = ?",full:116},
+    {file:"auth.py",range:"8–18",text:"def validate_token unauthorized token timestamp signature",code:"return hmac.compare_digest(...)",full:148},
+    {file:"server.py",range:"10–18",text:"def handle_get_user unauthorized user_id get_user",code:"return Response(401, \"Unauthorized\")",full:174},
+    {file:"cache.py",range:"21–27",text:"def invalidate func_name cache keys remove",code:"del _cache[key]",full:150}
+  ];
+  const totalTokens = candidates.reduce((n,c) => n + c.full, 0);
+  function words(s){return s.toLowerCase().match(/\w+/g) || []}
+  candidates.forEach(c => {
+    const ws=words(c.text), dl=ws.length, tf={};
+    ws.forEach(w => tf[w]=(tf[w]||0)+1);
+    let lexical=0;
+    query.forEach(term => {const f=tf[term]||0, den=f+1.5*(1-.75+.75*dl/50); if(den) lexical+=Math.log(2)*(f*2.5)/den});
+    c.score=lexical+(c.file==="test_server.py"?2:0)+(c.text.includes("def ")?1:0);
+    c.tokens=words(c.text+" "+c.code).length+8;
+    c.intent=intention.some(k=>c.text.toLowerCase().includes(k));
+  });
+  candidates.sort((a,b)=>b.score-a.score);
+  const maxScore=candidates[0].score;
+  const els={budget:document.querySelector("#budget"),threshold:document.querySelector("#threshold"),packets:document.querySelector("#packets")};
+  function render(){
+    const budget=+els.budget.value, threshold=+els.threshold.value/100*maxScore;
+    let used=0, eligible=0, kept=[];
+    candidates.forEach(c=>{
+      c.pass=c.intent&&c.score>=threshold;
+      if(c.pass) eligible++;
+      c.keep=c.pass&&used+c.tokens<=budget;
+      if(c.keep){used+=c.tokens;kept.push(c)}
+    });
+    els.packets.innerHTML=candidates.map(c=>`<div class="packet ${c.keep?"":"drop"}"><span class="signal"></span><div><div class="file">${c.file}:${c.range}</div><div class="why">${c.keep?"packaged":c.pass?"over token budget":"below gate"} · <code>${c.code}</code></div></div><span class="score">${c.score.toFixed(1)}</span></div>`).join("");
+    document.querySelector("#budgetOut").textContent=budget;
+    document.querySelector("#thresholdOut").textContent=els.threshold.value+"%";
+    document.querySelector("#retrieved").textContent=candidates.length+" keyword candidates";
+    document.querySelector("#filtered").textContent=eligible+" pass intention gate";
+    document.querySelector("#packaged").textContent=kept.length+" compact ranges";
+    document.querySelector("#used").textContent=used;
+    document.querySelector("#reduction").textContent=Math.round((1-used/totalTokens)*100)+"%";
+    document.querySelector("#fill").style.width=Math.min(100,used/budget*100)+"%";
+    document.querySelector("#budgetText").textContent=`${used} of ${budget} available tokens used`;
+    document.querySelector("#warning").textContent=kept.some(c=>c.file==="server.py"&&c.range==="28–36")&&kept.some(c=>c.file==="test_server.py")?"Buggy function and failing test both preserved.":"Critical evidence is missing—relax the gate or budget.";
+  }
+  els.budget.addEventListener("input",render);els.threshold.addEventListener("input",render);
+  document.querySelector("#reset").addEventListener("click",()=>{els.budget.value=180;els.threshold.value=45;render()});
+  render();
+  const report=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(report).observe(document.documentElement);report();
+})();
+</script>
+</body>
+</html>

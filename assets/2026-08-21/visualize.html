@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Pixels-to-Tokens Pipeline Simulator</title>
+  <style>
+    :root{color-scheme:dark;--bg:#071015;--panel:#0e1a21;--edge:#26404b;--ink:#eef9fb;--muted:#8caab3;--aqua:#2dd4bf;--yellow:#facc15;--coral:#fb7185;--blue:#60a5fa}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% -10%,#173f46,transparent 38%),var(--bg);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,sans-serif}main{max-width:1180px;margin:auto;padding:clamp(18px,4vw,42px)}.eyebrow{color:var(--aqua);font:800 11px ui-monospace,monospace;letter-spacing:.15em;text-transform:uppercase}h1{font-size:clamp(28px,4.8vw,48px);line-height:1.02;margin:7px 0}.intro{color:var(--muted);max-width:760px}
+    .controls{display:grid;grid-template-columns:1.2fr repeat(2,.65fr) 1fr 1fr auto;gap:10px;align-items:end;margin:22px 0;padding:14px;border:1px solid var(--edge);border-radius:15px;background:#0c171d}label{display:block;color:var(--muted);font-size:11px;font-weight:800;margin-bottom:5px}select,input,button{width:100%;border:1px solid #365460;border-radius:9px;background:#101f27;color:var(--ink);padding:9px;font:inherit}input[type=checkbox]{width:18px;height:18px;accent-color:var(--aqua)}button{width:auto;font-weight:800;cursor:pointer}button:hover{border-color:var(--aqua)}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #2dd4bf66;outline-offset:2px}.check{display:flex;align-items:center;gap:8px;height:39px}.check label{margin:0;color:var(--ink)}
+    .compare{display:grid;grid-template-columns:1fr 1fr;gap:14px}.pipeline{border:1px solid var(--edge);border-radius:16px;background:var(--panel);padding:16px;overflow:hidden}.pipehead{display:flex;justify-content:space-between;align-items:start;gap:10px}.pipehead h2{margin:0;font-size:18px}.pipehead p{margin:3px 0;color:var(--muted);font-size:12px}.tag{font:800 10px ui-monospace,monospace;border:1px solid var(--edge);border-radius:999px;padding:6px 8px;color:var(--yellow);white-space:nowrap}
+    .stage{height:260px;display:grid;place-items:center;margin:13px 0;background:#081117;border:1px solid #1b3039;border-radius:12px;position:relative;overflow:hidden}.image{position:relative;max-width:86%;max-height:86%;background:#321c24;border:2px solid var(--blue);box-shadow:0 0 25px #60a5fa22}.image:before{content:"";position:absolute;left:0;top:0;width:var(--source-w,100%);height:var(--source-h,100%);background:linear-gradient(145deg,#336c78,#16323c)}.image:after{content:"SOURCE PIXELS";position:absolute;inset:0;display:grid;place-items:center;color:#d8f5fa;font:800 10px ui-monospace,monospace;letter-spacing:.08em}.tilegrid{position:absolute;inset:0;background-image:linear-gradient(to right,#facc156b 1px,transparent 1px),linear-gradient(to bottom,#facc156b 1px,transparent 1px);background-size:var(--gx) var(--gy);outline:1px solid var(--yellow)}.nativegrid{position:absolute;inset:0;background-image:linear-gradient(to right,#2dd4bf35 1px,transparent 1px),linear-gradient(to bottom,#2dd4bf35 1px,transparent 1px);background-size:14px 14px}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{background:#0a141a;border-radius:9px;padding:10px}.stat b{font-size:19px;display:block}.stat small{color:var(--muted)}.waste b{color:var(--coral)}.native .stat b{color:var(--aqua)}.formula{margin-top:10px;padding:9px;background:#081117;border-radius:8px;color:var(--muted);font:11px ui-monospace,monospace}
+    .scheduler{margin-top:14px;border:1px solid var(--edge);border-radius:16px;background:var(--panel);padding:16px}.scheduler-top{display:grid;grid-template-columns:1fr 260px;gap:16px}.scheduler h2{font-size:17px;margin:0}.scheduler p{color:var(--muted);margin:3px 0}.schedule{display:flex;align-items:end;gap:3px;height:130px;margin-top:14px;border-bottom:1px solid #38505a;padding:0 3px}.job{flex:1;min-width:2px;background:var(--aqua);border-radius:3px 3px 0 0}.job.pad{background:linear-gradient(to top,var(--aqua) var(--real),#6c4650 var(--real))}.schedstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.schedstats .stat b{font-size:16px}.warning{margin-top:10px;border-left:3px solid var(--yellow);padding:9px 11px;background:#22200d;color:#d9cf96;font-size:12px}
+    @media(max-width:900px){.controls{grid-template-columns:1fr 1fr 1fr}.compare{grid-template-columns:1fr}.scheduler-top{grid-template-columns:1fr}.schedstats{grid-template-columns:1fr 1fr}}
+    @media(max-width:520px){.controls{grid-template-columns:1fr 1fr}.stage{height:210px}.stats{grid-template-columns:1fr}.schedstats{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:no-preference){.image,.job{transition:width .25s,height .25s}}
+  </style>
+</head>
+<body>
+<main data-visualizer>
+  <div class="eyebrow">Image input cost lab</div>
+  <h1>Pixels are not tokens.</h1>
+  <p class="intro">The same image enters two very different quantizers. Fixed tiling makes cost predictable by hiding padding and a resolution ceiling; native resolution preserves shape but hands variable-length work to your scheduler.</p>
+  <section class="controls" aria-label="Image and budget controls">
+    <div><label for="preset">Source image</label><select id="preset"><option value="1654,2339">A4 doc @200 dpi</option><option value="2880,1800">Laptop screenshot</option><option value="1170,2532">Phone screenshot</option><option value="1024,1024">Square photo</option><option value="96,96">Small icon</option><option value="3000,500">Wide banner</option><option value="custom">Custom dimensions</option></select></div>
+    <div><label for="width">Width px</label><input id="width" type="number" min="28" max="12000" value="1654"></div>
+    <div><label for="height">Height px</label><input id="height" type="number" min="28" max="12000" value="2339"></div>
+    <div><label for="budget">Native max token cap</label><select id="budget"><option>1280</option><option>2560</option><option>4096</option><option>8192</option></select></div>
+    <div class="check"><input id="floor" type="checkbox"><label for="floor">256-token min floor</label></div>
+    <button id="reset">Reset</button>
+  </section>
+  <section class="compare">
+    <article class="pipeline">
+      <div class="pipehead"><div><h2>Fixed tiling</h2><p>Fit 2048 box → shortest side 768 → ceil to 512 tiles</p></div><span class="tag">85 + 170 / tile</span></div>
+      <div class="stage"><div class="image" id="tileImage"><div class="tilegrid" id="tileGrid"></div></div></div>
+      <div class="stats"><div class="stat"><b id="tileSize">—</b><small>model input</small></div><div class="stat"><b id="tiles">—</b><small>512² tiles</small></div><div class="stat waste"><b id="tileWaste">—</b><small>grid area empty</small></div></div>
+      <div class="formula" id="tileFormula">—</div>
+    </article>
+    <article class="pipeline native">
+      <div class="pipehead"><div><h2>Native resolution</h2><p>Round to 28 px → preserve aspect → enforce total-pixel budget</p></div><span class="tag">14 patch × 2 merge = 28</span></div>
+      <div class="stage"><div class="image" id="nativeImage"><div class="nativegrid"></div></div></div>
+      <div class="stats"><div class="stat"><b id="nativeSize">—</b><small>model input</small></div><div class="stat"><b id="nativeTokens">—</b><small>visual tokens</small></div><div class="stat"><b id="detail">—</b><small>source detail kept</small></div></div>
+      <div class="formula" id="nativeFormula">—</div>
+    </article>
+  </section>
+  <section class="scheduler">
+    <div class="scheduler-top"><div><h2>Where native resolution moves the variance</h2><p>A deterministic 600-image UI-agent workload: many icons, a few full-page captures. Choose how requests share GPU batches.</p></div><div><label for="strategy">Batch strategy</label><select id="strategy"><option value="naive4">Arrival order · pad batch 4</option><option value="naive16">Arrival order · pad batch 16</option><option value="bucket8">Length bucket · batch 8</option><option value="pack2048">Patch-n-pack · 2048</option><option value="pack4096">Patch-n-pack · 4096</option></select></div></div>
+    <div class="schedule" id="schedule" aria-label="Representative request token lengths"></div>
+    <div class="schedstats"><div class="stat"><b>600</b><small>images</small></div><div class="stat"><b id="realTokens">—</b><small>real tokens</small></div><div class="stat waste"><b id="padding">—</b><small>padding waste</small></div><div class="stat"><b id="tradeoff">—</b><small>operational trade-off</small></div></div>
+    <div class="warning" id="warning">—</div>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $=id=>document.getElementById(id), FACTOR=28, MIN=56*56;
+  function tile(w,h){
+    if(Math.max(w,h)>2048){const s=2048/Math.max(w,h);w*=s;h*=s}
+    if(Math.min(w,h)>768){const s=768/Math.min(w,h);w*=s;h*=s}
+    const cols=Math.ceil(w/512),rows=Math.ceil(h/512),grid=cols*512*rows*512;
+    return {w:Math.round(w),h:Math.round(h),cols,rows,tokens:85+170*cols*rows,waste:1-w*h/grid};
+  }
+  function native(w,h,cap,minPx){
+    let wb=Math.round(w/FACTOR)*FACTOR,hb=Math.round(h/FACTOR)*FACTOR,maxPx=FACTOR*FACTOR*cap;
+    if(wb*hb>maxPx){const b=Math.sqrt(w*h/maxPx);wb=Math.floor(w/b/FACTOR)*FACTOR;hb=Math.floor(h/b/FACTOR)*FACTOR}
+    else if(wb*hb<minPx){const b=Math.sqrt(minPx/(w*h));wb=Math.ceil(w*b/FACTOR)*FACTOR;hb=Math.ceil(h*b/FACTOR)*FACTOR}
+    wb=Math.max(wb,FACTOR);hb=Math.max(hb,FACTOR);return {w:wb,h:hb,tokens:wb/FACTOR*hb/FACTOR};
+  }
+  function fit(el,w,h){const max=215,ratio=w/h;el.style.width=(ratio>=1?max:Math.max(36,max*ratio))+"px";el.style.height=(ratio>=1?Math.max(36,max/ratio):max)+"px"}
+  function renderImage(){
+    const w=Math.max(28,Math.min(12000,+$("width").value||28)),h=Math.max(28,Math.min(12000,+$("height").value||28)),cap=+$("budget").value;
+    const t=tile(w,h),n=native(w,h,cap,$("floor").checked?256*FACTOR*FACTOR:MIN);
+    fit($("tileImage"),t.cols*512,t.rows*512);fit($("nativeImage"),n.w,n.h);
+    $("tileGrid").style.setProperty("--gx",100/t.cols+"%");$("tileGrid").style.setProperty("--gy",100/t.rows+"%");
+    $("tileImage").style.setProperty("--source-w",t.w/(t.cols*512)*100+"%");$("tileImage").style.setProperty("--source-h",t.h/(t.rows*512)*100+"%");
+    $("tileSize").textContent=`${t.w}×${t.h}`;$("tiles").textContent=`${t.cols}×${t.rows} = ${t.cols*t.rows}`;$("tileWaste").textContent=(t.waste*100).toFixed(1)+"%";
+    $("tileFormula").textContent=`85 + 170 × ${t.cols*t.rows} = ${t.tokens} tokens · billed grid ${t.cols*512}×${t.rows*512}`;
+    $("nativeSize").textContent=`${n.w}×${n.h}`;$("nativeTokens").textContent=n.tokens.toLocaleString();$("detail").textContent=(Math.min(1,(n.w*n.h)/(w*h))*100).toFixed(1)+"%";
+    $("nativeFormula").textContent=`(${n.w}/28) × (${n.h}/28) = ${n.tokens} tokens · cap is ${cap}, not a target`;
+  }
+  function lcg(seed){let s=seed;return()=>{s=(1103515245*s+12345)%(2**31);return s/(2**31)}}
+  function workload(){
+    const rng=lcg(7),mix=[[96,96,.34],[240,64,.18],[800,48,.12],[1170,2532,.16],[1654,2339,.12],[2880,1800,.08]],out=[];
+    for(let i=0;i<600;i++){let r=rng(),a=0;for(const [w,h,p] of mix){a+=p;if(r<=a){out.push(native(w,h,1280,MIN).tokens);break}}}return out;
+  }
+  const seqs=workload();
+  function pad(xs,b){let used=0;for(let i=0;i<xs.length;i+=b){const c=xs.slice(i,i+b);used+=Math.max(...c)*c.length}return used}
+  function pack(xs,size){let used=0,cur=0;for(const n of xs){if(cur+n>size){used+=size;cur=0}cur+=n}return used+(cur?size:0)}
+  function renderSchedule(){
+    const key=$("strategy").value,real=seqs.reduce((a,b)=>a+b,0);let used,trade,note,view=seqs.slice(0,48);
+    if(key==="naive4"||key==="naive16"){const b=key==="naive4"?4:16;used=pad(seqs,b);trade="arrival order kept";note=`Every group of ${b} pays for its longest request. A page capture makes nearby icons look equally expensive.`}
+    else if(key==="bucket8"){used=pad([...seqs].sort((a,b)=>a-b),8);trade="tail latency";note="Sorting by length nearly removes padding, but requests leave arrival order: throughput improves at an SLO cost.";view=[...seqs].sort((a,b)=>a-b).slice(0,48)}
+    else{const size=key==="pack2048"?2048:4096;used=pack(seqs,size);trade="packing + mask";note=size===2048?"A 2048 pack strands large tails: two ~1260-token pages cannot share one sequence. Larger can be better.":"A 4096 pack clears roughly 2× the largest item, sharply reducing stranded capacity."}
+    $("realTokens").textContent=real.toLocaleString();$("padding").textContent=((1-real/used)*100).toFixed(1)+"%";$("tradeoff").textContent=trade;$("warning").textContent=note;
+    const max=Math.max(...view);$("schedule").innerHTML=view.map(n=>`<i class="job pad" style="height:${Math.max(4,n/max*100)}%;--real:${Math.max(3,n/max*100)}%" title="${n} tokens"></i>`).join("");
+  }
+  $("preset").addEventListener("change",()=>{if($("preset").value!=="custom"){const [w,h]=$("preset").value.split(",");$("width").value=w;$("height").value=h;renderImage()}});
+  ["width","height"].forEach(id=>$(id).addEventListener("input",()=>{$("preset").value="custom";renderImage()}));
+  ["budget","floor"].forEach(id=>$(id).addEventListener("change",renderImage));$("strategy").addEventListener("change",renderSchedule);
+  $("reset").addEventListener("click",()=>{$("preset").value="1654,2339";$("width").value=1654;$("height").value=2339;$("budget").value="1280";$("floor").checked=false;$("strategy").value="naive4";renderImage();renderSchedule()});
+  renderImage();renderSchedule();
+  const postHeight=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(postHeight).observe(document.documentElement);postHeight();
+})();
+</script>
+</body>
+</html>

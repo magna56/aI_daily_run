@@ -1,0 +1,233 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Circuit Condensation Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#141821;--line:#303747;--text:#f4f6fb;--muted:#929db1;--bad:#f97316;--ok:#34d399;--acc:#818cf8;--warn:#facc15}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111827,var(--bg) 48%);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:24px}
+.kicker{font:800 .75rem ui-monospace;color:var(--warn);letter-spacing:.13em}
+h1{font-size:clamp(1.7rem,4.4vw,2.9rem);line-height:1.08;margin:.4rem 0}
+.lede{max-width:820px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.panel h2{margin:0 0 12px;font-size:1rem}
+label{display:block;font:700 .78rem ui-monospace;color:var(--muted);margin-bottom:8px}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:760px){.grid4{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+.stat{background:#0c1018;border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font:900 1.5rem ui-monospace;line-height:1.15}
+.stat small{color:var(--muted);font-size:.76rem}
+.field{display:grid;grid-template-columns:repeat(auto-fill,minmax(9px,1fr));gap:2px;margin-top:10px}
+.dot{height:9px;border-radius:2px;background:#1b2130}
+.dot.keep{background:var(--acc)}
+.dot.core{background:var(--ok)}
+.legend{display:flex;gap:16px;margin-top:10px;font:600 .72rem ui-monospace;color:var(--muted);flex-wrap:wrap}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.rows{display:grid;gap:5px;margin-top:10px;max-height:230px;overflow-y:auto}
+.row{display:grid;grid-template-columns:52px 60px 1fr 78px 78px;gap:10px;align-items:center;font:600 .74rem ui-monospace;padding:7px 10px;border-radius:8px;background:#0c1018;border:1px solid var(--line)}
+.row.rej{border-color:var(--bad)}
+.row.acc{border-color:var(--ok)}
+.hdr{display:grid;grid-template-columns:52px 60px 1fr 78px 78px;gap:10px;padding:0 10px;font:700 .66rem ui-monospace;color:var(--muted);letter-spacing:.04em}
+.bar{height:9px;border-radius:99px;background:#1b2130;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc)}
+.ok{color:var(--ok)} .bad{color:var(--bad)} .mut{color:var(--muted)}
+.verdict{margin-top:14px;padding:14px;border-radius:12px;border:1px solid var(--line);background:#0c1018}
+.verdict b{display:block;font:900 1.05rem ui-monospace}
+.verdict p{margin:.4rem 0 0;color:var(--muted);font-size:.88rem}
+.verdict.good b{color:var(--ok)} .verdict.bad b{color:var(--bad)}
+code{font-family:ui-monospace,monospace;color:var(--warn)}
+#reset{width:100%;margin-top:16px;background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:11px;cursor:pointer;font-weight:700}
+#reset:hover{border-color:var(--acc)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main class="wrap" data-visualizer="frontier-2026-08-30">
+<header>
+<div class="kicker">CIRCUIT CONDENSATION &middot; THE WEIGHT UPDATES DO THE WORK</div>
+<h1>How small can the explanation get?</h1>
+<p class="lede">Drag the adapter's re-routing capacity from zero and watch the same search, on the same 400-edge graph with the same scores, end somewhere completely different. At capacity 0 this <em>is</em> frozen circuit discovery. The loop, the gates and the halving backoff are the ones <code>code_example.py</code> runs.</p>
+</header>
+
+<section class="panel">
+<h2>1. What the adapter is allowed to do</h2>
+<div class="grid2">
+  <div>
+    <label for="cap">Re-routing capacity &mdash; share of a cut edge's work the adapter can recover: <span id="capOut" style="color:var(--acc)">0.72</span></label>
+    <input type="range" id="cap" min="0" max="0.9" step="0.02" value="0.72">
+    <label for="acc" style="margin-top:16px">Task gate &mdash; accuracy may drop by: <span id="accOut" style="color:var(--acc)">0.05</span></label>
+    <input type="range" id="acc" min="0.01" max="0.25" step="0.01" value="0.05">
+  </div>
+  <div>
+    <label for="ppl">Capability gate &mdash; perplexity ratio ceiling: <span id="pplOut" style="color:var(--acc)">1.05</span></label>
+    <input type="range" id="ppl" min="1.0" max="1.3" step="0.01" value="1.05">
+    <label for="floor" style="margin-top:16px">Cut floor &mdash; smallest step before the run ends: <span id="floorOut" style="color:var(--acc)">5%</span></label>
+    <input type="range" id="floor" min="1" max="20" step="1" value="5">
+  </div>
+</div>
+</section>
+
+<section class="panel">
+<h2>2. The 400 edges, after the run</h2>
+<div class="field" id="field"></div>
+<div class="legend">
+  <span><i class="sw" style="background:var(--ok)"></i>survives at this capacity</span>
+  <span><i class="sw" style="background:var(--acc)"></i>survives frozen too</span>
+  <span><i class="sw" style="background:#1b2130"></i>cut</span>
+</div>
+<div class="grid4" style="margin-top:16px">
+  <div class="stat"><b id="sFrozen">84</b><small>frozen search (capacity 0)</small></div>
+  <div class="stat"><b id="sCond">50</b><small>at this capacity</small></div>
+  <div class="stat"><b id="sRatio">1.7&times;</b><small>smaller than frozen</small></div>
+  <div class="stat"><b id="sRej">4</b><small>rejected proposals</small></div>
+</div>
+<div class="verdict" id="verdict"><b>&nbsp;</b><p>&nbsp;</p></div>
+</section>
+
+<section class="panel">
+<h2>3. Round by round</h2>
+<div class="hdr"><span>round</span><span>cut</span><span>edges left</span><span>accuracy</span><span>perplexity</span></div>
+<div class="rows" id="log"></div>
+<button id="reset">Reset</button>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var N = 400, DECAY = 28;
+
+  // Deterministic LCG so the graph is identical on every run and every reload.
+  function rng(seed){ var s = seed >>> 0; return function(){ s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+
+  // Exponentially decaying edge mass, shuffled: a few edges do the work and
+  // hundreds carry almost nothing. That long tail is the sprawl.
+  var TASK = (function(){
+    var r = rng(7), mass = [], i;
+    for(i = 0; i < N; i++) mass.push(Math.exp(-i / DECAY));
+    for(i = N - 1; i > 0; i--){ var j = Math.floor(r() * (i + 1)); var t = mass[i]; mass[i] = mass[j]; mass[j] = t; }
+    var tot = mass.reduce(function(a,b){return a+b;}, 0);
+    return mass.map(function(m){ return m / tot; });
+  })();
+
+  function evaluate(keptMass, capacity){
+    var lost = 1 - keptMass;
+    var recovered = lost * capacity;
+    var acc = 1 - (lost - recovered);
+    var strain = recovered / Math.max(keptMass, 1e-9);
+    return { acc: acc, ppl: 1 + 0.055 * strain };
+  }
+
+  // The paper's controller. The floor is a minimum cut size, not a stopping
+  // condition: the run ends when a cut AT the floor is rejected.
+  function condense(capacity, accTol, pplTol, floor){
+    var kept = TASK.map(function(_, i){ return i; });
+    var frac = 0.30, rejects = 0, log = [], round = 0, guard = 0;
+    var baseAcc = evaluate(1, capacity).acc;
+    while(guard++ < 400){
+      var ranked = kept.slice().sort(function(a, b){ return TASK[a] - TASK[b]; });
+      var n = Math.max(1, Math.floor(kept.length * frac));
+      var trial = ranked.slice(n);
+      var mass = trial.reduce(function(s, e){ return s + TASK[e]; }, 0);
+      var ev = trial.length ? evaluate(mass, capacity) : { acc: 0, ppl: 99 };
+      var pass = trial.length && (baseAcc - ev.acc) <= accTol && ev.ppl <= pplTol;
+      round++;
+      log.push({ round: round, frac: frac, left: pass ? trial.length : kept.length,
+                 acc: ev.acc, ppl: ev.ppl, pass: pass });
+      if(pass){ kept = trial; continue; }
+      rejects++;
+      if(frac <= floor + 1e-9) break;
+      frac = Math.max(frac / 2, floor);
+    }
+    return { kept: kept, rejects: rejects, log: log };
+  }
+
+  var S = { cap: 0.72, acc: 0.05, ppl: 1.05, floor: 0.05 };
+  var DEF = { cap: 0.72, acc: 0.05, ppl: 1.05, floor: 0.05 };
+
+  var fieldEl = document.getElementById("field");
+  var dots = (function(){
+    var out = [], i;
+    for(i = 0; i < N; i++){ var d = document.createElement("span"); d.className = "dot"; fieldEl.appendChild(d); out.push(d); }
+    return out;
+  })();
+
+  function render(){
+    var frozen = condense(0, S.acc, S.ppl, S.floor);
+    var cur = condense(S.cap, S.acc, S.ppl, S.floor);
+    var fSet = {}, cSet = {};
+    frozen.kept.forEach(function(e){ fSet[e] = 1; });
+    cur.kept.forEach(function(e){ cSet[e] = 1; });
+
+    // An edge frozen search also keeps is drawn differently from one only
+    // condensation could reach, so the difference is visible, not asserted.
+    for(var i = 0; i < N; i++){
+      dots[i].className = "dot" + (cSet[i] ? (fSet[i] ? " keep" : " core") : "");
+    }
+
+    document.getElementById("sFrozen").textContent = frozen.kept.length;
+    document.getElementById("sCond").textContent = cur.kept.length;
+    document.getElementById("sRatio").textContent =
+      (frozen.kept.length / Math.max(cur.kept.length, 1)).toFixed(1) + "×";
+    document.getElementById("sRej").textContent = cur.rejects;
+
+    var html = "", maxLeft = N;
+    cur.log.forEach(function(r){
+      html += '<div class="row ' + (r.pass ? "acc" : "rej") + '">'
+           +  '<span>' + r.round + '</span>'
+           +  '<span>' + (r.frac * 100).toFixed(1) + '%</span>'
+           +  '<span class="bar"><i style="width:' + (100 * r.left / maxLeft).toFixed(1) + '%"></i></span>'
+           +  '<span class="' + (r.pass ? "" : "bad") + '">' + r.acc.toFixed(3) + '</span>'
+           +  '<span class="' + (r.ppl > S.ppl ? "bad" : "") + '">' + r.ppl.toFixed(3) + '</span>'
+           +  '</div>';
+    });
+    document.getElementById("log").innerHTML = html;
+
+    var v = document.getElementById("verdict"), b = v.querySelector("b"), p = v.querySelector("p");
+    if(S.cap < 0.02){
+      v.className = "verdict bad";
+      b.textContent = "Capacity 0 — this is frozen circuit discovery.";
+      p.innerHTML = "The adapter can recover nothing, so every cut costs its full task mass and the accuracy gate binds almost immediately. Whatever the search returns here is the model's own sprawl, not the mechanism.";
+    } else if(cur.kept.length < frozen.kept.length){
+      v.className = "verdict good";
+      b.textContent = "Frozen keeps " + frozen.kept.length + " edges; this run keeps " + cur.kept.length + ".";
+      p.innerHTML = "The green edges are the ones only condensation could reach — the search never changed, so the reduction came from letting the weights move. This is the paper's own control, which finds frozen search returning <em>larger</em> circuits in 29 of 32 settings.";
+    } else {
+      v.className = "verdict bad";
+      b.textContent = "No reduction over frozen search.";
+      p.innerHTML = "At these gate settings the adapter cannot buy anything the search could not already take. If your own run looks like this, the number you are about to report is a property of the search, not of the model.";
+    }
+    reportHeight();
+  }
+
+  function bind(id, key, fmt, scale){
+    var el = document.getElementById(id), out = document.getElementById(id + "Out");
+    el.addEventListener("input", function(){
+      S[key] = parseFloat(this.value) * (scale || 1);
+      out.textContent = fmt(S[key]);
+      render();
+    });
+  }
+  bind("cap", "cap", function(v){ return v.toFixed(2); });
+  bind("acc", "acc", function(v){ return v.toFixed(2); });
+  bind("ppl", "ppl", function(v){ return v.toFixed(2); });
+  bind("floor", "floor", function(v){ return (v * 100).toFixed(0) + "%"; }, 0.01);
+
+  document.getElementById("reset").addEventListener("click", function(){
+    S = { cap: DEF.cap, acc: DEF.acc, ppl: DEF.ppl, floor: DEF.floor };
+    document.getElementById("cap").value = S.cap;   document.getElementById("capOut").textContent = S.cap.toFixed(2);
+    document.getElementById("acc").value = S.acc;   document.getElementById("accOut").textContent = S.acc.toFixed(2);
+    document.getElementById("ppl").value = S.ppl;   document.getElementById("pplOut").textContent = S.ppl.toFixed(2);
+    document.getElementById("floor").value = S.floor * 100;
+    document.getElementById("floorOut").textContent = (S.floor * 100).toFixed(0) + "%";
+    render();
+  });
+
+  function reportHeight(){
+    parent.postMessage({ type: "adl-visualize-height", height: document.documentElement.scrollHeight }, "*");
+  }
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+  render();
+})();
+</script>
+</body></html>

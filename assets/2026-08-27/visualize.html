@@ -1,0 +1,138 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Layer-Isolated Evaluation Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#141821;--line:#303747;--text:#f4f6fb;--muted:#929db1;--bad:#f97316;--ok:#34d399;--acc:#818cf8;--warn:#facc15}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111827,var(--bg) 48%);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:24px}
+.kicker{font:800 .75rem ui-monospace;color:var(--warn);letter-spacing:.13em}
+h1{font-size:clamp(1.7rem,4.4vw,2.9rem);line-height:1.08;margin:.4rem 0}
+.lede{max-width:760px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.control label{display:block;font:700 .78rem ui-monospace;color:var(--muted);margin-bottom:8px}
+.chooser{display:flex;flex-wrap:wrap;gap:8px}
+.chooser button{background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:99px;padding:8px 14px;font:600 .82rem system-ui;cursor:pointer}
+.chooser button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#0a0d18}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px}
+@media(max-width:680px){.compare{grid-template-columns:1fr}}
+.meterbox h2{margin:0 0 10px;font-size:1rem}
+.meterbox small{color:var(--muted)}
+.meter{position:relative;height:150px;border:1px solid var(--line);border-radius:12px;background:#0c1018;overflow:hidden}
+.fill{position:absolute;bottom:0;left:0;right:0;transition:height .25s}
+.readout{display:flex;align-items:baseline;gap:8px;margin-top:10px}
+.readout output{font:900 2rem ui-monospace}
+.readout span{color:var(--muted);font-size:.85rem}
+.ratio{margin-top:16px;padding:14px;border-radius:12px;border:1px solid var(--line);background:#0c1018}
+.ratio b{display:block;font:900 1.7rem ui-monospace;color:var(--warn)}
+.ratio p{margin:.4rem 0 0;color:var(--muted)}
+.rows{display:grid;gap:8px;margin-top:14px}
+.row{display:grid;grid-template-columns:150px 1fr 70px;align-items:center;gap:9px}
+.row small{color:var(--muted);font-size:.78rem}
+.bar{height:14px;border-radius:99px;background:#252b38;overflow:hidden}
+.bar i{height:100%;display:block;border-radius:99px}
+.row.active{outline:1px solid var(--acc);border-radius:8px;padding:2px 4px;margin:-2px -4px}
+#reset{width:100%;margin-top:14px;background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:9px;cursor:pointer;font-weight:700}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main class="wrap" data-visualizer="2026-08-27">
+<header>
+<div class="kicker">REGRESSION-INJECTION LAB &middot; ARXIV:2606.11686</div>
+<h1>Break one layer. Watch two scores disagree.</h1>
+<p class="lede">Pick a layer to break completely, then compare the AGGREGATE end-to-end score against the SLICE built to test just that layer. Numbers match <code>code_example.py</code>'s masking table.</p>
+</header>
+
+<section class="panel control">
+<label for="layerGroup">Which layer regresses?</label>
+<div class="chooser" id="layerGroup" role="group" aria-label="Choose a layer to break"></div>
+</section>
+
+<section class="panel">
+<div class="compare">
+<div class="meterbox">
+<h2>Aggregate suite</h2>
+<small>500 synthetic end-to-end scenarios</small>
+<div class="meter"><div class="fill" id="aggFill" style="background:var(--acc)"></div></div>
+<div class="readout"><output id="aggOut">100.0%</output><span>pass rate</span></div>
+</div>
+<div class="meterbox">
+<h2>This layer's slice</h2>
+<small id="sliceSize">pure mode, no LLM call</small>
+<div class="meter"><div class="fill" id="sliceFill" style="background:var(--bad)"></div></div>
+<div class="readout"><output id="sliceOut">100.0%</output><span>pass rate</span></div>
+</div>
+</div>
+<div class="ratio"><b id="ratioOut">1.0x</b><p id="ratioText">Baseline: every layer healthy, every slice at 100%.</p></div>
+<button id="reset" type="button" aria-label="Reset to baseline">Reset</button>
+</section>
+
+<section class="panel">
+<h2 style="margin-top:0">All seven layers, ranked by masking ratio</h2>
+<div class="rows" id="rows"></div>
+</section>
+</main>
+<script>
+(()=>{"use strict";
+const $=s=>document.querySelector(s);
+const LAYERS=[
+ {id:"ood_gate",   label:"OOD gate",              size:11, aggDrop:1.6,  sliceDrop:36.4},
+ {id:"intent",     label:"Intent signals",        size:40, aggDrop:4.2,  sliceDrop:25.0},
+ {id:"escalation", label:"Escalation",            size:22, aggDrop:4.6,  sliceDrop:50.0},
+ {id:"defense",    label:"Defense scan",          size:19, aggDrop:5.0,  sliceDrop:63.2},
+ {id:"reformul",   label:"Reformulator",          size:20, aggDrop:5.8,  sliceDrop:80.0},
+ {id:"decomp",     label:"Decomposer",            size:22, aggDrop:5.8,  sliceDrop:90.9},
+ {id:"ontology",   label:"Ontology (foundational)",size:21, aggDrop:26.4, sliceDrop:100.0},
+];
+const ranked=[...LAYERS].sort((a,b)=>(b.sliceDrop/b.aggDrop)-(a.sliceDrop/a.aggDrop));
+
+const group=$("#layerGroup");
+LAYERS.forEach(l=>{
+  const b=document.createElement("button");
+  b.textContent=l.label; b.dataset.id=l.id; b.setAttribute("aria-pressed","false");
+  b.addEventListener("click",()=>select(l.id));
+  group.appendChild(b);
+});
+
+$("#rows").innerHTML=ranked.map(l=>{
+  const ratio=(l.sliceDrop/l.aggDrop).toFixed(1);
+  return `<div class="row" data-id="${l.id}"><strong>${l.label}</strong>
+    <div class="bar"><i style="width:${l.sliceDrop}%;background:var(--bad)"></i></div>
+    <small>${ratio}x hidden</small></div>`;
+}).join("");
+
+let current=null;
+function select(id){
+  current = id===current ? null : id;
+  document.querySelectorAll(".chooser button").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.id===current)));
+  document.querySelectorAll(".row").forEach(r=>r.classList.toggle("active", r.dataset.id===current));
+  render();
+}
+function render(){
+  const l = LAYERS.find(x=>x.id===current);
+  const aggPct = l ? 100-l.aggDrop : 100;
+  const slicePct = l ? 100-l.sliceDrop : 100;
+  $("#aggFill").style.height = aggPct+"%";
+  $("#sliceFill").style.height = slicePct+"%";
+  $("#aggOut").textContent = aggPct.toFixed(1)+"%";
+  $("#sliceOut").textContent = slicePct.toFixed(1)+"%";
+  $("#sliceSize").textContent = l ? `${l.size} pure-mode cases, no LLM call` : "pure mode, no LLM call";
+  if(!l){
+    $("#ratioOut").textContent="1.0x";
+    $("#ratioText").textContent="Baseline: every layer healthy, every slice at 100%.";
+    return;
+  }
+  const ratio=(l.sliceDrop/l.aggDrop).toFixed(1);
+  $("#ratioOut").textContent=ratio+"x";
+  $("#ratioText").textContent = l.id==="ontology"
+    ? `Ontology is foundational, so this one shows up in the aggregate too -- but the slice still tells you WHICH layer broke, instantly.`
+    : `The aggregate moved ${l.aggDrop.toFixed(1)}pp. The slice built for ${l.label} moved ${l.sliceDrop.toFixed(1)}pp. Same bug, ${ratio}x more visible in isolation.`;
+}
+$("#reset").addEventListener("click",()=>{current=null; document.querySelectorAll(".chooser button").forEach(b=>b.setAttribute("aria-pressed","false")); document.querySelectorAll(".row").forEach(r=>r.classList.remove("active")); render();});
+render();
+
+function reportHeight(){parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");}
+addEventListener("load",reportHeight);
+new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body></html>

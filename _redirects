@@ -1,0 +1,4 @@
+/api/*  /api/:splat  200
+/frontier-2026-09-05-the-two-things-missing-from-most-coding-agent-requests/* /2026-09-06-the-two-things-missing-from-most-coding-agent-requests/ 301
+/2026-09-05-how-an-mcp-tool-puts-a-clickable-app-inside-the-chat/* /2026-09-05-how-an-mcp-tool-sends-back-an-image-a-file-or-audio/ 301
+/*  /index.html  200

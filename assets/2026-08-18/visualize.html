@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Prefill-Pressure Scheduler Lab</title>
+  <style>
+    :root{color-scheme:dark;--bg:#080d14;--card:#111a27;--line:#29364b;--text:#eaf1fb;--muted:#96a5ba;--mint:#5ee6bd;--blue:#75a7ff;--amber:#ffc466;--pink:#f783ac}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 82% 0,#183041 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.45 system-ui,sans-serif}
+    main{max-width:1120px;margin:auto;padding:clamp(16px,3vw,34px)}header{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:18px}h1{font-size:clamp(23px,4vw,37px);line-height:1.08;margin:0 0 8px}p{margin:0;color:var(--muted);max-width:770px}
+    button,select{font:inherit;color:var(--text);background:#172338;border:1px solid var(--line);border-radius:9px;padding:9px 13px}button{cursor:pointer}button:hover,button:focus-visible,select:focus-visible{border-color:var(--mint);outline:none}
+    .layout{display:grid;grid-template-columns:minmax(240px,.7fr) minmax(0,1.45fr);gap:15px}.card{background:color-mix(in srgb,var(--card) 93%,transparent);border:1px solid var(--line);border-radius:15px;padding:18px}.controls{display:grid;gap:20px}
+    .top{display:flex;justify-content:space-between;gap:8px}.value{font-weight:750;color:var(--mint);font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:var(--mint)}.ends{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}
+    select{width:100%;margin-top:7px}.pressure{background:#09121d;border-radius:10px;padding:12px}.pressure-line{display:flex;justify-content:space-between;font-size:12px;margin-bottom:7px}.track{height:8px;background:#263247;border-radius:8px;overflow:hidden}.track i{display:block;height:100%;background:linear-gradient(90deg,var(--mint),var(--amber),var(--pink))}
+    .stage{min-height:430px}.legend{display:flex;gap:13px;flex-wrap:wrap;color:var(--muted);font-size:12px}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}canvas{width:100%;height:350px;display:block}
+    .stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:11px}.stat span{font-size:12px;color:var(--muted)}.stat strong{display:block;font-size:clamp(20px,3vw,28px);font-variant-numeric:tabular-nums}.adaptive{color:var(--mint)}
+    @media(max-width:730px){header{display:block}header button{margin-top:13px}.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}canvas{height:310px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer>
+  <header><div><h1>A token budget is a control variable.</h1><p>Large prefill chunks finish prompts efficiently at low load. Under pressure, every decoding sequence pays that long iteration time for every output token—so the latency winner flips.</p></div><button id="reset" type="button">Reset</button></header>
+  <section class="layout">
+    <div class="card controls">
+      <div><div class="top"><label for="load">Arrival load</label><output id="loadOut" class="value" for="load"></output></div><input id="load" type="range" min="1" max="8" step=".25" value="4"><div class="ends"><span>quiet</span><span>pressure</span></div></div>
+      <div><label for="policy">Scheduler policy</label><select id="policy"><option value="1024">Static MBT = 1,024</option><option value="2048">Static MBT = 2,048</option><option value="8192">Static MBT = 8,192</option><option value="adaptive" selected>P-PAS adaptive</option></select></div>
+      <div class="pressure"><div class="pressure-line"><span>Live scheduling pressure</span><strong id="pressureOut"></strong></div><div class="track"><i id="pressureBar"></i></div></div>
+      <p>Engine step: <strong>T = 8 ms + 0.020 ms × batched tokens</strong>. Decodes run first; prefill consumes the remaining MBT. P-PAS shrinks from 8,192 toward 1,024 as backlog and decode population rise.</p>
+    </div>
+    <div class="card stage">
+      <div class="legend"><span><i class="dot" style="background:var(--pink)"></i>MBT 1,024</span><span><i class="dot" style="background:var(--amber)"></i>MBT 2,048</span><span><i class="dot" style="background:var(--blue)"></i>MBT 8,192</span><span><i class="dot" style="background:var(--mint)"></i>P-PAS</span></div>
+      <canvas id="chart" role="img" aria-label="End-to-end latency curves showing the best token budget invert as request load rises"></canvas>
+    </div>
+    <div class="stats">
+      <div class="card stat"><span>Chosen budget</span><strong id="budget" class="adaptive"></strong></div>
+      <div class="card stat"><span>Decode population</span><strong id="decodes"></strong></div>
+      <div class="card stat"><span>Engine iteration</span><strong id="iteration"></strong></div>
+      <div class="card stat"><span>E2E p50 estimate</span><strong id="latency"></strong></div>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $=s=>document.querySelector(s),load=$("#load"),policy=$("#policy"),canvas=$("#chart"),ctx=canvas.getContext("2d");
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  function state(rate){
+    const dec=Math.round(2+rate*rate*.72),waiting=Math.round(8000+Math.max(0,rate-1)*21000);
+    const backlog=Math.max(0,waiting-8192)/8192,pressure=backlog+dec/6;
+    const adaptive=Math.round((1024+(8192-1024)/(1+pressure))/64)*64;
+    return {dec,waiting,pressure,adaptive};
+  }
+  function latency(rate,budget){
+    const s=state(rate),prefill=(10000/budget)*(8+.020*budget);
+    const decode=120*(8+.020*s.dec);
+    const interference=.00115*rate*rate*budget;
+    return (prefill+decode+interference)/1000;
+  }
+  function adaptiveLatency(rate){const b=state(rate).adaptive;return latency(rate,b)*1.035}
+  function draw(){
+    const rate=+load.value,s=state(rate),budget=policy.value==="adaptive"?s.adaptive:+policy.value,lat=policy.value==="adaptive"?adaptiveLatency(rate):latency(rate,budget);
+    const dpr=Math.min(devicePixelRatio||1,2),r=canvas.getBoundingClientRect();canvas.width=Math.max(1,Math.round(r.width*dpr));canvas.height=Math.max(1,Math.round(r.height*dpr));ctx.setTransform(dpr,0,0,dpr,0,0);
+    const w=r.width,h=r.height,L=49,R=18,T=24,B=41,x=v=>L+(v-1)/7*(w-L-R),y=v=>h-B-(v-.9)/.85*(h-T-B);
+    ctx.clearRect(0,0,w,h);ctx.strokeStyle="#29364b";ctx.fillStyle="#96a5ba";ctx.font="11px system-ui";
+    [1,2,4,6,8].forEach(v=>{const xx=x(v);ctx.beginPath();ctx.moveTo(xx,T);ctx.lineTo(xx,h-B);ctx.stroke();ctx.fillText(v,xx-3,h-18)});
+    [1,1.2,1.4,1.6].forEach(v=>{const yy=y(v);ctx.beginPath();ctx.moveTo(L,yy);ctx.lineTo(w-R,yy);ctx.stroke();ctx.fillText(v.toFixed(1)+"s",7,yy+4)});
+    ctx.fillText("requests / second",w/2-38,h-3);ctx.save();ctx.translate(12,h/2+32);ctx.rotate(-Math.PI/2);ctx.fillText("E2E p50",0,0);ctx.restore();
+    [[1024,"#f783ac"],[2048,"#ffc466"],[8192,"#75a7ff"],["a","#5ee6bd"]].forEach(([b,color])=>{ctx.strokeStyle=color;ctx.lineWidth=b==="a"?3:2;ctx.beginPath();for(let i=0;i<=56;i++){const q=1+i/8,v=b==="a"?adaptiveLatency(q):latency(q,b);i?ctx.lineTo(x(q),y(v)):ctx.moveTo(x(q),y(v))}ctx.stroke()});
+    ctx.setLineDash([4,4]);ctx.strokeStyle="#96a5ba";ctx.beginPath();ctx.moveTo(x(rate),T);ctx.lineTo(x(rate),h-B);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=policy.value==="adaptive"?"#5ee6bd":policy.value==="8192"?"#75a7ff":policy.value==="2048"?"#ffc466":"#f783ac";ctx.beginPath();ctx.arc(x(rate),y(lat),7,0,Math.PI*2);ctx.fill();
+    $("#loadOut").textContent=rate.toFixed(2)+" req/s";$("#pressureOut").textContent=s.pressure.toFixed(1);$("#pressureBar").style.width=clamp(s.pressure/20*100,2,100)+"%";$("#budget").textContent=budget.toLocaleString();$("#decodes").textContent=s.dec;$("#iteration").textContent=(8+.020*(budget+s.dec)).toFixed(0)+" ms";$("#latency").textContent=lat.toFixed(2)+" s";
+  }
+  load.addEventListener("input",draw);policy.addEventListener("change",draw);$("#reset").addEventListener("click",()=>{load.value=4;policy.value="adaptive";draw()});
+  new ResizeObserver(draw).observe(canvas);new ResizeObserver(()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*")).observe(document.documentElement);draw();
+})();
+</script>
+</body>
+</html>

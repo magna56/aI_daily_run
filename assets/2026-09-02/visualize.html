@@ -1,0 +1,180 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>The Noise Floor</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#141821;--line:#303747;--text:#f4f6fb;--muted:#929db1;--bad:#f97316;--ok:#34d399;--acc:#818cf8;--warn:#facc15}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111827,var(--bg) 48%);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:24px}
+.kicker{font:800 .75rem ui-monospace;color:var(--warn);letter-spacing:.13em}
+h1{font-size:clamp(1.6rem,4.2vw,2.6rem);line-height:1.1;margin:.4rem 0}
+.lede{max-width:840px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.panel h2{margin:0 0 12px;font-size:1rem}
+label{display:block;font:700 .78rem ui-monospace;color:var(--muted);margin-bottom:8px}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.val{color:var(--text);font-weight:700}
+.chooser{display:flex;flex-wrap:wrap;gap:8px}
+.chooser button{background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:99px;padding:8px 14px;font:600 .82rem system-ui;cursor:pointer}
+.chooser button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#0a0d18}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+@media(max-width:760px){.grid3{grid-template-columns:1fr}}
+.stat{background:#0c1018;border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font:900 1.3rem ui-monospace;line-height:1.2;word-break:break-all}
+.stat small{color:var(--muted);font-size:.73rem;display:block;margin-top:3px}
+.stat.good b{color:var(--ok)} .stat.bad b{color:var(--bad)} .stat.warn b{color:var(--warn)}
+table{width:100%;border-collapse:collapse;margin-top:10px;font:600 .74rem ui-monospace}
+th,td{text-align:right;padding:6px 8px;border-bottom:1px solid #1c2130}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted)}
+tr.flip td{color:var(--bad)}
+.verdict{margin-top:14px;padding:14px;border-radius:12px;border:1px solid var(--line);background:#0c1018}
+.verdict b{display:block;font:900 1rem ui-monospace}
+.verdict.good b{color:var(--ok)} .verdict.bad b{color:var(--bad)}
+.verdict p{margin:.4rem 0 0;color:var(--muted);font-size:.87rem}
+code{font-family:ui-monospace,monospace;color:var(--warn)}
+#reset{width:100%;margin-top:16px;background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:11px;cursor:pointer;font-weight:700}
+#reset:hover{border-color:var(--acc)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main class="wrap" data-visualizer="2026-09-02">
+<header>
+<div class="kicker">FLOATING POINT &middot; THE ORDER DECIDES</div>
+<h1>Same numbers, different total</h1>
+<p class="lede">The dot product from <code>code_example.py</code>, summed the way different kernels sum it. Nothing about the values changes — only how the additions are grouped, which is what a batch shape or a split-K count decides for you.</p>
+</header>
+
+<section class="panel">
+<h2>1. The values being summed</h2>
+<label for="mag">Spread of magnitudes: 10<sup>-<span class="val" id="magV">6</span></sup> to 10<sup>2</sup> — wider spread means more rounding lost per step</label>
+<input type="range" id="mag" min="0" max="9" step="1" value="6">
+<label for="n" style="margin-top:14px">Terms in the dot product <span class="val" id="nV">64</span></label>
+<input type="range" id="n" min="8" max="512" step="8" value="64">
+<div class="chooser" id="seedGrp" role="group" aria-label="Sample" style="margin-top:14px">
+  <button data-v="5" aria-pressed="true">sample 1</button>
+  <button data-v="17" aria-pressed="false">sample 2</button>
+  <button data-v="42" aria-pressed="false">sample 3</button>
+</div>
+</section>
+
+<section class="panel">
+<h2>2. The same sum, computed several ways</h2>
+<table><thead><tr><th>reduction order</th><th>result</th><th>difference from sequential</th></tr></thead>
+<tbody id="tbl"></tbody></table>
+<div class="grid3">
+  <div class="stat" id="sSpread"><b>&mdash;</b><small>spread across orders (your noise floor)</small></div>
+  <div class="stat" id="sRel"><b>&mdash;</b><small>relative to the value</small></div>
+  <div class="stat" id="sFlip"><b>&mdash;</b><small>orders that disagree on a near-tie</small></div>
+</div>
+<div class="verdict" id="verdict"><b>&mdash;</b><p></p></div>
+<button id="reset">Reset</button>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var el = function(id){ return document.getElementById(id); };
+  var seed = 5;
+
+  function lcg(s){ var x = s >>> 0; return function(){ x = (x * 1664525 + 1013904223) >>> 0; return x / 4294967296; }; }
+
+  function makeRow(rng, n, lowExp){
+    var out = [], i;
+    for (i = 0; i < n; i++){
+      var mag = Math.pow(10, -lowExp + rng() * (lowExp + 2));
+      out.push((rng() < 0.5 ? -1 : 1) * mag);
+    }
+    return out;
+  }
+  function seqSum(xs){ var t = 0, i; for (i = 0; i < xs.length; i++) t += xs[i]; return t; }
+  function splitSum(xs, k){
+    var n = xs.length, size = Math.ceil(n / k), parts = [], i;
+    for (i = 0; i < n; i += size) parts.push(seqSum(xs.slice(i, i + size)));
+    return seqSum(parts);
+  }
+  function pairSum(xs){
+    var cur = xs.slice();
+    while (cur.length > 1){
+      var nxt = [], i;
+      for (i = 0; i < cur.length; i += 2) nxt.push(i + 1 < cur.length ? cur[i] + cur[i+1] : cur[i]);
+      cur = nxt;
+    }
+    return cur[0];
+  }
+
+  function render(){
+    var lowExp = Number(el("mag").value), n = Number(el("n").value);
+    el("magV").textContent = lowExp; el("nV").textContent = n;
+
+    var row = makeRow(lcg(seed), n, lowExp);
+    var base = seqSum(row);
+    var orders = [
+      ["sequential", base],
+      ["pairwise (tree)", pairSum(row)],
+      ["split-K = 2", splitSum(row, 2)],
+      ["split-K = 4", splitSum(row, 4)],
+      ["split-K = 8", splitSum(row, 8)],
+      ["split-K = 16", splitSum(row, 16)]
+    ];
+
+    var tb = el("tbl"); tb.textContent = "";
+    var vals = orders.map(function(o){ return o[1]; });
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    orders.forEach(function(o){
+      var tr = document.createElement("tr");
+      if (o[1] !== base) tr.className = "flip";
+      [o[0], o[1].toPrecision(17), (o[1] - base === 0 ? "0" : (o[1] - base).toExponential(2))]
+        .forEach(function(v){ var td = document.createElement("td"); td.textContent = v; tr.appendChild(td); });
+      tb.appendChild(tr);
+    });
+
+    var spread = hi - lo;
+    var rel = Math.abs(base) > 0 ? spread / Math.abs(base) : 0;
+    var distinct = {}; vals.forEach(function(v){ distinct[v] = 1; });
+    var nDistinct = Object.keys(distinct).length;
+
+    el("sSpread").querySelector("b").textContent = spread === 0 ? "0" : spread.toExponential(3);
+    el("sSpread").className = "stat " + (spread === 0 ? "good" : "warn");
+    el("sRel").querySelector("b").textContent = rel === 0 ? "0" : rel.toExponential(2);
+    el("sRel").className = "stat";
+    el("sFlip").querySelector("b").textContent = nDistinct + " of " + vals.length;
+    el("sFlip").className = "stat " + (nDistinct > 1 ? "bad" : "good");
+
+    var v = el("verdict"), b = v.querySelector("b"), p = v.querySelector("p");
+    if (spread === 0){
+      v.className = "verdict good"; b.textContent = "Every order agrees — this time";
+      p.textContent = "At this spread of magnitudes nothing is lost to rounding, so all six reductions land on the same bits. Widen the magnitude range or add terms and the agreement stops.";
+    } else {
+      v.className = "verdict bad"; b.textContent = nDistinct + " distinct answers from one sum";
+      p.textContent = "The values are identical in every row; only the grouping changed. That spread is the noise floor of any comparison you make between two runtimes — a real regression smaller than it is invisible, and a test asserting exact equality across it is flaky, not strict.";
+    }
+    reportHeight();
+  }
+
+  el("mag").addEventListener("input", render);
+  el("n").addEventListener("input", render);
+  Array.prototype.forEach.call(el("seedGrp").querySelectorAll("button"), function(btn){
+    btn.addEventListener("click", function(){
+      seed = Number(btn.dataset.v);
+      Array.prototype.forEach.call(el("seedGrp").querySelectorAll("button"), function(o){
+        o.setAttribute("aria-pressed", String(o === btn)); });
+      render();
+    });
+  });
+  el("reset").addEventListener("click", function(){
+    seed = 5; el("mag").value = 6; el("n").value = 64;
+    Array.prototype.forEach.call(el("seedGrp").querySelectorAll("button"), function(o){
+      o.setAttribute("aria-pressed", String(o.dataset.v === "5")); });
+    render();
+  });
+
+  function reportHeight(){
+    parent.postMessage({type:"adl-visualize-height",
+      height:document.documentElement.scrollHeight}, "*");
+  }
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+  render();
+})();
+</script>
+</body></html>

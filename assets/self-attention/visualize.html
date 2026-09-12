@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Who matters right now?</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090c12;--card:#121821;--line:#2a3544;--ink:#edf4ff;--muted:#95a4b8;--cyan:#55e6d2;--violet:#b197fc}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif}
+    main{max-width:980px;margin:auto;padding:clamp(16px,3vw,32px)}
+    header{display:flex;justify-content:space-between;gap:16px;margin-bottom:16px}
+    h1{font-size:clamp(22px,4vw,34px);line-height:1.1;margin:0 0 6px}
+    p{margin:0;color:var(--muted);max-width:540px}
+    button{font:inherit;color:var(--ink);background:#192231;border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer}
+    .toks{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+    .toks button.on{border-color:var(--cyan);color:var(--cyan)}
+    label{display:block;color:var(--muted);font-size:12px;margin:10px 0 6px}
+    input[type=range]{width:100%;accent-color:var(--cyan)}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+    .row{display:grid;grid-template-columns:88px 1fr 54px;align-items:center;gap:8px;margin:8px 0}
+    .bar{height:18px;background:#1b2432;border-radius:6px;overflow:hidden}
+    .bar>i{display:block;height:100%;background:var(--violet)}
+    .mix{margin-top:12px;font:13px ui-monospace,monospace;color:var(--cyan)}
+    @media(prefers-reduced-motion:no-preference){.bar>i{transition:width .15s}}
+  </style>
+</head>
+<body>
+<main data-visualizer="self-attention">
+  <header>
+    <div>
+      <h1>Pick a token. Watch it spend its 1.0.</h1>
+      <p>Causal mask: a token cannot see the future. Softmax is a competition — raise the scale and one neighbor eats the mix.</p>
+    </div>
+    <button type="button" id="reset">Reset</button>
+  </header>
+  <div class="card">
+    <div class="toks" id="toks"></div>
+    <label for="scale">Score scale (stand-in for 1/√d) <b id="slab">1.0</b></label>
+    <input id="scale" type="range" min="0.4" max="3" step="0.1" value="1">
+    <div id="bars"></div>
+    <p class="mix" id="mix"></p>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const TOKENS = ["refund", "not", "the", "charge"];
+  const Q = {refund:[1,0.1],not:[0.2,1.2],the:[0.4,0],charge:[0.9,0.8]};
+  const K = {refund:[1.1,0],not:[0.1,1.4],the:[0.5,0],charge:[1,0.2]};
+  const V = {refund:[1,0],not:[0,1],the:[0.2,0],charge:[0.8,0.1]};
+  let qi = 3;
+  const $ = (id) => document.getElementById(id);
+  function softmax(xs) {
+    const m = Math.max.apply(null, xs);
+    const ex = xs.map((x) => Math.exp(x - m));
+    const s = ex.reduce((a, b) => a + b, 0);
+    return ex.map((e) => e / s);
+  }
+  function weights() {
+    const scale = +$("scale").value;
+    const q = Q[TOKENS[qi]];
+    const scores = TOKENS.map((t, i) => {
+      if (i > qi) return -1e9;
+      return scale * (q[0] * K[t][0] + q[1] * K[t][1]);
+    });
+    const w = softmax(scores);
+    return { w, scores };
+  }
+  function render() {
+    $("slab").textContent = (+$("scale").value).toFixed(1);
+    $("toks").innerHTML = TOKENS.map((t, i) =>
+      "<button type='button' data-i='" + i + "' class='" + (i === qi ? "on" : "") + "'" +
+      (i > qi ? " disabled" : "") + ">" + t + "</button>").join("");
+    const { w } = weights();
+    $("bars").innerHTML = TOKENS.map((t, i) => {
+      const pct = (w[i] * 100).toFixed(0);
+      return "<div class='row'><span>" + t + "</span><div class='bar'><i style='width:" + pct + "%'></i></div><span>" + pct + "%</span></div>";
+    }).join("");
+    const mix = [0, 0];
+    TOKENS.forEach((t, i) => { mix[0] += w[i] * V[t][0]; mix[1] += w[i] * V[t][1]; });
+    $("mix").textContent = "weighted V = [" + mix[0].toFixed(2) + ", " + mix[1].toFixed(2) + "]  (keys pick who; values pick what)";
+    reportHeight();
+  }
+  function reportHeight() {
+    parent.postMessage({ type: "adl-visualize-height", height: document.documentElement.scrollHeight }, "*");
+  }
+  $("toks").addEventListener("click", (ev) => {
+    const b = ev.target.closest("button[data-i]");
+    if (!b || b.disabled) return;
+    qi = +b.getAttribute("data-i");
+    render();
+  });
+  $("scale").addEventListener("input", render);
+  $("reset").onclick = () => { qi = 3; $("scale").value = 1; render(); };
+  addEventListener("load", () => { render(); reportHeight(); });
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

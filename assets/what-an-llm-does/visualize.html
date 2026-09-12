@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>The model only ever picks the next token</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090c12;--panel:#121821;--edge:#2a3544;--ink:#edf4ff;--muted:#95a4b8;--lime:#bef264;--blue:#60a5fa;--orange:#fb923c;--pink:#f472b6}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#101928 0,#090c12 42%);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,sans-serif}
+    main{max-width:980px;margin:auto;padding:clamp(18px,4vw,36px)}
+    header{display:flex;justify-content:space-between;align-items:end;gap:22px;margin-bottom:18px}
+    h1{font-size:clamp(24px,4.4vw,40px);line-height:1.08;margin:6px 0}
+    .kicker{font:800 11px ui-monospace,monospace;letter-spacing:.16em;color:var(--lime);text-transform:uppercase}
+    .intro{max-width:420px;color:var(--muted)}
+    button{border:1px solid #435168;border-radius:9px;background:#192231;color:var(--ink);padding:9px 13px;font-weight:750;cursor:pointer}
+    button:hover{border-color:var(--lime)}
+    button:focus-visible,input:focus-visible{outline:3px solid #bef26466;outline-offset:2px}
+    .stage{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+    .stage label{display:flex;align-items:center;gap:8px;border:1px solid var(--edge);border-radius:999px;padding:8px 12px;cursor:pointer;background:#101620}
+    .stage input{accent-color:var(--lime)}
+    .prefix{border:1px solid var(--edge);border-radius:14px;background:var(--panel);padding:14px 16px;margin-bottom:14px}
+    .prefix b{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+    .prefix p{margin:0;font:600 16px/1.5 ui-monospace,monospace}
+    .prefix .next{color:var(--lime)}
+    .board{display:grid;gap:8px}
+    .row{display:grid;grid-template-columns:110px 1fr 52px;align-items:center;gap:10px}
+    .bar{height:22px;border-radius:6px;background:#1b2432;overflow:hidden}
+    .bar>i{display:block;height:100%;background:var(--blue);width:0}
+    .row button{text-align:left;font:700 12px ui-monospace,monospace}
+    .note{color:var(--muted);margin:14px 0 0}
+    .callout{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+    .callout div{padding:11px;border-radius:10px;background:#111925;color:var(--muted)}
+    .callout b{color:var(--ink);display:block}
+    @media(max-width:720px){header{display:block}.callout{grid-template-columns:1fr}.row{grid-template-columns:90px 1fr 44px}}
+    @media(prefers-reduced-motion:no-preference){.bar>i{transition:width .2s}}
+  </style>
+</head>
+<body>
+<main data-visualizer="what-an-llm-does">
+  <header>
+    <div>
+      <div class="kicker">Next-token runtime</div>
+      <h1>Same picker.<br>Three training stages.</h1>
+    </div>
+    <p class="intro">Toggle the training stage. The machine still only scores the next word. What changes is which word looks likely after “the” — same prefix the code example prints.</p>
+  </header>
+  <div class="stage" role="radiogroup" aria-label="Training stage">
+    <label><input type="radio" name="stage" value="pretrain" checked> Pretrain (base)</label>
+    <label><input type="radio" name="stage" value="sft"> Supervised fine-tune</label>
+    <label><input type="radio" name="stage" value="pref"> Preference</label>
+  </div>
+  <div class="prefix">
+    <b>Prefix so far</b>
+    <p id="prefix"></p>
+  </div>
+  <div class="board" id="board" aria-live="polite"></div>
+  <p class="note" id="note"></p>
+  <div style="margin-top:12px"><button id="reset" type="button">Reset prefix</button></div>
+  <div class="callout">
+    <div><b>Runtime never changes</b>Score every word, pick one, append, repeat.</div>
+    <div><b>SFT adds the assistant format</b>Probability mass moves onto “the cat sat…” replies.</div>
+    <div><b>Preference is taste</b>A chosen reply is boosted; a rejected completer dies.</div>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const START = "the";
+  const tables = {
+    pretrain: {cat:0.29, model:0.29, mat:0.14, chair:0.14, question:0.14},
+    sft:      {cat:0.58, mat:0.16, chair:0.16, model:0.06, question:0.03},
+    pref:     {cat:0.60, mat:0.28, chair:0.12, model:0.00, question:0.00}
+  };
+  const notes = {
+    pretrain: "Base completer: after unlabeled web text, “model” and “question” still look fine.",
+    sft: "Labeled (prompt, reply) pairs make “the cat…” the assistant-shaped continuation.",
+    pref: "Preferred “mat” path is boosted. The nonsense completer is almost gone — still next-token."
+  };
+  const follow = {
+    the: {cat:0.7, model:0.3},
+    cat: {sat:1},
+    sat: {on:1},
+    on: {the:1},
+    model: {sat:0.6, a:0.4},
+    users: {asked:1},
+    question: {'.':1},
+    asked: {the:1},
+    a: {question:1}
+  };
+  let prefix = START;
+  const $ = (id) => document.getElementById(id);
+  const stage = () => document.querySelector('input[name="stage"]:checked').value;
+  const last = () => prefix.split(/\s+/).filter(Boolean).pop();
+  function dist() {
+    if (prefix.trim() === START) return tables[stage()];
+    return follow[last()] || {'.':1};
+  }
+  function render() {
+    $("prefix").innerHTML = prefix + ' <span class="next">▮</span>';
+    const d = dist();
+    const words = Object.keys(d).sort((a,b) => d[b]-d[a]);
+    $("board").innerHTML = words.map((w) => {
+      const pct = Math.round(d[w]*100);
+      return `<div class="row"><button type="button" data-w="${w}">${w}</button><div class="bar"><i style="width:${pct}%"></i></div><span>${pct}%</span></div>`;
+    }).join("");
+    $("note").textContent = notes[stage()];
+    $("board").querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        prefix += " " + btn.getAttribute("data-w");
+        if (btn.getAttribute("data-w") === ".") prefix = START;
+        render();
+      });
+    });
+  }
+  document.querySelectorAll('input[name="stage"]').forEach((el) => el.addEventListener("change", render));
+  $("reset").addEventListener("click", () => { prefix = START; render(); });
+  render();
+  const postHeight=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(postHeight).observe(document.documentElement);postHeight();
+})();
+</script>
+</body>
+</html>

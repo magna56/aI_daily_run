@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>The loop is cheap. The bill and the latch are not.</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090c12;--card:#121821;--line:#2a3544;--ink:#edf4ff;--muted:#95a4b8;--cyan:#55e6d2;--amber:#ffd166;--red:#ff758f}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif}
+    main{max-width:980px;margin:auto;padding:clamp(16px,3vw,32px)}
+    header{display:flex;justify-content:space-between;gap:16px;margin-bottom:16px}
+    h1{font-size:clamp(22px,4vw,34px);line-height:1.1;margin:0 0 6px}
+    p{margin:0;color:var(--muted);max-width:560px}
+    button{font:inherit;color:var(--ink);background:#192231;border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer}
+    .toggles{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+    .toggles button.on{border-color:var(--cyan);color:var(--cyan)}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+    .stats strong{display:block;font-size:26px;font-variant-numeric:tabular-nums}
+    .stats span{font:12px;color:var(--muted)}
+    .good{color:var(--cyan)}.bad{color:var(--red)}
+    ol{margin:12px 0 0;padding-left:18px;color:var(--muted)}
+    @media(max-width:720px){.stats{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<main data-visualizer="agents-in-prod">
+  <header>
+    <div>
+      <h1>Same three tool calls. Different bill. Different wreckage.</h1>
+      <p>Toggle a timestamp in the prefix (cache miss) and the verifier on the write. The loop does not change.</p>
+    </div>
+    <button type="button" id="reset">Reset</button>
+  </header>
+  <div class="card">
+    <div class="toggles">
+      <button type="button" id="cache">Bust cache (timestamp in prefix)</button>
+      <button type="button" id="verify" class="on">Verifier on writes</button>
+    </div>
+    <div class="stats">
+      <div><span>Bill (prefill units)</span><strong id="bill"></strong></div>
+      <div><span>Cache hits</span><strong id="hits" class="good"></strong></div>
+      <div><span>orders table</span><strong id="table"></strong></div>
+    </div>
+    <ol id="log"></ol>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  let bust = false, verify = true;
+  const PLAN = [
+    ["lookup", "select count from orders"],
+    ["migrate", "alter table orders add note"],
+    ["migrate", "drop table orders"]
+  ];
+  function run() {
+    let bill = 0, hits = 0, cached = false, orders = 12;
+    const log = [];
+    PLAN.forEach(([tool, sql], i) => {
+      if (!bust && cached) { bill += 2; hits += 1; }
+      else { bill += 12; cached = !bust; }
+      bill += 3;
+      let result = "ok", ok = true;
+      if (tool === "migrate" && sql.indexOf("drop") === 0) {
+        if (verify) { result = "verifier rejected drop"; ok = false; }
+        else { orders = 0; result = "applied — table gone"; ok = false; }
+      }
+      log.push({ i: i + 1, tool, sql, result, ok });
+    });
+    return { bill, hits, orders, log };
+  }
+  function render() {
+    $("cache").classList.toggle("on", bust);
+    $("verify").classList.toggle("on", verify);
+    const s = run();
+    $("bill").textContent = s.bill;
+    $("hits").textContent = s.hits + " / 3";
+    $("table").textContent = s.orders ? s.orders + " rows" : "DROPPED";
+    $("table").className = s.orders ? "good" : "bad";
+    $("log").innerHTML = s.log.map((r) =>
+      "<li><strong>" + r.tool + "</strong> — " + r.sql + " → " + r.result + "</li>").join("");
+    reportHeight();
+  }
+  function reportHeight() {
+    parent.postMessage({ type: "adl-visualize-height", height: document.documentElement.scrollHeight }, "*");
+  }
+  $("cache").onclick = () => { bust = !bust; render(); };
+  $("verify").onclick = () => { verify = !verify; render(); };
+  $("reset").onclick = () => { bust = false; verify = true; render(); };
+  addEventListener("load", () => { render(); reportHeight(); });
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

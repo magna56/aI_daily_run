@@ -1,0 +1,224 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Agent Loop Item Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#141821;--line:#303747;--text:#f4f6fb;--muted:#929db1;--bad:#f97316;--ok:#34d399;--acc:#818cf8;--warn:#facc15;--dim:#252b38}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111827,var(--bg) 48%);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:24px}
+.kicker{font:800 .75rem ui-monospace;color:var(--warn);letter-spacing:.13em}
+h1{font-size:clamp(1.7rem,4.4vw,2.9rem);line-height:1.08;margin:.4rem 0}
+.lede{max-width:780px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.panel h2{margin:0 0 12px;font-size:1rem}
+label{display:block;font:700 .78rem ui-monospace;color:var(--muted);margin-bottom:8px}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.chooser{display:flex;flex-wrap:wrap;gap:8px}
+.chooser button{background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:99px;padding:8px 14px;font:600 .82rem system-ui;cursor:pointer}
+.chooser button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#0a0d18}
+.checks{display:flex;flex-wrap:wrap;gap:18px;margin-top:4px}
+.checks label{display:flex;align-items:center;gap:8px;font:600 .84rem system-ui;color:var(--text);margin:0;cursor:pointer}
+.checks input{accent-color:var(--bad);width:17px;height:17px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:680px){.grid3{grid-template-columns:1fr}}
+.stat{background:#0c1018;border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font:900 1.9rem ui-monospace;line-height:1.1}
+.stat small{color:var(--muted);font-size:.78rem}
+.reqs{display:flex;align-items:flex-end;gap:10px;height:190px;margin-top:6px;overflow-x:auto;padding-bottom:4px}
+.req{flex:1 0 62px;display:flex;flex-direction:column-reverse;gap:2px;min-width:62px}
+.req .cap{flex:none;text-align:center;font:600 .7rem ui-monospace;color:var(--muted);margin-top:6px}
+.blk{border-radius:3px;min-height:7px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;color:var(--muted);font-size:.78rem}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.items{display:grid;gap:6px;margin-top:8px}
+.item{display:grid;grid-template-columns:132px 1fr;gap:10px;align-items:center;font:600 .78rem ui-monospace;padding:6px 9px;border-radius:8px;background:#0c1018;border:1px solid var(--line)}
+.item.drop{opacity:.42;text-decoration:line-through;border-color:var(--bad)}
+.item small{color:var(--muted);font-family:system-ui;font-weight:500}
+.verdict{margin-top:14px;padding:14px;border-radius:12px;border:1px solid var(--line);background:#0c1018}
+.verdict b{display:block;font:900 1.15rem ui-monospace}
+.verdict p{margin:.4rem 0 0;color:var(--muted);font-size:.88rem}
+.verdict.good b{color:var(--ok)} .verdict.bad b{color:var(--bad)}
+#reset{width:100%;margin-top:16px;background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:10px;cursor:pointer;font-weight:700}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main class="wrap" data-visualizer="2026-08-28">
+<header>
+<div class="kicker">RESPONSES API &middot; THE LOOP IS YOURS NOW</div>
+<h1>One question. Four requests. Everything sent again.</h1>
+<p class="lede">Set how many tools the question needs, then pick how you carry the conversation. The item list and the billed characters are computed exactly as <code>code_example.py</code> computes them &mdash; a base context of 4,000 characters plus the whole list, on every request.</p>
+</header>
+
+<section class="panel">
+<label for="tools">Tool calls this question needs: <span id="toolsOut" style="color:var(--acc)">3</span></label>
+<input type="range" id="tools" min="0" max="6" step="1" value="3">
+<label for="stateGroup" style="margin-top:16px">How you carry the conversation</label>
+<div class="chooser" id="stateGroup" role="group" aria-label="Conversation state strategy"></div>
+<label style="margin-top:16px">Replay bugs to introduce</label>
+<div class="checks">
+<label><input type="checkbox" id="dropCall"> Drop the model&rsquo;s <code>function_call</code> item</label>
+<label><input type="checkbox" id="dropReason"> Filter out <code>reasoning</code> items</label>
+</div>
+</section>
+
+<section class="panel">
+<h2>What it costs</h2>
+<div class="grid3">
+<div class="stat"><b id="reqOut">4</b><small>requests sent</small></div>
+<div class="stat"><b id="charOut">18,182</b><small>billed input characters</small></div>
+<div class="stat"><b id="multOut" style="color:var(--warn)">4.5x</b><small>base context, for ONE question</small></div>
+</div>
+<div class="reqs" id="reqs"></div>
+<div class="legend">
+<span><i style="background:var(--bad)"></i>base context re-sent every time</span>
+<span><i style="background:var(--acc)"></i>conversation replayed so far</span>
+<span><i style="background:var(--ok)"></i>new items this request</span>
+</div>
+<div class="verdict" id="stateVerdict"><b id="stateHead"></b><p id="stateBody"></p></div>
+</section>
+
+<section class="panel">
+<h2>The item list going into the final request</h2>
+<div class="items" id="items"></div>
+<div class="verdict" id="assertBox"><b id="assertHead"></b><p id="assertBody"></p></div>
+<button id="reset" type="button" aria-label="Reset to defaults">Reset</button>
+</section>
+</main>
+<script>
+(()=>{"use strict";
+const $=s=>document.querySelector(s);
+const BASE=4000;
+
+// Python json.dumps default separators are ", " and ": ", so mirror them exactly:
+// the character counts here must match code_example.py's, not JSON.stringify's.
+function pyd(v){
+  if(v===null)return"null";
+  if(typeof v==="string")return JSON.stringify(v);
+  if(typeof v==="number")return String(v);
+  if(typeof v==="boolean")return v?"true":"false";
+  if(Array.isArray(v))return"["+v.map(pyd).join(", ")+"]";
+  return"{"+Object.keys(v).map(k=>JSON.stringify(k)+": "+pyd(v[k])).join(", ")+"}";
+}
+
+const STATES=[
+ {id:"manual",label:"Replay items yourself",
+  head:"Same cost. You own the list.",
+  body:"You keep the array and append response.output after every call. Nothing is stored server-side, so nothing is retained — and nothing is billed differently."},
+ {id:"prev",label:"previous_response_id",
+  head:"Same cost. The server stitches.",
+  body:"You send the last response id instead of the array. All previous input tokens in the chain are still billed as input tokens. Response objects are retained 30 days."},
+ {id:"conv",label:"Conversations API",
+  head:"Same cost. History outlives 30 days.",
+  body:"POST /v1/conversations, then pass conversation on each request. Identical billing — the difference is that conversation objects are not subject to the 30-day response TTL."}
+];
+let stateId="manual";
+
+function build(n,dropCall,dropReason){
+  // Mirrors run_agent_loop(): items in, items out, whole list re-sent each turn.
+  let list=[{role:"user",content:"What's the weather?"}];
+  const reqs=[]; let billed=0;
+  for(let step=1;step<=n+1;step++){
+    const carried=pyd(list).length;
+    billed+=BASE+carried;
+    const added=[];
+    const reasoning={type:"reasoning",summary:[],content:[{text:"step "+step+": deciding what to look up"}]};
+    if(!dropReason)added.push(reasoning); else added.push({__dropped:true,type:"reasoning"});
+    if(step<=n){
+      const cid="call_"+String(step).padStart(5,"0");
+      const fc={id:"fc_"+String(step).padStart(5,"0"),call_id:cid,type:"function_call",
+                name:"get_weather",arguments:pyd({location:"city-"+step})};
+      if(!dropCall)added.push(fc); else added.push({__dropped:true,type:"function_call",call_id:cid});
+      added.push({type:"function_call_output",call_id:cid,output:"25C and clear in city-"+step});
+    }else{
+      added.push({type:"message",role:"assistant",content:[{type:"output_text",text:"It is 25C and clear."}]});
+    }
+    const keep=added.filter(i=>!i.__dropped);
+    reqs.push({step:step,base:BASE,carried:carried,added:pyd(keep).length});
+    list=list.concat(keep);
+    if(step===n+1)reqs.finalList=added.length?list:list;
+    reqs.shown=(reqs.shown||[]).concat(added);
+  }
+  return {reqs:reqs,billed:billed,list:list,shown:reqs.shown};
+}
+
+function render(){
+  const n=+$("#tools").value, dropCall=$("#dropCall").checked, dropReason=$("#dropReason").checked;
+  $("#toolsOut").textContent=n;
+  const r=build(n,dropCall,dropReason);
+  $("#reqOut").textContent=r.reqs.length;
+  $("#charOut").textContent=r.billed.toLocaleString("en-US");
+  $("#multOut").textContent=(r.billed/BASE).toFixed(1)+"x";
+
+  const max=Math.max.apply(null,r.reqs.map(q=>q.base+q.carried+q.added));
+  $("#reqs").innerHTML=r.reqs.map(q=>{
+    const h=v=>Math.max(7,Math.round(150*v/max))+"px";
+    return '<div class="req">'+
+      '<div class="cap">req '+q.step+'</div>'+
+      '<div class="blk" style="height:'+h(q.base)+';background:var(--bad)"></div>'+
+      (q.carried?'<div class="blk" style="height:'+h(q.carried)+';background:var(--acc)"></div>':'')+
+      '<div class="blk" style="height:'+h(q.added)+';background:var(--ok);opacity:.55"></div>'+
+      '</div>';
+  }).join("");
+
+  const st=STATES.find(s=>s.id===stateId);
+  $("#stateHead").textContent=st.head;
+  $("#stateBody").textContent=st.body;
+
+  const labels={reasoning:"reasoning",function_call:"function_call",
+                function_call_output:"function_call_output",message:"message"};
+  const notes={reasoning:"the model's own chain of thought",
+               function_call:"what the model wants run — carries call_id",
+               function_call_output:"your result, matched by call_id",
+               message:"the final text answer"};
+  const rows=[{type:"user",note:"the original question"}].concat(
+    r.shown.map(i=>({type:i.type,note:notes[i.type]||"",drop:!!i.__dropped})));
+  $("#items").innerHTML=rows.map(i=>
+    '<div class="item'+(i.drop?" drop":"")+'"><span>'+(labels[i.type]||i.type)+
+    '</span><small>'+(i.drop?"dropped from the replay":i.note)+'</small></div>').join("");
+
+  const calls=new Set(), outs=new Set();
+  r.list.forEach(i=>{if(i.type==="function_call")calls.add(i.call_id);
+                     if(i.type==="function_call_output")outs.add(i.call_id);});
+  const orphan=[].concat(Array.from(outs).filter(c=>!calls.has(c)));
+  const box=$("#assertBox");
+  if(orphan.length){
+    box.className="verdict bad";
+    $("#assertHead").textContent="assert_call_pairing FAILED";
+    $("#assertBody").textContent="Orphaned call_id(s): "+orphan.join(", ")+
+      ". The model is being handed answers to questions it has no record of asking. This is the assertion worth keeping in your own loop — it fires here instead of in production.";
+  }else if(dropReason&&n>0){
+    box.className="verdict bad";
+    $("#assertHead").textContent="Pairing OK — but 0 reasoning items replayed";
+    $("#assertBody").textContent="Nothing asserts on this one, which is why it survives review. The symptom is an agent that reasons well on the first tool call and badly on the third.";
+  }else{
+    box.className="verdict good";
+    $("#assertHead").textContent="assert_call_pairing OK";
+    $("#assertBody").textContent="Every function_call has a function_call_output with a matching call_id, and reasoning items are carried forward. This is what a correct replay looks like.";
+  }
+  report();
+}
+
+function report(){parent.postMessage({type:"adl-visualize-height",
+  height:document.documentElement.scrollHeight},"*");}
+
+$("#stateGroup").innerHTML=STATES.map(s=>
+  '<button type="button" data-id="'+s.id+'" aria-pressed="'+(s.id===stateId)+'">'+s.label+'</button>').join("");
+$("#stateGroup").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b)return;
+  stateId=b.dataset.id;
+  Array.from($("#stateGroup").children).forEach(x=>x.setAttribute("aria-pressed",x===b));
+  render();
+});
+["tools","dropCall","dropReason"].forEach(id=>$("#"+id).addEventListener("input",render));
+$("#reset").addEventListener("click",()=>{
+  $("#tools").value=3; $("#dropCall").checked=false; $("#dropReason").checked=false;
+  stateId="manual";
+  Array.from($("#stateGroup").children).forEach(x=>x.setAttribute("aria-pressed",x.dataset.id==="manual"));
+  render();
+});
+
+render();
+addEventListener("load",report);
+new ResizeObserver(report).observe(document.documentElement);
+})();
+</script>
+</body></html>

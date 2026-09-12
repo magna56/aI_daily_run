@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Redirecting…</title>
+<script>
+  // GitHub Pages serves this project site at /aI_daily_run/. Any other path
+  // hits this 404 page — bounce back to the canonical app URL so shared links
+  // still work. location.hash is carried across automatically, since a
+  // fragment never reaches the server, which is what keeps #<session>
+  // permalinks working through the redirect.
+  (function () {
+    var BASE = "/aI_daily_run/";
+    if (location.pathname !== BASE) {
+      location.replace(BASE + location.search + location.hash);
+    }
+  })();
+</script>
+</head>
+<body style="font-family:system-ui,sans-serif;background:#111217;color:#e7e2d8;padding:40px">
+  Redirecting to <a style="color:#a78bfa" href="/aI_daily_run/">The AI Commit</a>…
+</body>
+</html>

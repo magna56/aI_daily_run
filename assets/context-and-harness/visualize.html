@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Model vs Harness Prefix</title>
+  <style>
+    :root{color-scheme:dark;--bg:#100b0a;--panel:#201512;--line:#4a3029;--ink:#fff3ec;--muted:#bea79c;--orange:#ff945f;--gold:#ffd166;--blue:#74c7ec;--green:#74e0a3;--red:#ff6f7d}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 20% 0,#392016 0,transparent 38%),var(--bg);color:var(--ink);font:15px/1.45 ui-sans-serif,system-ui,sans-serif}
+    [data-visualizer]{max-width:1140px;margin:auto;padding:clamp(16px,3vw,36px)}
+    .kicker{color:var(--orange);font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+    h1{font-size:clamp(24px,4vw,38px);line-height:1.08;margin:4px 0 8px}p{color:var(--muted);margin:0 0 16px;max-width:800px}
+    .controls{display:grid;grid-template-columns:1fr 1fr auto;gap:14px;align-items:end;background:#1a110f;border:1px solid var(--line);border-radius:14px;padding:14px}
+    label{font-weight:700}output{float:right;color:var(--gold);font-variant-numeric:tabular-nums}
+    input[type=range]{display:block;width:100%;margin-top:8px;accent-color:var(--orange)}
+    select,button{font:inherit;color:var(--ink);background:#281a17;border:1px solid #604237;border-radius:9px;padding:9px 12px}
+    button{cursor:pointer;font-weight:750}button:hover,button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #ff945f66;border-color:var(--orange)}
+    .prefix{display:grid;grid-template-columns:90fr 40fr auto;margin-top:16px;border-radius:10px;overflow:hidden;min-height:42px}
+    .prefix span{padding:10px;text-align:center;font-size:12px;font-weight:800}
+    .tools{background:#5c3225}.system{background:#75422e}.messages{background:#995737}.system.hot{background:var(--red)}
+    .caption{color:var(--muted);font-size:12px;margin-top:6px}
+    .timeline{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:16px}
+    .turn{border-radius:8px;background:#392721;padding:10px 6px;text-align:center;font-size:11px;min-height:72px}
+    .turn.write{background:var(--gold);color:#150a07;font-weight:800}
+    .turn.hit{background:var(--blue);color:#0a1620;font-weight:800}
+    .turn.now{outline:2px solid #fff}
+    .who{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .card h2{font-size:14px;margin:0 0 8px}
+    .card ul{margin:0;padding-left:18px;color:var(--muted)}
+    .hero{font-size:clamp(32px,6vw,56px);font-weight:850;color:var(--gold);font-variant-numeric:tabular-nums;line-height:1}
+    @media(max-width:700px){.controls,.who{grid-template-columns:1fr}.prefix{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer="context-and-harness">
+  <div class="kicker">Stateless model · stateful harness</div>
+  <h1>Every turn, the harness rebuilds the notebook.</h1>
+  <p>Same 8-turn toy as <code>code_example.py</code>: tools 90, system 40, user 12, reply 20. A stable prefix caches. A timestamp in the system prompt pays 1.25× every turn. Compaction rewrites the notebook when it crosses 220 tokens.</p>
+  <div class="controls">
+    <label>Show through turn <output id="tOut" for="t">8</output><input id="t" type="range" min="1" max="8" value="8"></label>
+    <label>Harness policy<select id="mode">
+      <option value="stable">Stable prefix</option>
+      <option value="volatile">Timestamp in system</option>
+      <option value="compact">Compact over 220</option>
+    </select></label>
+    <button id="reset" type="button">Reset</button>
+  </div>
+  <div class="prefix" id="prefix" aria-label="Prefix layers"></div>
+  <p class="caption">Render order: tools → system → messages. Edit earlier bytes and everything after them misses the cache.</p>
+  <div class="timeline" id="timeline" aria-label="Per-turn cache"></div>
+  <div class="who">
+    <article class="card"><h2>Harness did</h2><ul id="harness"></ul></article>
+    <article class="card"><h2>Model did</h2><ul id="model"></ul><p class="hero" id="bill"></p><p class="caption">effective tokens billed through this turn</p></article>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const TOOLS=90, SYSTEM=40, USER=12, REPLY=20, READ=0.10, WRITE=1.25, LIMIT=220;
+  const $ = id => document.getElementById(id);
+  function simulate(mode){
+    let tools=TOOLS, system=SYSTEM, messages=0, cached=null, bill=0, events=[];
+    for(let t=1;t<=8;t++){
+      const sys = mode==="volatile" ? system+t : system;
+      let extra="";
+      if(mode==="compact" && tools+sys+messages+USER>LIMIT){messages=50;cached=null;extra="compacted"}
+      const front=tools+"|"+sys+"|"+messages;
+      const sent=tools+sys+messages+USER;
+      let kind, who;
+      if(front===cached){bill+=(tools+sys+messages)*READ+USER;kind="hit";who="cache hit 0.1× on front"}
+      else{bill+=sent*WRITE;kind="write";who="cache write 1.25×"}
+      messages+=USER+REPLY;
+      cached=tools+"|"+sys+"|"+messages;
+      events.push({t,sent,kind,who,extra,sys,messages,bill});
+    }
+    return events;
+  }
+  function render(){
+    const mode=$("mode").value, upto=+$("t").value;
+    $("tOut").value=upto;
+    const ev=simulate(mode).slice(0,upto);
+    const last=ev[ev.length-1];
+    $("prefix").innerHTML=`<span class="tools">tools ${TOOLS}</span><span class="system${mode==="volatile"?" hot":""}">system ${last.sys}</span><span class="messages">messages ${last.messages}</span>`;
+    $("timeline").innerHTML=simulate(mode).map(e=>`<div class="turn ${e.kind}${e.t===upto?" now":""}"><div>t${e.t}</div><div>${e.kind}</div><div>${e.sent}</div></div>`).join("");
+    $("harness").innerHTML=[
+      "<li>Assembled tools | system | messages</li>",
+      `<li>${last.who}</li>`,
+      last.extra?`<li>Rewrote history (${last.extra})</li>`:"<li>Left prior messages intact</li>",
+      "<li>Appended the model reply to disk</li>"
+    ].join("");
+    $("model").innerHTML="<li>Read this turn’s prefix</li><li>Emitted a reply (no memory kept)</li>";
+    $("bill").textContent=last.bill.toFixed(1);
+  }
+  $("t").addEventListener("input",render);
+  $("mode").addEventListener("change",render);
+  $("reset").addEventListener("click",()=>{$("t").value=8;$("mode").value="stable";render();});
+  render();
+  const post=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(post).observe(document.documentElement); post();
+})();
+</script>
+</body>
+</html>

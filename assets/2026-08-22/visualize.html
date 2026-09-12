@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Context Re-Payment Timeline</title>
+  <style>
+    :root{color-scheme:dark;--bg:#100b0a;--panel:#201512;--line:#4a3029;--text:#fff3ec;--muted:#bea79c;--orange:#ff945f;--gold:#ffd166;--blue:#74c7ec;--green:#74e0a3;--red:#ff6f7d}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 20% 0,#392016 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.45 ui-sans-serif,system-ui,sans-serif}[data-visualizer]{max-width:1140px;margin:auto;padding:clamp(18px,4vw,42px)}
+    .eyebrow{color:var(--orange);font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}h1{font-size:clamp(25px,4vw,42px);line-height:1.08;margin:4px 0 8px}.lede{max-width:800px;color:var(--muted);margin:0 0 22px}
+    .controls{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:16px;align-items:end;background:#1a110f;border:1px solid var(--line);padding:16px;border-radius:14px}label{font-weight:700}output{float:right;color:var(--gold);font-variant-numeric:tabular-nums}input[type=range]{display:block;width:100%;margin-top:9px;accent-color:var(--orange)}select{display:block;width:100%;margin-top:8px;padding:8px;border-radius:8px;background:#281a17;color:var(--text);border:1px solid #604237}button{background:transparent;border:1px solid #765043;color:var(--text);padding:9px 14px;border-radius:9px;font-weight:700;cursor:pointer}button:hover,button:focus-visible{outline:none;border-color:var(--orange)}
+    .timeline-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:16px}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.panel-head h2{font-size:16px;margin:0}.formula{color:var(--muted);font:12px ui-monospace,SFMono-Regular,monospace}.timeline{display:grid;grid-template-columns:repeat(20,minmax(8px,1fr));gap:4px;margin-top:16px}.turn{height:52px;border-radius:4px;background:#392721;position:relative}.turn.before{opacity:.3}.turn.write{background:var(--gold)}.turn.read{background:var(--blue)}.turn.full{background:var(--orange)}.turn.thrash{background:var(--red)}.turn i{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-style:normal;font-size:8px;color:#150a07;font-weight:900}.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;color:var(--muted);font-size:11px}.key{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}.note{color:var(--muted);font-size:12px;margin:10px 0 0}
+    .results{display:grid;grid-template-columns:.75fr 1.25fr;gap:16px;margin-top:16px}.hero,.compare{background:#1a110f;border:1px solid var(--line);border-radius:14px;padding:18px}.hero .big{font-size:clamp(38px,7vw,68px);line-height:1;font-weight:850;color:var(--gold);font-variant-numeric:tabular-nums}.hero h2,.compare h2{font-size:15px;margin:0 0 12px}.hero p{color:var(--muted);margin:8px 0 0}.equation{margin-top:14px;padding:10px;border-radius:8px;background:#281a17;font:12px ui-monospace,SFMono-Regular,monospace;color:#f4c9b5}
+    .bars{display:grid;gap:13px}.bar-row{display:grid;grid-template-columns:118px 1fr 74px;gap:10px;align-items:center}.track{height:13px;background:#32211d;border-radius:99px;overflow:hidden}.bar{height:100%;border-radius:99px}.bar.cached{background:var(--blue)}.bar.nocache{background:var(--orange)}.bar.thrash{background:var(--red)}.bar-row.active span:first-child{color:var(--gold);font-weight:800}.value{text-align:right;font-variant-numeric:tabular-nums}.prefix{display:grid;grid-template-columns:1fr 1fr 2fr;margin-top:16px;border-radius:9px;overflow:hidden}.prefix span{padding:10px;text-align:center;font-size:12px;font-weight:800}.tools{background:#5c3225}.system{background:#75422e}.messages{background:#995737}.prefix-caption{color:var(--muted);font-size:12px;margin-top:6px}.insight{border-left:3px solid var(--gold);padding-left:12px;margin-top:14px;color:var(--muted)}.insight strong{color:var(--text)}
+    @media(max-width:800px){.controls{grid-template-columns:1fr 1fr}.results{grid-template-columns:1fr}}@media(max-width:500px){.controls{grid-template-columns:1fr}.bar-row{grid-template-columns:95px 1fr 60px}.timeline{gap:2px}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer>
+  <div class="eyebrow">Input economics · Claude Opus 5</div>
+  <h1>A 6,000-token read is not a one-time cost</h1>
+  <p class="lede">Place one file dump into an append-only agent transcript. Every later turn sends it again; exact-prefix caching changes the rate, not the fact that the bytes return.</p>
+  <section class="controls" aria-label="Session controls">
+    <label>Session length <output id="turnsOut" for="turns">60 turns</output><input id="turns" type="range" min="10" max="200" step="10" value="60"></label>
+    <label>File inserted at turn <output id="insertOut" for="insert">5</output><input id="insert" type="range" min="1" max="60" step="1" value="5"></label>
+    <label>Caching behavior<select id="mode"><option value="cached">Stable append-only prefix</option><option value="nocache">No caching</option><option value="thrash">Prefix edited every turn</option></select></label>
+    <button id="reset" type="button">Reset</button>
+  </section>
+  <section class="timeline-panel">
+    <div class="panel-head"><h2>How the file is billed across turns</h2><span class="formula">6,000 tokens × per-turn multiplier</span></div>
+    <div class="timeline" id="timeline" aria-label="Turn cost timeline"></div>
+    <div class="legend"><span><i class="key" style="background:#392721"></i>not present</span><span><i class="key" style="background:var(--gold)"></i>cache write 1.25×</span><span><i class="key" style="background:var(--blue)"></i>cache read 0.1×</span><span><i class="key" style="background:var(--orange)"></i>normal input 1×</span><span><i class="key" style="background:var(--red)"></i>invalidated write 1.25×</span></div>
+    <p class="note" id="sampling"></p>
+  </section>
+  <section class="results">
+    <article class="hero"><h2>Selected strategy: effective file cost</h2><div class="big" id="multiplier"></div><p id="heroText"></p><div class="equation" id="equation"></div></article>
+    <article class="compare"><h2>Same insertion, three cache outcomes</h2><div class="bars" id="bars"></div>
+      <div class="prefix"><span class="tools">tools</span><span class="system">system</span><span class="messages">messages</span></div>
+      <div class="prefix-caption">Rendered prefix order. Editing earlier bytes invalidates everything after them.</div>
+      <div class="insight" id="insight"></div>
+    </article>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const BIG=6000,PRICE=5/1000000,READ=.10,WRITE=1.25,$=s=>document.querySelector(s);
+  const controls={turns:$("#turns"),insert:$("#insert"),mode:$("#mode")};
+  function multiplier(mode,remaining){
+    if(mode==="cached")return WRITE+READ*remaining;
+    if(mode==="thrash")return WRITE*(remaining+1);
+    return remaining+1;
+  }
+  function renderTimeline(turns,insert,mode){
+    const count=Math.min(20,turns), indices=[];
+    for(let i=0;i<count;i++)indices.push(Math.round(1+i*(turns-1)/Math.max(1,count-1)));
+    $("#timeline").innerHTML=indices.map(t=>{
+      let cls="before",mark="";
+      if(t>=insert){if(mode==="cached"){cls=t===insert?"write":"read"}else cls=mode==="thrash"?"thrash":"full";mark=t===insert?"+" : ""}
+      return `<span class="turn ${cls}" title="Turn ${t}${t<insert?": file not yet present":": file billed"}"><i>${mark||t}</i></span>`;
+    }).join("");
+    $("#sampling").textContent=turns>20?"Timeline samples 20 turns; totals include every turn.":"Every turn is shown.";
+  }
+  function render(){
+    const turns=+controls.turns.value;
+    controls.insert.max=turns;if(+controls.insert.value>turns)controls.insert.value=turns;
+    const insert=+controls.insert.value, remaining=turns-insert, mode=controls.mode.value;
+    const values={cached:multiplier("cached",remaining),nocache:multiplier("nocache",remaining),thrash:multiplier("thrash",remaining)},selected=values[mode],max=Math.max(...Object.values(values));
+    $("#turnsOut").textContent=turns+" turns";$("#insertOut").textContent=insert;
+    $("#multiplier").textContent=selected.toFixed(2)+"×";
+    $("#heroText").textContent=`${Math.round(BIG*selected).toLocaleString()} effective input tokens · $${(BIG*selected*PRICE).toFixed(3)} at $5/M input`;
+    const eq=mode==="cached"?`1.25 write + ${remaining} × 0.10 reads`:mode==="thrash"?`${remaining+1} × 1.25 invalidated writes`:`${remaining+1} × 1.00 full-price sends`;
+    $("#equation").textContent=eq;
+    const labels={cached:"Stable cache",nocache:"No cache",thrash:"Cache thrash"};
+    $("#bars").innerHTML=["cached","nocache","thrash"].map(k=>`<div class="bar-row ${k===mode?"active":""}"><span>${labels[k]}</span><span class="track"><i class="bar ${k}" style="display:block;width:${values[k]/max*100}%"></i></span><span class="value">${values[k].toFixed(2)}×</span></div>`).join("");
+    const earliest=WRITE+READ*(turns-1),latest=WRITE;
+    $("#insight").innerHTML=`With a stable cache, the same bytes cost <strong>${(earliest/latest).toFixed(1)}× more at turn 1 than turn ${turns}</strong>. A volatile value near the start makes caching worse than no cache because every send becomes a 1.25× write.`;
+    renderTimeline(turns,insert,mode);
+  }
+  controls.turns.addEventListener("input",render);controls.insert.addEventListener("input",render);controls.mode.addEventListener("change",render);
+  $("#reset").addEventListener("click",()=>{controls.turns.value=60;controls.insert.value=5;controls.mode.value="cached";render()});
+  render();
+  const report=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(report).observe(document.documentElement);report();
+})();
+</script>
+</body>
+</html>

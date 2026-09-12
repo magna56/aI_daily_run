@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>RAG Retrieval Grid Search</title>
+  <style>
+    :root{color-scheme:dark;--bg:#080c14;--card:#111827;--line:#29344a;--text:#edf2fb;--muted:#98a6bc;--violet:#b197fc;--cyan:#55e6d2;--amber:#ffd166;--red:#ff758f}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 75% 0,#242047 0,transparent 37%),var(--bg);color:var(--text);font:15px/1.45 system-ui,sans-serif}main{max-width:1120px;margin:auto;padding:clamp(16px,3vw,34px)}
+    header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:18px}h1{font-size:clamp(23px,4vw,37px);line-height:1.08;margin:0 0 8px}p{margin:0;color:var(--muted);max-width:780px}
+    button,select{font:inherit;color:var(--text);background:#192238;border:1px solid var(--line);border-radius:9px;padding:9px 13px}button{cursor:pointer}button:hover,button:focus-visible,select:focus-visible{outline:none;border-color:var(--violet)}
+    .layout{display:grid;grid-template-columns:minmax(245px,.72fr) minmax(0,1.45fr);gap:15px}.card{background:color-mix(in srgb,var(--card) 93%,transparent);border:1px solid var(--line);border-radius:15px;padding:18px}.controls{display:grid;gap:15px}.control label{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}.control select{width:100%}
+    .formula{background:#09111f;border-radius:10px;padding:12px;color:var(--cyan);font:12px/1.6 ui-monospace,monospace}.winner{border-left:3px solid var(--cyan);padding-left:11px}.winner span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.winner strong{display:block;color:var(--cyan);margin-top:3px}
+    .stage{min-height:435px}.stage-top{display:flex;justify-content:space-between;gap:12px;align-items:center}.stage h2{font-size:15px;margin:0}.legend{font-size:11px;color:var(--muted)}canvas{display:block;width:100%;height:350px}
+    .stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:11px}.stat span{font-size:12px;color:var(--muted)}.stat strong{display:block;font-size:clamp(20px,3vw,28px);font-variant-numeric:tabular-nums}.selected{color:var(--violet)}.good{color:var(--cyan)}
+    @media(max-width:730px){header{display:block}header button{margin-top:13px}.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}canvas{height:330px}.stage-top{display:block}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer>
+  <header><div><h1>Measure retrieval. Keep the winner.</h1><p>This runs the exact 72-way chunk size × overlap × top-k grid from the session against two labeled questions. Every score is deterministic and LLM-free: answer recall, rank, and context cost.</p></div><button id="reset" type="button">Reset</button></header>
+  <section class="layout">
+    <div class="card controls">
+      <div class="control"><label for="chunk">Chunk size (words)</label><select id="chunk"><option>10</option><option>15</option><option selected>20</option><option>30</option><option>45</option><option>60</option></select></div>
+      <div class="control"><label for="overlap">Neighbor overlap</label><select id="overlap"><option value="0">0%</option><option value=".15" selected>15%</option><option value=".3">30%</option></select></div>
+      <div class="control"><label for="topk">Retrieved chunks (top-k)</label><select id="topk"><option>1</option><option selected>2</option><option>3</option><option>5</option></select></div>
+      <div class="formula">score = context_recall<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.05 × MRR<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;− 0.00002 × avg_words</div>
+      <div class="winner"><span>Grid winner</span><strong id="winner"></strong></div>
+      <p>Each heatmap cell is one chunk/overlap pair at the selected top-k. Brighter cells score higher; the ring is your current configuration and the star is the global winner.</p>
+    </div>
+    <div class="card stage">
+      <div class="stage-top"><h2>Retrieval score surface</h2><div class="legend">low <span style="color:var(--violet)">■</span> <span style="color:var(--cyan)">■</span> high</div></div>
+      <canvas id="heatmap" role="img" aria-label="Grid search heatmap of RAG retrieval score by chunk size and overlap"></canvas>
+    </div>
+    <div class="stats">
+      <div class="card stat"><span>Context recall</span><strong id="recall" class="good"></strong></div>
+      <div class="card stat"><span>Mean reciprocal rank</span><strong id="mrr"></strong></div>
+      <div class="card stat"><span>Average context</span><strong id="words"></strong></div>
+      <div class="card stat"><span>Composite score</span><strong id="score" class="selected"></strong></div>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $=s=>document.querySelector(s),chunk=$("#chunk"),overlap=$("#overlap"),topk=$("#topk"),canvas=$("#heatmap"),ctx=canvas.getContext("2d");
+  const DOCS={
+    doc1:"Retrieval augmented generation pipelines fetch external text before the language model writes an answer The system was first deployed in 2026 across three production regions and cut hallucination rates by half Many teams still hand-tune chunk size instead of measuring it Overlap between neighboring chunks helps preserve context across boundaries Retrieval quality is usually the first thing to check when answers go wrong",
+    doc2:"Vector databases index embeddings for approximate nearest neighbor search Chunk size controls how much text each embedding represents The optimal chunk size for the finance dataset was found to be one hundred and fifty words with thirty percent overlap between chunks Top-k controls how many chunks are handed to the language model Smaller top-k values reduce noise but risk missing the answer entirely"
+  };
+  const QUERIES=[
+    {q:"when was the rag pipeline first deployed and what did it cut",doc:"doc1",answer:"cut hallucination rates by half"},
+    {q:"what chunk size and overlap worked best for the finance dataset",doc:"doc2",answer:"one hundred and fifty words with thirty percent overlap"}
+  ],sizes=[10,15,20,30,45,60],ovs=[0,.15,.3],ks=[1,2,3,5];
+  function chunks(text,size,ov){const words=text.split(" "),step=Math.max(1,Math.floor(size*(1-ov))),out=[];for(let i=0;i<words.length;){out.push(words.slice(i,i+size).join(" "));if(i+size>=words.length)break;i+=step}return out}
+  function evaluate(size,ov,k){
+    let recalls=0,mrr=0,words=0;
+    QUERIES.forEach(item=>{const qw=new Set(item.q.toLowerCase().split(" ")),ranked=chunks(DOCS[item.doc],size,ov).map((c,i)=>({c,i,n:c.toLowerCase().split(" ").filter(w=>qw.has(w)).length})).sort((a,b)=>b.n-a.n||a.i-b.i).slice(0,k),hit=ranked.findIndex(x=>x.c.includes(item.answer));if(hit>=0){recalls++;mrr+=1/(hit+1)}words+=ranked.reduce((n,x)=>n+x.c.split(" ").length,0)});
+    const recall=recalls/2,rank=mrr/2,avg=words/2;return {size,ov,k,recall,mrr:rank,words:avg,score:recall+.05*rank-.00002*avg};
+  }
+  const all=[];sizes.forEach(s=>ovs.forEach(o=>ks.forEach(k=>all.push(evaluate(s,o,k)))));all.sort((a,b)=>b.score-a.score);const best=all[0];
+  function draw(){
+    const selected=evaluate(+chunk.value,+overlap.value,+topk.value),cells=sizes.flatMap(s=>ovs.map(o=>evaluate(s,o,+topk.value))),min=Math.min(...cells.map(x=>x.score)),max=Math.max(...cells.map(x=>x.score));
+    const dpr=Math.min(devicePixelRatio||1,2),r=canvas.getBoundingClientRect();canvas.width=Math.max(1,Math.round(r.width*dpr));canvas.height=Math.max(1,Math.round(r.height*dpr));ctx.setTransform(dpr,0,0,dpr,0,0);
+    const w=r.width,h=r.height,L=58,R=16,T=35,B=47,cw=(w-L-R)/sizes.length,ch=(h-T-B)/ovs.length;ctx.clearRect(0,0,w,h);ctx.font="12px system-ui";
+    cells.forEach(c=>{const ix=sizes.indexOf(c.size),iy=ovs.indexOf(c.ov),v=(c.score-min)/(max-min||1),red=Math.round(75-20*v),green=Math.round(55+170*v),blue=Math.round(135+70*v);ctx.fillStyle=`rgb(${red},${green},${blue})`;ctx.fillRect(L+ix*cw+2,T+iy*ch+2,cw-4,ch-4);ctx.fillStyle=v>.55?"#07111a":"#edf2fb";ctx.textAlign="center";ctx.fillText(c.score.toFixed(3),L+(ix+.5)*cw,T+(iy+.54)*ch)});
+    ctx.fillStyle="#98a6bc";sizes.forEach((s,i)=>ctx.fillText(s,L+(i+.5)*cw,h-22));ovs.forEach((o,i)=>{ctx.textAlign="right";ctx.fillText(Math.round(o*100)+"%",L-9,T+(i+.54)*ch)});ctx.textAlign="center";ctx.fillText("chunk size",L+(w-L-R)/2,h-3);ctx.save();ctx.translate(12,T+(h-T-B)/2+25);ctx.rotate(-Math.PI/2);ctx.fillText("overlap",0,0);ctx.restore();
+    const ix=sizes.indexOf(selected.size),iy=ovs.indexOf(selected.ov);ctx.strokeStyle="#fff";ctx.lineWidth=3;ctx.strokeRect(L+ix*cw+4,T+iy*ch+4,cw-8,ch-8);
+    if(best.k===selected.k){const bx=L+(sizes.indexOf(best.size)+.5)*cw,by=T+(ovs.indexOf(best.ov)+.5)*ch;ctx.fillStyle="#ffd166";ctx.font="22px system-ui";ctx.textAlign="center";ctx.fillText("★",bx,by+7)}
+    $("#recall").textContent=(selected.recall*100).toFixed(0)+"%";$("#mrr").textContent=selected.mrr.toFixed(3);$("#words").textContent=selected.words.toFixed(0)+" words";$("#score").textContent=selected.score.toFixed(4);$("#winner").textContent=`chunk ${best.size} · ${Math.round(best.ov*100)}% overlap · top-${best.k}`;
+  }
+  [chunk,overlap,topk].forEach(el=>el.addEventListener("change",draw));$("#reset").addEventListener("click",()=>{chunk.value=20;overlap.value=".15";topk.value=2;draw()});
+  new ResizeObserver(draw).observe(canvas);new ResizeObserver(()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*")).observe(document.documentElement);draw();
+})();
+</script>
+</body>
+</html>

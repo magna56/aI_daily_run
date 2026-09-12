@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Agent-Generated Code Trust Stack</title>
+  <style>
+    :root{color-scheme:dark;--bg:#080a0d;--panel:#101419;--line:#2b323c;--ink:#f2f4f7;--muted:#989fa9;--red:#ff5c70;--amber:#ffbd59;--green:#63e6a6;--cyan:#65d9ff}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#111318,var(--bg) 36%);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,sans-serif}main{max-width:1160px;margin:auto;padding:clamp(18px,4vw,44px)}
+    .mast{display:grid;grid-template-columns:1.3fr .7fr;gap:24px;align-items:end}.eyebrow{color:var(--red);font:800 11px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}h1{font-size:clamp(28px,5vw,52px);line-height:1;margin:8px 0}.intro{color:var(--muted);max-width:700px}.scale{border-left:1px solid var(--line);padding-left:22px}.scale b{display:block;font-size:34px}.scale span{color:var(--muted)}
+    .metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:22px 0}.metric{border:1px solid var(--line);background:var(--panel);border-radius:11px;padding:11px}.metric b{display:block;font-size:18px}.metric small{color:var(--muted)}
+    .console{display:grid;grid-template-columns:.72fr 1.28fr;gap:14px}.panel{border:1px solid var(--line);background:var(--panel);border-radius:15px;padding:16px}h2{font-size:14px;margin:0 0 12px}
+    .layer{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;border:1px solid var(--line);border-radius:11px;padding:11px;margin-top:9px;background:#131920}.layer input{width:19px;height:19px;accent-color:var(--green)}.layer label{font-weight:800;cursor:pointer}.layer small{display:block;color:var(--muted);margin-top:2px}.catch{font:800 11px ui-monospace,monospace;color:var(--green);white-space:nowrap}.layer.off{opacity:.47}.controls{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px}button,select{border:1px solid #424b58;background:#171d25;color:var(--ink);border-radius:9px;padding:9px 12px;font:inherit;font-weight:700}button{cursor:pointer}button:hover{border-color:var(--cyan)}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #65d9ff66;outline-offset:2px}
+    .riskhead{display:flex;justify-content:space-between;gap:14px;align-items:center}.risknum{text-align:right}.risknum b{font-size:30px;line-height:1;display:block}.risknum small{color:var(--muted)}.bar{height:16px;background:#252a31;border-radius:999px;overflow:hidden;margin:12px 0}.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--green),var(--amber),var(--red));border-radius:inherit}
+    .bugs{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.bug{border:1px solid var(--line);border-radius:11px;padding:12px;background:#0b0f14}.bug .icon{font-size:18px}.bug h3{font-size:12px;margin:6px 0 2px}.bug p{font-size:11px;color:var(--muted);margin:0}.bug .status{margin-top:9px;font:800 10px ui-monospace,monospace;text-transform:uppercase;color:var(--red)}.bug.stopped{border-color:#286249}.bug.stopped .status{color:var(--green)}
+    .pipeline{display:flex;gap:6px;align-items:stretch;margin-top:14px}.phase{flex:1;border:1px solid var(--line);border-radius:9px;padding:9px;min-width:0}.phase b{display:block;font-size:10px}.phase span{font-size:10px;color:var(--muted)}.arrow{align-self:center;color:#596270}.phase.active{border-color:var(--green);background:#10231b}.phase.disabled{opacity:.34}
+    .process{margin-top:14px;border-left:3px solid var(--cyan);padding:10px 12px;background:#101a20;color:var(--muted)}.process b{color:var(--ink)}.note{font-size:11px;color:var(--muted);margin-top:12px}
+    @media(max-width:850px){.mast,.console{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(3,1fr)}.scale{border-left:0;padding:0}.bugs{grid-template-columns:1fr}.pipeline{overflow-x:auto}.phase{min-width:110px}}
+    @media(prefers-reduced-motion:no-preference){.bar i,.layer,.bug{transition:width .35s,opacity .2s,border-color .2s}}
+  </style>
+</head>
+<body>
+<main data-visualizer>
+  <section class="mast">
+    <div><div class="eyebrow">Trust is a system property</div><h1>You cannot review<br>one million lines.</h1><p class="intro">So do not make line-by-line human trust the bottleneck. Build independent, asymmetric verification layers that turn plausible code into evidence-backed code.</p></div>
+    <div class="scale"><b>1,448 files</b><span>Bun’s Zig → Rust rewrite: ~1M net lines, 6,502 commits, 11 days, one human supervising.</span></div>
+  </section>
+  <section class="metrics" aria-label="Rewrite facts">
+    <div class="metric"><b>~50</b><small>dynamic workflows</small></div><div class="metric"><b>64</b><small>agents at peak</small></div><div class="metric"><b>695</b><small>commits/hour peak</small></div><div class="metric"><b>1.386M</b><small>Debian assertions</small></div><div class="metric"><b>6</b><small>green platforms</small></div><div class="metric"><b>~4%</b><small>unsafe Rust</small></div>
+  </section>
+  <section class="console">
+    <div class="panel">
+      <h2>Verification layers</h2>
+      <div class="layer"><input id="split" type="checkbox" checked><div><label for="split">Split-context review</label><small>Two/three reviewers see only the diff and “assume it is wrong.”</small></div><span class="catch">−72%</span></div>
+      <div class="layer"><input id="oracle" type="checkbox" checked><div><label for="oracle">Conformance oracle</label><small>Language-independent behavior tests; zero tests skipped or deleted.</small></div><span class="catch">−96%</span></div>
+      <div class="layer"><input id="process" type="checkbox" checked><div><label for="process">Process rules</label><small>Edit the loop prompt so a whole failure class disappears next iteration.</small></div><span class="catch">−55%</span></div>
+      <div class="layer"><input id="fuzz" type="checkbox"><div><label for="fuzz">Post-merge fuzzing</label><small>Fuzzilli ran 100B executions; defense in depth found additional bugs.</small></div><span class="catch">−80%</span></div>
+      <div class="controls"><select id="volume" aria-label="Generated change volume"><option value="200">200 simulated ports</option><option value="6502">6,502 commits</option><option value="1000000">~1M generated lines</option></select><button id="reset">Reset</button></div>
+    </div>
+    <div class="panel">
+      <div class="riskhead"><div><h2>Modeled residual risk</h2><div class="intro">A deterministic teaching model, not a claim about Bun’s defect rate.</div></div><div class="risknum"><b id="risk">0</b><small>escaped units</small></div></div>
+      <div class="bar" aria-hidden="true"><i id="riskbar"></i></div>
+      <div class="bugs">
+        <article class="bug" id="ownership"><div class="icon">⌁</div><h3>Use-after-free</h3><p>libuv close callback outlives a Rust owner. Compiles; plausible on skim.</p><div class="status">unverified</div></article>
+        <article class="bug" id="arithmetic"><div class="icon">±</div><h3>Negative timespec</h3><p>A sign/rounding error survives compilation but violates observable behavior.</p><div class="status">unverified</div></article>
+        <article class="bug" id="evaluation"><div class="icon">ƒ</div><h3>Eager fallback</h3><p><code>unwrap_or</code> evaluates work that lazy <code>unwrap_or_else</code> would avoid.</p><div class="status">unverified</div></article>
+      </div>
+      <div class="pipeline" aria-label="Agent workflow">
+        <div class="phase active"><b>TASK</b><span>port one unit</span></div><div class="arrow">›</div>
+        <div class="phase active"><b>IMPLEMENT</b><span>faithful first</span></div><div class="arrow">›</div>
+        <div class="phase" id="pReview"><b>ADVERSARIAL</b><span>fresh context</span></div><div class="arrow">›</div>
+        <div class="phase active"><b>FIXER</b><span>apply feedback</span></div><div class="arrow">›</div>
+        <div class="phase" id="pGate"><b>GATE</b><span>external oracle</span></div>
+      </div>
+      <div class="process" id="processText"><b>Loop artifact:</b> Rules currently prohibit all three demonstrated failure classes. Patching the loop is O(bug classes); patching diffs is O(bugs).</div>
+      <div class="note">Actual run: May 8 had 972 failing test files; Linux was green May 10, Windows May 11, and all six platforms May 14. Post-merge included 11 security-review rounds and 19 tracked regressions.</div>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $=id=>document.getElementById(id), ids=["split","oracle","process","fuzz"];
+  function render(){
+    const volume=+$("volume").value;
+    const rates={split:.28,oracle:.04,process:.45,fuzz:.20};
+    let risk=Math.max(1,Math.round(volume*.055));
+    ids.forEach(id=>{if($(id).checked)risk*=rates[id]});
+    risk=Math.round(risk);
+    $("risk").textContent=risk.toLocaleString();
+    const base=Math.max(1,Math.round(volume*.055));
+    $("riskbar").style.width=Math.max(1,Math.min(100,risk/base*100))+"%";
+    document.querySelectorAll(".layer").forEach(x=>x.classList.toggle("off",!x.querySelector("input").checked));
+    const stopped={
+      ownership:$("split").checked||$("oracle").checked||$("process").checked,
+      arithmetic:$("split").checked||$("oracle").checked||$("process").checked,
+      evaluation:$("split").checked||$("oracle").checked||$("process").checked
+    };
+    Object.entries(stopped).forEach(([id,on])=>{const el=$(id);el.classList.toggle("stopped",on);el.querySelector(".status").textContent=on?"caught before release":"could escape"});
+    $("pReview").className="phase "+($("split").checked?"active":"disabled");
+    $("pGate").className="phase "+($("oracle").checked?"active":"disabled");
+    $("processText").innerHTML=$("process").checked?"<b>Loop artifact:</b> Rules currently prohibit all three demonstrated failure classes. Patching the loop is O(bug classes); patching diffs is O(bugs).":"<b>Diff artifact:</b> Failures are patched one at a time. The next agent can regenerate the same bug class.";
+  }
+  ids.forEach(id=>$(id).addEventListener("change",render));$("volume").addEventListener("change",render);
+  $("reset").addEventListener("click",()=>{$("split").checked=true;$("oracle").checked=true;$("process").checked=true;$("fuzz").checked=false;$("volume").value="200";render()});
+  render();
+  const postHeight=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(postHeight).observe(document.documentElement);postHeight();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Freeze W. Train BA.</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090c12;--card:#121821;--line:#2a3544;--ink:#edf4ff;--muted:#95a4b8;--cyan:#55e6d2;--amber:#ffd166;--violet:#b197fc}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif}
+    main{max-width:980px;margin:auto;padding:clamp(16px,3vw,32px)}
+    header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:16px}
+    h1{font-size:clamp(22px,4vw,34px);line-height:1.1;margin:0 0 6px}
+    p{margin:0;color:var(--muted);max-width:520px}
+    button{font:inherit;color:var(--ink);background:#192231;border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer}
+    button:hover{border-color:var(--cyan)}label{display:block;color:var(--muted);font-size:12px;margin:0 0 6px}
+    input[type=range]{width:100%;accent-color:var(--cyan)}
+    .grid{display:grid;grid-template-columns:minmax(220px,.7fr) 1fr;gap:14px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+    .stats strong{display:block;font-size:22px;font-variant-numeric:tabular-nums;color:var(--cyan)}
+    .stats span{font-size:12px;color:var(--muted)}
+    canvas{width:100%;height:220px;display:block;background:#0b1018;border-radius:10px}
+    .note{margin-top:10px;font:13px ui-monospace,monospace;color:var(--amber)}
+    @media(max-width:720px){.grid,.stats{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer="lora">
+  <header>
+    <div>
+      <h1>Two skinny matrices beat rewriting W.</h1>
+      <p>Drag width and rank. Full fine-tune is d². LoRA is 2dr. B starts at 0 so the first forward pass matches the frozen model.</p>
+    </div>
+    <button type="button" id="reset">Reset</button>
+  </header>
+  <section class="grid">
+    <div class="card">
+      <label for="d">Layer width d <b id="dlab">4096</b></label>
+      <input id="d" type="range" min="256" max="8192" step="256" value="4096">
+      <label for="r" style="margin-top:14px">Rank r <b id="rlab">8</b></label>
+      <input id="r" type="range" min="1" max="64" step="1" value="8">
+      <div class="stats">
+        <div><span>Full W</span><strong id="full"></strong></div>
+        <div><span>Adapter 2dr</span><strong id="ada"></strong></div>
+        <div><span>Smaller by</span><strong id="ratio"></strong></div>
+      </div>
+      <p class="note" id="note"></p>
+    </div>
+    <div class="card">
+      <canvas id="bars" aria-label="Parameter counts for W versus LoRA"></canvas>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const d = $("d"), r = $("r"), canvas = $("bars"), ctx = canvas.getContext("2d");
+  function fmt(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + "k";
+    return String(n);
+  }
+  function draw(full, ada) {
+    const w = canvas.width = canvas.clientWidth * 2;
+    const h = canvas.height = 440;
+    ctx.clearRect(0, 0, w, h);
+    const max = Math.max(full, ada, 1);
+    const bw = w * 0.28;
+    [[full, "#b197fc", "W  d×d", 0.22], [ada, "#55e6d2", "BA  2dr", 0.58]].forEach(([v, c, lab, x]) => {
+      const bh = (v / max) * (h - 80);
+      const left = w * x;
+      ctx.fillStyle = c;
+      ctx.fillRect(left, h - 40 - bh, bw, bh);
+      ctx.fillStyle = "#edf4ff";
+      ctx.font = "22px ui-sans-serif,system-ui";
+      ctx.fillText(lab, left, h - 14);
+    });
+  }
+  function render() {
+    const dim = +d.value, rank = +r.value;
+    $("dlab").textContent = dim;
+    $("rlab").textContent = rank;
+    const full = dim * dim;
+    const ada = 2 * dim * rank;
+    $("full").textContent = fmt(full);
+    $("ada").textContent = fmt(ada);
+    $("ratio").textContent = (full / ada).toFixed(0) + "×";
+    $("note").textContent = rank === 0 ? "" : "B = 0 at init → ΔW = 0. Training starts on the pretrained weights.";
+    draw(full, ada);
+    reportHeight();
+  }
+  function reportHeight() {
+    parent.postMessage({ type: "adl-visualize-height", height: document.documentElement.scrollHeight }, "*");
+  }
+  $("reset").onclick = () => { d.value = 4096; r.value = 8; render(); };
+  d.addEventListener("input", render);
+  r.addEventListener("input", render);
+  addEventListener("load", () => { render(); reportHeight(); });
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>
