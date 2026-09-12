@@ -762,13 +762,17 @@
   .editor-wrap .editor-textarea::selection { background: rgba(167,139,250,.40); }
   /* One palette, not a per-theme pair: .panel is always dark in both themes
      (see the :root[data-theme="light"] .panel override above). */
-  .editor-hl .t-kw  { color: #bb9af7; }
-  .editor-hl .t-str { color: #9ece6a; }
-  .editor-hl .t-com { color: #6f7a8d; font-style: italic; }
-  .editor-hl .t-num { color: #ff9e64; }
-  .editor-hl .t-bi  { color: #7dcfff; }
-  .editor-hl .t-fn  { color: #7aa2f7; }
-  .editor-hl .t-dec { color: #e0af68; }
+  /* The same palette in the Code tab's editor and in a fenced block in the
+     prose. Scoped to .editor-hl alone, the article's code blocks emitted the
+     spans and got no colour — the tokens were there, unpainted. Both surfaces
+     are always dark, so one palette serves both themes. */
+  .editor-hl .t-kw,  .prose pre .t-kw  { color: #bb9af7; }
+  .editor-hl .t-str, .prose pre .t-str { color: #9ece6a; }
+  .editor-hl .t-com, .prose pre .t-com { color: #6f7a8d; font-style: italic; }
+  .editor-hl .t-num, .prose pre .t-num { color: #ff9e64; }
+  .editor-hl .t-bi,  .prose pre .t-bi  { color: #7dcfff; }
+  .editor-hl .t-fn,  .prose pre .t-fn  { color: #7aa2f7; }
+  .editor-hl .t-dec, .prose pre .t-dec { color: #e0af68; }
   /* Run/Reset sit ABOVE the editor: these examples run 100-400 lines, so a
      control bar underneath meant scrolling the whole file to find Run. */
   .editor-controls { display: flex; gap: 8px; padding: 9px 13px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.03); }
@@ -821,14 +825,6 @@
   .fallback[open] summary::before { content: "▾ "; }
   .fallback summary:hover { color: var(--accent2); }
   .fallback pre { margin: 0; padding: 0 15px 15px; overflow: auto; max-height: 40vh; font-family: var(--mono); font-size: 12.4px; line-height: 1.62; }
-
-  /* Python syntax colours */
-  .py-kw  { color: #c792ea; }
-  .py-str { color: #a5d6a7; }
-  .py-com { color: #6f6a60; font-style: italic; }
-  .py-num { color: #ffcb8b; }
-  .py-dec { color: #82aaff; }
-  .py-fn  { color: #c4b5fd; }
 
   /* Articles */
   .agroup h2 { font-size: 15px; color: var(--accent2); margin: 26px 0 12px; text-transform: uppercase; letter-spacing: .06em; }
@@ -1559,8 +1555,12 @@
   function md(src) {
     if (!src) return "";
     var blocks = [];
-    src = String(src).replace(/```[a-z]*\n?([\s\S]*?)```/g, function (_, c) {
-      blocks.push(c); return "%%CB" + (blocks.length - 1) + "%%";
+    /* The language was matched but not captured, so every fenced block in the
+       prose rendered as plain escaped text while the Code tab was syntax
+       coloured — the same code, two different looks, on one page. */
+    src = String(src).replace(/```([a-z]*)\n?([\s\S]*?)```/g, function (_, lang, c) {
+      blocks.push({ lang: lang, code: c });
+      return "%%CB" + (blocks.length - 1) + "%%";
     });
     function e(s) { return s.replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
     src = e(src);
@@ -1598,7 +1598,14 @@
       return "<p>" + softWrap(t) + "</p>";
     }).join("\n");
     src = src.replace(/%%CB(\d+)%%/g, function (_, i) {
-      return blocks[i] != null ? "<pre><code>" + e(blocks[i].replace(/^\n/, "")) + "</code></pre>" : "";
+      var b = blocks[i];
+      if (b == null) return "";
+      var body = b.code.replace(/^\n/, "").replace(/\n$/, "");
+      /* Only an explicitly labelled Python fence gets coloured. Bare fences are
+         json, bash, plain output and a few things nobody labelled, and guessing
+         wrong paints a JSON key as a keyword. pyHighlight escapes as it goes. */
+      var html = /^py(thon)?$/.test(b.lang) ? pyHighlight(body) : e(body);
+      return "<pre><code>" + html + "</code></pre>";
     });
     /* Figures are pre-rendered SVG from build.js. They go in AFTER escaping,
        because escaping is what the marker exists to survive. */
@@ -1740,42 +1747,6 @@
     return p.insight
       ? '<div class="insight"><span class="k">Key insight</span>' + strip(md(p.insight)) + "</div>"
       : "";
-  }
-
-  /* ---- python highlighting -------------------------------------------- */
-  // Tokenise the RAW source (so quotes are still quotes), escaping each piece
-  // on the way out. Strings and comments come first in the alternation, which
-  // is what keeps a `#` inside a string from starting a comment.
-  var PY_RE = new RegExp([
-    '"""[\\s\\S]*?"""', "'''[\\s\\S]*?'''",
-    '#[^\\n]*',
-    '"(?:\\\\.|[^"\\\\\\n])*"', "'(?:\\\\.|[^'\\\\\\n])*'",
-    '@[A-Za-z_][\\w.]*',
-    '\\b(?:False|None|True|and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield)\\b',
-    '\\b\\d[\\d_]*\\.?\\d*(?:[eE][+-]?\\d+)?\\b'
-  ].join("|"), "g");
-
-  function pyClass(tok) {
-    var c = tok[0];
-    if (c === "#") return "py-com";
-    if (c === '"' || c === "'") return "py-str";
-    if (c === "@") return "py-dec";
-    if (c >= "0" && c <= "9") return "py-num";
-    return "py-kw";
-  }
-
-  function highlightPython(src) {
-    var out = "", last = 0, m;
-    PY_RE.lastIndex = 0;
-    while ((m = PY_RE.exec(src)) !== null) {
-      out += esc(src.slice(last, m.index));
-      out += '<span class="' + pyClass(m[0]) + '">' + esc(m[0]) + "</span>";
-      last = PY_RE.lastIndex;
-    }
-    out += esc(src.slice(last));
-    // Name that follows def/class reads as the thing being defined.
-    return out.replace(/(<span class="py-kw">(?:def|class)<\/span>\s+)([A-Za-z_]\w*)/g,
-      '$1<span class="py-fn">$2</span>');
   }
 
   /* ---- stats ----------------------------------------------------------- */
