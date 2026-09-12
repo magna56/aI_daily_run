@@ -650,7 +650,15 @@
   .prose p { margin: 0 0 17px; }
   .prose ul, .prose ol { margin: 0 0 17px; padding-left: 22px; }
   .prose li { margin: 8px 0; }
-  .prose code { font-family: var(--mono); font-size: 12.8px; background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; }
+  /* Inline code carries the SAME dark chip as the fenced blocks below, in both
+     themes, so every piece of code on the page reads the same way as the Code
+     tab. The previous rule used a white overlay — invisible on the light
+     ground, which left inline code with no distinction from body text at all.
+     Text colour is pinned for the reason the comment below gives: an inherited
+     colour resolves to near-black on the light theme, on a near-black chip. */
+  .prose code { font-family: var(--mono); font-size: 12.4px; background: #0d0e12;
+                color: #e7e2d8; padding: 1px 5px; border-radius: 4px;
+                border: 1px solid var(--line); white-space: nowrap; }
   /* This block keeps its dark background in BOTH themes, so it must also pin its own
      text colour. Without this it inherits the computed colour off .prose, which the
      light theme overrides to #3a362e — near-black text on a near-black block. The
@@ -658,11 +666,16 @@
      an already-resolved colour, not the var. #e7e2d8 is the dark theme --ink, so this
      changes nothing in dark mode. */
   .prose pre { background: #0d0e12; color: #e7e2d8; border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow: auto; }
-  .prose pre code { background: none; padding: 0; font-size: 12.5px; }
+  /* Undo every part of the inline-code chip, including the nowrap, which the
+     fenced block must not inherit. */
+  .prose pre code { background: none; padding: 0; font-size: 12.5px;
+                    border: 0; white-space: inherit; }
   .prose blockquote { margin: 0 0 14px; padding-left: 14px; border-left: 2px solid var(--line); color: var(--muted); }
   .prose table { border-collapse: collapse; margin: 0 0 18px; font-size: 13.5px; width: 100%; }
   .prose th, .prose td { border: 1px solid var(--line); padding: 8px 11px; text-align: left; vertical-align: top; }
-  .prose th { background: rgba(255,255,255,.04); color: var(--ink); font-weight: 600; }
+  /* Grey rather than a white overlay, so the header row is distinguishable on
+     the light ground as well as the dark one. */
+  .prose th { background: rgba(127,127,127,.10); color: var(--ink); font-weight: 600; }
 
   /* Diagram */
   .dgm-tools { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
@@ -821,7 +834,10 @@
   .acard .host { color: var(--dim); font-size: 11px; font-family: var(--mono); }
 
   footer { text-align: center; color: var(--dim); font-size: 12.5px; margin-top: 50px; line-height: 1.7; }
-  footer code { font-family: var(--mono); font-size: 11.5px; background: rgba(255,255,255,.05); padding: 1px 5px; border-radius: 4px; }
+  /* Same fix as .prose code — a white overlay showed nothing in light mode. */
+  footer code { font-family: var(--mono); font-size: 11.5px; background: #0d0e12;
+                color: #e7e2d8; padding: 1px 5px; border-radius: 4px;
+                border: 1px solid var(--line); }
 
   .nl { text-align: left; }
   .nl-home {
