@@ -1440,3 +1440,26 @@ now skipped.
   and one template survived the 2026-09-02 change and went on instructing the generator for five
   days. A returning rule needs a sweep of every place the retirement was justified, not just the
   place it was declared.
+
+## 2026-09-12 — site rendering, not a session
+- **Note**: "in our overview tag the code text is white ... can we have the text like we have it
+  in the code tab"
+- **Verdict**: standing rule — the same defect had already shipped three times, so it is a bug
+  class rather than one miss.
+- **Changed**: `index.html` — `.prose code` now carries the dark chip the fenced blocks and the
+  Code tab use, in both themes, with its text colour pinned and a `--line` border so it still
+  reads as a chip in dark mode where `#0d0e12` sits close to the `#111217` page. `footer code`
+  got the same treatment and `.prose th` moved to a neutral grey. `.prose pre code` now resets
+  the border and the nowrap as well as the background.
+- **Changed**: `index.html` — a standing comment at the light-theme token block saying never to
+  write a bare `rgba(255,255,255,.0X)` background, with the three rules that shipped with it
+  named. That is the placement most likely to be read by whoever next adds a subtle surface.
+- **Not changed**: the four `ai-daily-learn` spec files. This is how the reader renders, not what
+  a session must contain, and the feedback skill's own routing table already sends render issues
+  to `index.html`. Adding a CSS rule to a content spec would put it where the generator looks and
+  the person editing styles does not.
+- **Why this is worth reading later**: the bug is invisible in the direction that matters. A white
+  overlay on a light ground does not look broken, it looks like plain text — so it passes review,
+  passes `--check`, and is only caught by someone reading the rendered page in the theme it fails
+  in. That is the same lesson as the memory note about checking rendered output rather than lint,
+  and it is now the second time it has cost real time.

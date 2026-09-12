@@ -136,6 +136,13 @@
      background too, same method as the dark set. First visit follows the
      OS; an explicit toggle is stored and wins after that. Dark remains
      the brand (no data-theme attribute). */
+  /* NEVER write a bare rgba(255,255,255,.0X) background. It is the dark theme's
+     way of lifting a surface off the page, and on this light ground it renders
+     as nothing at all — the element silently loses its distinction instead of
+     looking wrong, so it survives review. Three rules shipped with this bug
+     (.prose code, footer code, .prose th) before anyone noticed. Use --card /
+     --card-hi, which are defined per theme, or a neutral rgba(127,127,127,.1)
+     that reads on both. */
   :root[data-theme="light"] {
     --bg: #faf9f6;
     --bg-rgb: 250,249,246;
