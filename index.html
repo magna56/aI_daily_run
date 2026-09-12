@@ -207,6 +207,13 @@
   :root[data-theme="light"] .theme-toggle .i-sun { display: block; }
   @media (max-width: 640px) { .theme-toggle { top: 12px; right: 12px; } }
   * { box-sizing: border-box; }
+  /* The UA rule for this is [hidden]{display:none}, which any class rule
+     setting display beats on specificity. `.more { display: flex }` did
+     exactly that, so syncMore() set el.hidden correctly and the "Loading
+     more sessions…" banner stayed on screen forever — including when
+     every session was already shown. Declared once, with !important, so
+     the next element given a display rule cannot reintroduce it. */
+  [hidden] { display: none !important; }
   html, body { margin: 0; padding: 0; }
   body {
     font-family: var(--sans);
@@ -2005,16 +2012,32 @@
   function initInfiniteScroll() {
     var sentinel = $("more");
     if (!sentinel) return;
+
+    /* Load until the sentinel is genuinely out of range. An observer reports a
+       CHANGE in intersection, so a page shorter than the rootMargin leaves the
+       sentinel still intersecting and no second callback ever arrives — the
+       banner sits in view and nothing more loads. Pulling in a loop instead of
+       once per callback removes that dependency entirely. */
+    function pump() {
+      if (!gridLoadMore || sentinel.hidden) return;
+      var guard = 0;
+      while (guard++ < 20 && !sentinel.hidden &&
+             sentinel.getBoundingClientRect().top - innerHeight < 600) {
+        if (gridLoadMore() === false) break;
+      }
+    }
+
     if (typeof IntersectionObserver === "function") {
       new IntersectionObserver(function (entries) {
-        if (entries.some(function (e) { return e.isIntersecting; }) && gridLoadMore) gridLoadMore();
+        if (entries.some(function (e) { return e.isIntersecting; })) pump();
       }, { rootMargin: "600px 0px" }).observe(sentinel);
-      return;
     }
-    addEventListener("scroll", function () {
-      if (!gridLoadMore || sentinel.hidden) return;
-      if (sentinel.getBoundingClientRect().top - innerHeight < 600) gridLoadMore();
-    }, { passive: true });
+    /* Registered ALWAYS, not only as a fallback for a missing observer. Every
+       browser has IntersectionObserver, so the old `else` branch was dead code
+       and there was no recovery when the observer did not deliver. Both paths
+       call the same idempotent pump, so firing twice costs nothing. */
+    addEventListener("scroll", pump, { passive: true });
+    addEventListener("resize", pump, { passive: true });
   }
 
   function renderGrid() {
