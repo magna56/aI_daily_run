@@ -110,7 +110,7 @@ up more capable — have to be answered before he chooses, not discovered afterw
 Present each in exactly this shape:
 
 ```
-### Candidate N — <working title: one clause, one subject>
+### Candidate N — <working title: plain, explanatory, one clause, one subject>
 
 Source     <URL> — <what it is: changelog / spec revision / eng blog / report>, dated <date>
 Slot       <Category> · Tier <A|B|C> · For: <layer>   <"due" | "at cap" | "over-weight">
@@ -142,11 +142,19 @@ The choice covers the article's content too. Before anything is written, settle 
 and read back:
 
 - **Title** — one clause, one subject; explanatory, and readable by an engineer who has only used
-  Cursor. Before you put one in front of him, run the overloaded-word check from
-  `ai-daily-learn/SKILL.md`: a word that already means something else in a codebase (*interface*,
-  *resource*, *handler*, *context*, *client*) will be read in its code sense first, and comes back
-  as the one-word verdict "confusing" without naming the word. Name the physical thing the reader
-  would point at, and say where it appears.
+  Cursor. **Draft the plain statement of what the article is about first**, and depart from it only
+  when the departure is clearer. This is where that rule bites hardest: you are proposing titles
+  to someone who has not read the article, so a title that reads well to you because you already
+  know the subject is the failure this step exists to catch. Two checks from
+  `ai-daily-learn/SKILL.md`, run before anything goes in front of him:
+  - The **overloaded-word check**: a word that already means something else in a codebase
+    (*interface*, *resource*, *handler*, *context*, *client*) will be read in its code sense
+    first, and comes back as the one-word verdict "confusing" without naming the word. Name the
+    physical thing the reader would point at, and say where it appears.
+  - The **inversion check**: *the best X are the wrong X* satisfies every other rule and still
+    leaves the subject unsaid. Strike the domain word out of the draft — if what remains is
+    meaningless, that word was carrying the subject alone. Both tracks; a deeper Frontier subject
+    is a reason for a plainer title, not a cleverer one.
 - **The angle** — which of the possible articles this is, and which reader it is aimed at.
 - **What `## Implementing It` shows** — the roles covered and the code for each. This is the
   longest section and the reason the reader stays; agreeing it here is worth more than agreeing

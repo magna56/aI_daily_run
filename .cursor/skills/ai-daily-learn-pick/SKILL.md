@@ -29,7 +29,8 @@ writing anything until they choose.
 ## Step 5-6 — shape it, then lock the brief
 
 Settle the title, the angle, what `Implementing It` covers, what is cut, and the
-visualizer's one idea. Write it to `~/ai_learning/.briefs/YYYY-MM-DD.md` and get a yes.
+visualizer's one idea. Titles default to the plain statement of what the article is
+about — never let a clever inversion carry one, on either track. Write it to `~/ai_learning/.briefs/YYYY-MM-DD.md` and get a yes.
 
 ## Step 7-8 — write, report, do not publish
 

@@ -34,7 +34,7 @@ session uses the identical layout under `frontier/YYYY-MM-DD/`.
 ## topic.md metadata (exact keys, exact allowed values)
 
 ```
-# <hook title, not a method name>
+# <plain explanatory title — says what the article is about, not a method name>
 
 **Category**: <one of the 11 names in build.js CATEGORIES>
 **Tags**: <2-4 from build.js TAGS, lowercase, comma-separated>

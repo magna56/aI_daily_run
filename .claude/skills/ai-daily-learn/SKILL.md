@@ -338,7 +338,7 @@ directory name — later steps refer to it.
 Write `~/ai_learning/YYYY-MM-DD/topic.md`:
 
 ```markdown
-# [Topic Title — a hook, not a method name]
+# [Topic Title — the plain statement of what this is about, not a method name and not a riddle]
 
 **Category**: [which of the 11 categories — exactly as written in the rotation list]
 **Tags**: [2-4 tags from the Tag Vocabulary below, comma-separated, lowercase]
