@@ -16,3 +16,7 @@
 # carried image, audio and resource content all along -- so it was rewritten
 # around the core protocol instead. Same date, same slot, new slug.
 /2026-09-05-how-an-mcp-tool-puts-a-clickable-app-inside-the-chat/* /2026-09-05-how-an-mcp-tool-sends-back-an-image-a-file-or-audio/ 301
+
+# Retitled 2026-09-13: the original title was an inversion that never named the
+# subject, so a reader could not tell the piece was about shrinking a model.
+/frontier-2026-09-13-why-the-two-best-layers-to-prune-are-the-wrong-pair/* /frontier-2026-09-13-how-to-choose-what-to-cut-when-you-shrink-a-model/ 301

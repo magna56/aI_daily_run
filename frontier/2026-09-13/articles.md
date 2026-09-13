@@ -1,4 +1,4 @@
-# Further Reading: Why the Two Best Layers to Prune Are the Wrong Pair
+# Further Reading: How to Choose What to Cut When You Shrink a Model
 
 ## Articles
 

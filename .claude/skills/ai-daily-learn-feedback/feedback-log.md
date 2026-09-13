@@ -1463,3 +1463,31 @@ now skipped.
   passes `--check`, and is only caught by someone reading the rendered page in the theme it fails
   in. That is the same lesson as the memory note about checking rendered output rather than lint,
   and it is now the second time it has cost real time.
+
+## 2026-09-13 — frontier/2026-09-13
+- **Note**: "frontier title is very vauge I couldnt understand what the article is abour Why the
+  Two Best Layers to Prune Are the Wrong Pair", then, after four alternatives were offered: "I
+  like this How to Choose What to Cut When You Shrink a Model and going forward lets us this
+  philospihy while creating title for daily and frontier titles."
+- **Verdict**: compliance gap, not a new rule. The spec already said a surprise in the title is
+  optional and already preferred the explanatory form; the title still shipped, because an
+  inversion is not a "surprise number" and slipped past a rule aimed at one.
+- **Changed**: `.claude/skills/ai-daily-learn/SKILL.md` — the "surprise is optional" bullet gained
+  two siblings rather than a parallel section elsewhere. The first makes the plain explanatory
+  statement the **default** to depart from only when the departure is clearer, and says so for
+  both tracks explicitly, because the owner named both. The second bans an inversion from
+  carrying a title alone, with the real ✗/✓ pair from today and a concrete test: strike the
+  domain word out of the draft, and if what remains is meaningless that word was carrying the
+  subject by itself.
+- **Changed**: `frontier/2026-09-13/topic.md` — retitled, and the `Hook` and `TLDR` re-pointed at
+  the task, since both had leaned on the same inversion and would have kept the vagueness on the
+  page after the title was fixed.
+- **Changed**: `redirects` — a 301 from the old slug. Retitling a published session changes its
+  URL, and the old one was already in the live sitemap and feed.
+- **Not changed**: the other title rules. They are all still correct; the failure was that none
+  of them is a precondition, and an inversion can satisfy every one while failing the reader.
+- **Why this is worth reading later**: the seductive part is that the bad title *felt* compliant.
+  It was one clause, one subject, no overloaded words, and it paid off its promised count early
+  in the body — every check the spec offered returned green. A title rule set can be complete and
+  still miss "can the reader tell what this is about", because that question is upstream of all
+  of them.

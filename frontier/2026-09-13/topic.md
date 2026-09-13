@@ -1,13 +1,13 @@
-# Why the Two Best Layers to Prune Are the Wrong Pair
+# How to Choose What to Cut When You Shrink a Model
 
 **Category**: Multimodal Engineering
 **Tags**: distillation, multimodal, paper
 **Date**: 2026-09-13
 **Level**: Deeper
 **For**: How models work
-**Hook**: Score every layer for how removable it is, take the top two, and you get a worse model than if you had taken two that scored lower. The scores were right. Adding them was the mistake.
+**Hook**: Cutting a model down means choosing which parts to lose. Score each part on its own and take the best two, and you get a worse model than if you had taken two that scored lower — because the scores were right and adding them was the mistake.
 **Engineer's view**: You have profiled a service, found the two slowest functions, optimized both, and got far less than the sum of the two wins — because they shared a lock. Ranking items independently is only valid when the items are independent, and you found that out afterwards.
-**TLDR**: Removing model layers by individual importance score picks pairs that interact badly. Evaluating candidate combinations instead, and removing them in stages, beat the obvious approach on every benchmark tested.
+**TLDR**: Choosing what to remove from a model by ranking parts individually picks combinations that interact badly. Scoring the combinations instead, and cutting in stages, beat the obvious approach on every benchmark tested.
 **Time to read**: ~10 minutes
 
 ## Explain Like I'm 5

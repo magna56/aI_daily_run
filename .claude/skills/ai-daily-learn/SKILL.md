@@ -635,6 +635,25 @@ Tokenizer-Agnostic LLM-Based Lossless Image Compression` announces.
   paragraph, and in `Key insight`, where they have room to be true. If a surprise fits the
   explanatory form without straining, keep it there too: `How a Coding-Agent Hook Decides to Fire
   (And Why It Still Isn't a Gate)` is both.
+- **When in doubt, ship the plain explanatory statement.** Added 2026-09-13, after the owner
+  rejected a Frontier title with "very vague, I couldn't understand what the article is about"
+  and then chose the plainest of four alternatives on offer. The rule is a default, not a
+  tiebreak: draft the plain `How to …` / `Why …` sentence first, and only depart from it when
+  the departure is clearer, never when it is merely more interesting. This applies identically
+  to the daily lab and to Frontier — a deeper subject is a reason for a plainer title, not a
+  licence for a cleverer one.
+- **Never let an inversion carry the title alone.** An inversion — *the best X are the wrong X*,
+  *the fastest path is the slow one* — is the specific shape that defeats every other rule on
+  this list. It can be one clause with one subject, avoid overloaded words, pay off its count in
+  the body, and still leave the reader unable to say what the article covers, because the twist
+  has taken the place of the subject. Intrigue is not orientation. Name the task, then the twist
+  if it still fits:
+  - ✗ `Why the Two Best Layers to Prune Are the Wrong Pair`
+    → ✓ `How to Choose What to Cut When You Shrink a Model`
+  The ✗ is a real published title, retitled the same day. Both are one clause; only one says what
+  the piece is about. The test: strike the domain word (`prune`, `layers`, `eviction`) out of the
+  draft — if what remains is meaningless, that word was carrying the subject on its own, and a
+  reader scanning the card grid will not be carrying it with them.
 - **Ban academic formatting.** No `Method Name: Formal Description via Mechanism`. That pattern
   is why sessions feel all over the place. Compare — and note the ✓ column now prefers the
   explanatory form:
