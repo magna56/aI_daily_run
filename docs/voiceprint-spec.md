@@ -45,6 +45,7 @@ something no "humanize this text" tool has:
 | **B. The AI-edited version** | The diff A→B *is a measurement of what AI removed from you* |
 | **C. An unrelated sample you wrote** | Validates the fingerprint — proves A wasn't a one-off |
 | **D. Your current working draft** | The thing being scored |
+| **E. Which assistant edited it** | Selects the tell profile — see §4. Claude / ChatGPT / Gemini |
 
 Everyone else scores a single document against a generic notion of "human." Voiceprint scores a
 document against **this particular person**, using a diff that shows exactly which properties changed
@@ -78,9 +79,10 @@ profiles, one distance.
 10. Hedge rate (`may`, `could`, `generally`, `often`, `arguably`)
 11. Passive-voice share
 
-**Model tells** — the pattern library, matched as spans so they can be highlighted.
+**Model tells** — the pattern library, matched as spans so they can be highlighted. The lexicon and
+weights here are **selected by which assistant the user names** (§4), not one generic list.
 
-12. Cliché lexicon (~200 phrases: *delve, tapestry, testament to, underscore, multifaceted, navigate the complexities, in today's landscape, robust framework*)
+12. Cliché lexicon (*delve, tapestry, testament to, underscore, multifaceted, navigate the complexities, in today's landscape, robust framework*)
 13. Paragraph-opening connectives (*Moreover / Furthermore / Additionally*) as a share of paragraphs
 14. Tricolons — the three-item list, especially of abstract nouns (*rigor, curiosity, and collaboration*)
 15. Antithesis scaffolds (*not only X but also Y*, *it isn't X, it's Y*, *while X, Y*)
@@ -104,26 +106,110 @@ Three subscores, never one. A single number invites gaming and hides the useful 
 
 ---
 
-## 4. The screen
+## 4. Which assistant edited it
 
-Single page. Four paste boxes collapsing to one working view.
+A required input, multi-select because people chain tools: **Claude / ChatGPT / Gemini / Other /
+Not sure.** It is not cosmetic — it selects the tell profile and re-weights the drift comparison.
+
+**Why it earns its place.**
+
+1. **Precision.** One generic 200-phrase list flags phrases the model in question never produces,
+   and every false highlight costs trust. A per-model lexicon is 60–90 entries and nearly all of
+   them land on the document in front of the user.
+2. **Different assistants break different things.** The drift signature is not uniform — one
+   flattens sentence variance hardest, another strips contractions and injects headings and bullets
+   into flowing prose, another over-produces triads and *not-only-but-also* frames. Weighting the
+   distance metric by the known signature finds the drifted paragraphs faster and explains them
+   better.
+3. **The rewrite knows what to undo.** *"Reverse the specific transformations this assistant
+   applies"* is a far tighter instruction than *"make it sound human."*
+
+### Profiles are measured, not authored
+
+This is the part to get right. Hand-writing a list of "ChatGPT words" from memory produces a folk
+wisdom artifact that is wrong within two model releases. Each profile is a versioned, dated data
+file derived from a corpus run:
+
+```json
+{
+  "id": "chatgpt",
+  "measured": "2026-09",
+  "corpus": { "docs": 240, "task": "tighten-this-statement" },
+  "lexicon": [ { "span": "delve into", "lift": 14.2 }, { "span": "multifaceted", "lift": 9.1 } ],
+  "structural": { "tricolon_lift": 2.6, "heading_injection": 0.41, "antithesis_lift": 3.3 },
+  "drift_signature": { "sentence_sd": -0.38, "contractions": -0.71, "specificity": -0.55 }
+}
+```
+
+`lift` is how much more often a span appears in that assistant's edits than in the human baseline
+corpus. Only spans above a lift threshold make the list, so the lexicon is *derived* rather than
+guessed.
+
+**Building the corpus is the product's own core measurement, aggregated.** Take 200–300
+human-written statements, run each through one fixed edit prompt on each assistant, and record the
+A→B delta distribution — the identical code path §2 already describes, just averaged. No user
+documents are needed, which keeps the privacy promise in §7 intact.
+
+### Auto-detect, and the consistency check
+
+Score the AI-edited version against all three profiles and report the best match with a confidence
+band. Two uses:
+
+- It backs the **"Not sure"** option, which will be a large share of users.
+- It is a **consistency check.** If the user says ChatGPT and the text matches Gemini, they likely
+  chained tools or pasted from somewhere they have forgotten. The tool should say so rather than
+  silently scoring against the wrong profile.
+
+### Profiles rot
+
+Assistants change every few months and a stale profile is worse than no profile, because it is
+confidently wrong. Rules:
+
+- Every profile carries its `measured` date and is surfaced in the UI.
+- A profile older than six months shows a staleness warning and falls back to the generic lexicon
+  for any span below a confidence bar.
+- Refresh quarterly. It is a scripted corpus run — roughly half a day, mostly waiting.
+
+### The one thing not to build
+
+**No leaderboard of which assistant is hardest to detect.** The per-model breakdown invites it, and
+it would be the most shareable page on the site, which is exactly why it is a trap: it converts a
+voice-fidelity tool into an evasion tool and forfeits the entire position in §7.
+
+Ranking assistants on *how much of an author's voice they strip* is a legitimate quality question
+and a good piece of content. Ranking them on how well they hide is not. The line is firm enough to
+write into the repo's README so it survives a growth-hungry quarter.
+
+---
+
+## 5. The screen
+
+Single page. Four paste boxes and one assistant picker, collapsing to one working view.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │  Voice match  70/100      Concreteness  34/100    Tells  11  │
 │  ▓▓▓▓▓▓▓░░░               ▓▓▓░░░░░░░               ↓ from 23 │
 ├───────────────────────────────┬──────────────────────────────┤
-│                               │  WHAT THE AI CHANGED         │
-│  Your draft, paragraph-       │                              │
-│  shaded by voice distance:    │  Sentence variance  ↓ 41%    │
-│                               │  Contractions       ↓ 100%   │
-│  ░ para 1  close to you       │  Numbers/names      ↓ 62%    │
-│  ▓ para 2  DRIFTED            │  Tricolons          ↑ 4 → 11 │
-│  ░ para 3                     │  Avg para length    → uniform│
-│  ▓ para 4  DRIFTED            │                              │
-│  ░ para 5                     │  ── SELECTED: para 2 ──      │
+│                               │  WHAT CHATGPT CHANGED  [▾]   │
+│  Your draft, paragraph-       │  profile measured 2026-09    │
+│  shaded by voice distance:    │                              │
+│                               │  Sentence variance  ↓ 41%    │
+│  ░ para 1  close to you       │  Contractions       ↓ 100%   │
+│  ▓ para 2  DRIFTED            │  Numbers/names      ↓ 62%    │
+│  ░ para 3                     │  Tricolons          ↑ 4 → 11 │
+│  ▓ para 4  DRIFTED            │  Avg para length    → uniform│
+│  ░ para 5                     │                              │
+│                               │  Heavier than a typical      │
+│  [click a paragraph]          │  ChatGPT edit on specifics,  │
+│                               │  lighter on structure.       │
+│                               │                              │
+│                               │  ── SELECTED: para 2 ──      │
 │                               │  · "multifaceted" — not a    │
-│  [click a paragraph]          │    word you have ever used   │
+│                               │    word you have ever used,  │
+│                               │    and 9× more likely in a   │
+│                               │    ChatGPT edit than a human │
+│                               │    one                       │
 │                               │  · 3 sentences, all 19–22    │
 │                               │    words. You normally run   │
 │                               │    6–34.                     │
@@ -140,7 +226,7 @@ someone pay.
 
 ---
 
-## 5. The rewrite, and why it asks questions
+## 6. The rewrite, and why it asks questions
 
 Per paragraph, on demand. The prompt is few-shot on **the user's own A and C samples**, with hard
 constraints derived from their measured fingerprint ("target sentence-length SD ≥ 9; contractions
@@ -158,13 +244,14 @@ and this one structurally cannot.
 
 ---
 
-## 6. Guardrails, built in rather than promised
+## 7. Guardrails, built in rather than promised
 
 | Rule | Mechanism |
 |------|-----------|
 | Cannot be used to ghostwrite | **No baseline samples → no rewrite.** The feature is dead without ≥800 words the user wrote. A person with nothing of their own to feed it gets an analyzer and nothing else. |
 | Never fabricates | Rewrite returns a question, not a guess, when a specific is missing |
 | No evasion claims | Never markets against a named detector, never reports or predicts a "pass rate", never optimizes against a detector's score |
+| No assistant leaderboard | Per-model profiles (§4) are never aggregated into a ranking of which assistant hides best. Voice-stripping comparisons are fine; evasion comparisons are not |
 | Baseline honesty | If the "your writing" samples themselves score high on tell density, warn: *your baseline looks AI-assisted; the fingerprint will be unreliable* |
 | Privacy | Metrics run client-side. Only the rewrite call leaves the browser. No storage in v0, no training on user text, stated plainly |
 | Disclosure, not concealment | Export includes an optional, honest AI-assistance disclosure line the user can paste into their application |
@@ -176,7 +263,7 @@ is on a five-year clock.
 
 ---
 
-## 7. Build
+## 8. Build
 
 Deliberately boring. The differentiated part is the metric set and the diff, not the stack.
 
@@ -184,6 +271,8 @@ Deliberately boring. The differentiated part is the metric set and the diff, not
 |-------|--------|-----|
 | App | Vite + TypeScript, single page, static | No backend for the part that does the work |
 | Metrics | Hand-rolled TS: sentence splitter, tokenizer, frequency list, regex span matchers | ~600 lines. Runs in <50ms on 2,000 words. Client-side = privacy is real, not claimed |
+| Tell profiles | Three versioned JSON files (`profiles/{claude,chatgpt,gemini}-YYYY-MM.json`) shipped as static assets, plus a generic fallback | Data, not code — a quarterly refresh is a file swap, not a release |
+| Profile builder | Offline Node script: corpus → one fixed edit prompt per assistant → lift table | Reuses the same metric module as the app. Run quarterly, never in production |
 | Rewrite | One serverless function (Vercel/CF Workers) proxying Claude, holding the key | Only network call |
 | Model | `claude-sonnet-5` for rewrites | Style-matching from few-shot exemplars is the task it is good at |
 | .docx in/out | `mammoth` to read, `docx` to write | Applicants live in Word |
@@ -194,18 +283,22 @@ Deliberately boring. The differentiated part is the metric set and the diff, not
 
 | | Days | Ships |
 |---|------|-------|
-| **v0** | 1–5 | Paste 4 boxes → three scores, A→B drift table, paragraph heat map, tell highlighting. **No LLM at all.** This is already sellable and costs nothing to run. |
-| **v0.5** | 6–9 | Per-paragraph rewrite, seeded on user samples, with the question-asking behavior |
-| **v1** | 10–14 | .docx upload and export, provenance report, saved voiceprints (accounts) |
+| **v0** | 1–5 | Paste 4 boxes, pick the assistant → three scores, A→B drift table, paragraph heat map, tell highlighting. Ships with hand-seeded profiles for the three assistants. **No LLM at all.** This is already sellable and costs nothing to run. |
+| **v0.5** | 6–9 | Per-paragraph rewrite, seeded on user samples and the source assistant's drift signature, with the question-asking behavior |
+| **v1** | 10–14 | Profile builder run for real (replaces the hand-seeded lists), assistant auto-detect and the "Not sure" path, .docx upload and export, provenance report, saved voiceprints (accounts) |
 | v2 | later | Google Docs add-on — meet the writing where it happens |
 | v3 | later | B2B house-voice: same engine, fingerprint is a brand's not a person's |
 
 The v0 cut is the important one. A deterministic analyzer with zero inference cost, shipped in five
 days, tells you whether anyone cares — before you pay for a single token.
 
+One honest wrinkle: v0's profiles are hand-seeded, which is exactly the folk-wisdom artifact §4 warns
+against. That is an acceptable trade for five days, on two conditions — the UI labels them
+*provisional*, and the v1 corpus run is scheduled before v0 ships, not after someone complains.
+
 ---
 
-## 8. Who pays
+## 9. Who pays
 
 | Segment | Document | Urgency |
 |---------|----------|---------|
@@ -230,7 +323,7 @@ That framing is shareable in places where the evasion framing would get the post
 
 ---
 
-## 9. What could go wrong
+## 10. What could go wrong
 
 | Risk | Response |
 |------|----------|
@@ -238,12 +331,15 @@ That framing is shareable in places where the evasion framing would get the post
 | Metric-chasing makes writing worse | Every suggestion is accept/reject per span. Never auto-apply. Add a readability floor |
 | Their "own" samples are AI-written | Detect and warn (guardrail table above). Degrade to generic analysis |
 | Fingerprints are unstable on short samples | Require 800+ words across ≥2 documents before showing a voice-match score. Show a confidence band |
+| Per-model profiles go stale on the next release | Dated profiles, staleness warning past six months, quarterly refresh as a scripted corpus run. The generic lexicon is always the floor, so a stale profile degrades rather than breaks |
+| User names the wrong assistant, or chained two | Auto-detect scores against all three and flags the mismatch instead of silently using the wrong profile. Assistant picker is multi-select |
+| "Which one should I use so it looks least AI?" | The question the per-model view invites. Answer it as a voice-stripping question, never an evasion one, and never ship the ranking as a page |
 | Detection anxiety fades as norms shift | The concreteness half of the product has nothing to do with AI. "Your writing is too generic to get an interview" survives the shift |
 | Commodity — an LLM can approximate this in one prompt | True for the rewrite, false for the A→B diff and the longitudinal fingerprint. Defend on the measurement, not the generation |
 
 ---
 
-## 10. Does it work
+## 11. Does it work
 
 | Metric | Target |
 |--------|--------|
@@ -256,6 +352,10 @@ That framing is shareable in places where the evasion framing would get the post
 Validation before building v0.5: run 20 statements through the v0 analyzer by hand and check
 whether the paragraphs it flags are the paragraphs a real reader finds hollow. If flagged ≠ hollow,
 the metric weights are wrong and no amount of LLM rewriting will save it.
+
+Validation for the profiles specifically: hold out 30 edits per assistant from the corpus run and
+check that auto-detect picks the right one. Below roughly 70% the profiles are not capturing
+anything real, and the per-model view should be pulled rather than shipped as decoration.
 
 ---
 
