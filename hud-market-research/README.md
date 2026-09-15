@@ -34,6 +34,8 @@ observability dashboard, and that framing is the entire bet.
 | [`research/03-competition.md`](research/03-competition.md) | Sentry Seer, Datadog Bits Code, Lightrun, the AI-SRE tier, the code-review tier |
 | [`research/04-market.md`](research/04-market.md) | Market size, the "why now" data, adoption evidence |
 | [`research/05-assessment.md`](research/05-assessment.md) | Where the moat is real, where it is not, and what would kill this |
+| [`research/06-what-hud-provides.md`](research/06-what-hud-provides.md) | Verified capability inventory — what Hud does and does not cover |
+| [`research/07-gap-analysis.md`](research/07-gap-analysis.md) | Six candidate gaps tested against the competition; two are closed |
 | [`research/sources.md`](research/sources.md) | Every source, with a confidence rating per claim |
 | [`prototype/README.md`](prototype/README.md) | Run the pipeline yourself |
 | [`prototype/fix_flow.md`](prototype/fix_flow.md) | The one-click PR hop by hop, and who owns each hop |

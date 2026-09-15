@@ -79,6 +79,45 @@ the 1–2% overhead claim.
 - Job listing, "Senior Software Engineer, Runtime Internals" —
   https://freehire.me/jobs/senior-software-engineer-runtime-internals-hud-odqecf3t **[B]**
 
+## Capability inventory and gap analysis (docs 06 and 07)
+
+- Hud FAQ — https://docs.hud.io/docs/faq
+  *Source of the two load-bearing negatives: Hud does not capture raw variable values, and tracks
+  function behavior "without requiring logs" / does not replace your logging system.* **[B]**
+- Hud Heads-Up Alerts — https://docs.hud.io/docs/heads-up-alerts
+  *Post-deploy error and performance regression detection, version correlation, 5XX linkage,
+  new-vs-increased discrimination, Slack/web/IDE delivery.* **[B]**
+- Hud Quick Start — https://docs.hud.io/docs/installation-guide
+- Hud JetBrains plugin — https://plugins.jetbrains.com/plugin/25174-hud
+  *IDE feature names: "Hudders", Live Call Graphs.* **[B]**
+- Hud on error monitoring — https://www.hud.io/glossary/error-monitoring/ and
+  https://www.hud.io/blog/error-tracking-in-production-detect-critical-failures/ and
+  https://www.hud.io/blog/best-error-tracking-tools-developers/
+  *Evidence Hud positions against error trackers, not only APM.* **[B]**
+
+**Sentry handled errors and logs** — establishes gap 1 is closed vs Sentry
+- https://docs.sentry.io/platforms/javascript/usage/ — `captureException()` for handled errors **[A]**
+- https://docs.sentry.io/product/sentry-basics/integrate-backend/capturing-errors/ **[A]**
+- https://oneuptime.com/blog/post/2026-09-14-sentry-console-errors-without-duplicates/view
+  *Sentry's structured Logs product as a separate channel.* **[B]**
+
+**Dynamic invariant detection** — establishes gap 2 is feasible but commercially unclaimed
+- https://plse.cs.washington.edu/daikon/ and https://github.com/codespecs/daikon
+  *Daikon, v5.9.1 released 2026-09-01. Open source, academic, offline. No commercial equivalent
+  found.* **[A]**
+
+**Claude Code hooks** — establishes gap 3's delivery mechanism exists and is unused for telemetry
+- https://dev.to/mikelane/building-guardrails-for-ai-coding-assistants-a-pretooluse-hook-system-for-claude-code-ilj **[B]**
+- https://www.totalum.app/blog/claude-code-hooks-totalum — `additionalContext`, v2.1.9, Jan 2026 **[B]**
+- https://ranthebuilder.cloud/blog/agentic-coding-hooks-deterministic-ai-guardrails/ **[B]**
+
+**AI code provenance** — establishes gap 4's first half is already claimed
+- https://crashoverride.com/use-cases/ai-code-traceability/ **[B]**
+- https://blog.exceeds.ai/analyze-git-commits-ai-code/ — Exceeds Ink, Git Note attestations **[B]**
+- https://codebrewtools.com/blogs/ai-code-provenance-compliance-tools-2026 **[C]**
+- https://www.pagerly.io/blog/ai-generated-code-incidents-2026-data-2026-08-30 — the Amazon
+  120,000-lost-orders figure. Same source flagged unreliable in `04-market.md`. **[C]**
+
 ## Competitors
 
 **Sentry / Seer** — all **[A]**
