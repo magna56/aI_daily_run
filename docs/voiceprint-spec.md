@@ -1,7 +1,11 @@
 # Voiceprint — product spec (v0)
 
-**One line:** you give it two things you unquestionably wrote, and it tells you which paragraphs of
-your AI-edited draft no longer sound like you — and what the AI took out.
+**One line:** you upload what you wrote, it works out what the AI took out, and it hands you back a
+document that sounds like you.
+
+**The deliverable is a finished document.** Scores, heat maps and drift tables are how it gets
+there and how the user trusts it, but a session that ends in analysis has failed. Everything below
+is in service of a file the user can send.
 
 Working name. Alternatives: *Still You*, *Trueprint*, *Baseline*.
 
@@ -184,7 +188,18 @@ write into the repo's README so it survives a growth-hungry quarter.
 
 ## 5. The screen
 
-Single page. Four paste boxes and one assistant picker, collapsing to one working view.
+Single page. Four upload slots and one assistant picker, collapsing to one working view, ending in a
+download.
+
+**Uploads, entirely in the browser.** Drag-and-drop or file picker for each of the four inputs,
+with paste as a fallback for people working from a web editor. `.docx`, `.txt`, `.md` and `.pdf`
+(text-layer only) are parsed client-side — `mammoth` for Word, `pdf.js` for PDF — so the files never
+leave the machine. No upload endpoint exists in v0, which makes the privacy claim structural rather
+than a policy: there is nowhere for a document to be stored even by accident. The only network call
+in the whole product is the per-paragraph rewrite.
+
+A scanned PDF with no text layer is rejected with a clear message rather than sent to OCR. That is
+a v2 problem.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -242,6 +257,24 @@ The user types the answer. The tool works it in. This is better output *and* it 
 line — a tool that fabricates biographical detail for an application is a tool for committing fraud,
 and this one structurally cannot.
 
+**Unanswered questions cut the sentence, they do not fill it.** A user who skips a question gets a
+shorter document, not an invented one, and the export names what was removed so nothing vanishes
+silently.
+
+### Ending in a document
+
+The rewrite loop is not the end of the session. When the user accepts the last paragraph, the page
+hands them:
+
+1. **The rewritten document** — `.docx` or `.md`, same format they uploaded, generated client-side.
+2. **What was cut**, one line each, for anything dropped because a question went unanswered.
+3. **Before and after** — voice match, measures outside range, tells, sentences without specifics.
+   Three lines. This is the receipt, not the product.
+4. Optionally, a **disclosure line** they can adapt if they want to state that they used an AI editor.
+
+Rewriting toward the score past roughly 85 is fitting to a proxy. The page should stop encouraging
+edits at that point rather than gamifying the number.
+
 ---
 
 ## 7. Guardrails, built in rather than promised
@@ -275,7 +308,8 @@ Deliberately boring. The differentiated part is the metric set and the diff, not
 | Profile builder | Offline Node script: corpus → one fixed edit prompt per assistant → lift table | Reuses the same metric module as the app. Run quarterly, never in production |
 | Rewrite | One serverless function (Vercel/CF Workers) proxying Claude, holding the key | Only network call |
 | Model | `claude-sonnet-5` for rewrites | Style-matching from few-shot exemplars is the task it is good at |
-| .docx in/out | `mammoth` to read, `docx` to write | Applicants live in Word |
+| Uploads | `mammoth` (.docx), `pdf.js` (.pdf text layer), plain read for .md/.txt — all client-side | No upload endpoint means no document store to leak |
+| Export | `docx` npm package, generated in the browser | Applicants live in Word |
 | Hosting | Cloudflare Pages + one Function | Same shape as theaicommit.com — known quantity |
 | Storage | None in v0 | Ship faster, privacy claim is trivially true |
 
@@ -283,10 +317,10 @@ Deliberately boring. The differentiated part is the metric set and the diff, not
 
 | | Days | Ships |
 |---|------|-------|
-| **v0** | 1–5 | Paste 4 boxes, pick the assistant → three scores, A→B drift table, paragraph heat map, tell highlighting. Ships with hand-seeded profiles for the three assistants. **No LLM at all.** This is already sellable and costs nothing to run. |
+| **v0** | 1–5 | Upload 4 files, pick the assistant → three scores, A→B drift table, paragraph heat map, tell highlighting. Ships with hand-seeded profiles for the three assistants. **No LLM at all.** This is already sellable and costs nothing to run. |
 | **v0.5** | 6–9 | Per-paragraph rewrite, seeded on user samples and the source assistant's drift signature, with the question-asking behavior |
-| **v1** | 10–14 | Profile builder run for real (replaces the hand-seeded lists), assistant auto-detect and the "Not sure" path, .docx upload and export, provenance report, saved voiceprints (accounts) |
-| v2 | later | Google Docs add-on — meet the writing where it happens |
+| **v1** | 10–14 | Profile builder run for real (replaces the hand-seeded lists), assistant auto-detect and the "Not sure" path, .docx export, provenance report, saved voiceprints (accounts) |
+| v2 | later | Google Docs add-on — meet the writing where it happens; OCR for scanned PDFs |
 | v3 | later | B2B house-voice: same engine, fingerprint is a brand's not a person's |
 
 The v0 cut is the important one. A deterministic analyzer with zero inference cost, shipped in five
@@ -387,3 +421,21 @@ product is worth building, and useful immediately to anyone with a deadline this
 11. **Provenance hygiene.** Type your edits rather than pasting one block; keep the version history;
     do not hand over a file whose metadata shows three minutes of editing time.
 12. **One human read.** Someone who knows you, asked exactly one question: *does this sound like me?*
+
+---
+
+## Appendix B — the prototype that already exists
+
+`/sounds-like-me` (`.claude/skills/sounds-like-me/`) is this product as a Claude Code skill: same
+four inputs, same assistant picker, same interview, same deliverable. It exists to find out what
+the product should be before any of it is built in a browser.
+
+- `scripts/voiceprint.py` is the v0 metric engine — pure Python, no dependencies, no network. The
+  browser version is a port of it, not a rewrite.
+- The skill's Step 3 interview is where the product's real behavior lives, and it is the part
+  hardest to get right from a spec. Questions that reliably produce good answers should be logged
+  and folded back in here.
+- The skill enforces the 400-word baseline gate and the never-invent-a-fact rule the same way the
+  product is meant to.
+
+Run it on real documents before building v0. Anything it gets wrong is cheaper to learn there.
