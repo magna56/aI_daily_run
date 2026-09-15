@@ -461,7 +461,12 @@ function mixSources(rows) {
     const raw = readIfExists(path.join(ROOT, r.id, "articles.md")) || "";
     const hosts = new Set();
     for (const m of raw.matchAll(/\]\((https?:\/\/([^/)]+)[^)]*)\)/g)) {
-      hosts.add(m[2].replace(/^www\./, ""));
+      // Collapse to the registrable domain. Counting full hostnames split
+      // `datasette.io`, `docs.datasette.io` and `llm.datasette.io` into three
+      // rows of two, so the project that caused this check would have slipped
+      // under the floor -- it only showed up via the author's own blog.
+      const h = m[2].replace(/^www\./, "").split(".").slice(-2).join(".");
+      if (h !== "theaicommit.com") hosts.add(h);   // self-citation is a feature
     }
     for (const h of hosts) counts.set(h, (counts.get(h) || 0) + 1);
   }
