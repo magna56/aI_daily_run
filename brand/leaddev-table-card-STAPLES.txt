@@ -1,0 +1,34 @@
+The AI Commit — INITIAL table card — Staples print handoff
+==========================================================
+
+THIS IS THE DESIGN TO PRINT (the original landscape card).
+
+UPLOAD TO STAPLES:
+  brand/leaddev-table-card-staples.pdf
+
+OR bring on a USB / email yourself that PDF.
+
+WHAT TO ASK FOR AT THE COUNTER:
+  Product:  Custom stickers  OR  color prints on heavy cardstock / postcard
+  Size:     4 inches wide × 3 inches tall (landscape)
+  Finish:   Matte (less glare under conference lights)
+  Corners:  Rounded if they offer it (matches the art); square is fine
+  Color:    Full color
+  Qty:      However many tables you want to cover
+
+FILE SPECS (already baked in):
+  Page size:   4.25 in × 3.25 in  (includes 0.125 in bleed on every side)
+  Trim to:     4.00 in × 3.00 in
+  Resolution:  600 DPI
+  QR opens:    https://theaicommit.com/
+
+IF THEIR UPLOADER SAYS "bleed already added / use exact size":
+  Upload instead: brand/leaddev-table-card-4x3.pdf  (exact 4×3, no bleed)
+
+SHOW THEM IF NEEDED:
+  brand/leaddev-table-card-staples-guides.png
+  Cyan dashed = trim · Red box = keep text inside
+
+SAY THIS:
+  "Please print this PDF as 4 by 3 inch landscape stickers or cards,
+   matte, full color. Trim to the 4×3 finish — bleed is already in the file."
