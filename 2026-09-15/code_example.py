@@ -1,122 +1,149 @@
-"""Find authorization bypasses by enumerating what a response can reach.
+"""Triage what a coding-agent audit reports, instead of reading it.
 
-A permission check guards the object the caller named. The bug class is everything
-else that reaches the same data: the table under a different case, its search index,
-its statistics, its foreign-key neighbors. Point this at your own schema.
-
-Modeled on the fixes in Datasette 1.0a39 / 0.65.4 (11 September 2026).
+Three models audit one schema. This scores what came back: which claims are real,
+which are noise, which are not testable, and which real bugs nobody found. The
+oracle is independent of the findings, so the numbers mean something. The bug
+class itself is the 2026-09-11 session; this is the pipeline around it.
 
 Run:  python3 code_example.py
 """
 
-# Flip to True to authorize the resolved target set instead of the typed name.
-# That one change is the entire fix, and it closes every bypass found below.
-STRICT = False
+# Rounds of auditing to simulate. Each round a model repeats what it already found
+# and adds one claim. Going 2 -> 3 rounds takes raw findings from 15 to 25 and
+# precision from 67% to 57%: the bill grows faster than the truth does.
+ROUNDS = 3
 
-# A schema with the four shapes that bite: a private table, a search index derived
-# from it, engine-internal tables that mirror its contents, and a public table with
-# a foreign key pointing into private data.
 SCHEMA = {
     "public_notes": {},
     "documents": {"private": True},
-    "documents_fts": {"derived_from": "documents"},      # full-text search index
-    "sqlite_stat1": {"reflects": ["documents", "members"]},  # row counts, sampled values
     "members": {"private": True},
+    "documents_fts": {"derived_from": "documents"},
+    "sqlite_stat1": {"reflects": ["documents", "members"]},
     "orgs": {"foreign_keys": {"owner_id": "members"}},
 }
-
-# What the operator marked private. This is the realistic shape: you deny the tables
-# you know hold sensitive rows. Nobody writes a rule for a search index they forgot
-# exists, which is exactly the gap.
 PRIVATE = {"documents", "members"}
 
 
-def canonical(schema, name):
-    """Resolve a typed name the way the engine does, not the way a string compares.
-
-    SQLite matches table names case-insensitively, so a check on "documents" that
-    compares strings exactly is not the check the engine will honor.
-    """
-    for real in schema:
-        if real.casefold() == name.casefold():
-            return real
-    return None
+def canonical(name):
+    """The table a typed name resolves to, the way the engine resolves it."""
+    return next((t for t in SCHEMA if t.casefold() == name.casefold()), None)
 
 
-def reachable(schema, name):
-    """Every table whose data can be read through a request for `name`.
-
-    This is the function worth lifting. A permission layer that authorizes the typed
-    name is asking about one element of this set and serving all of it.
-    """
-    target = canonical(schema, name)
+def reachable(schema, name, seen=None):
+    """Every table whose rows a request for `name` can read."""
+    target = canonical(name)
     if target is None:
         return set()
-    out = {target}
+    seen = seen or set()
+    if target in seen:
+        return seen
+    seen.add(target)
     spec = schema[target]
-    if "derived_from" in spec:                 # a search index exposes its source rows
-        out |= reachable(schema, spec["derived_from"])
-    for src in spec.get("reflects", []):       # stats tables leak counts and samples
-        out |= reachable(schema, src)
-    for col, dest in spec.get("foreign_keys", {}).items():
-        out |= reachable(schema, dest)         # joins and expanded keys follow these
+    nxt = ([spec["derived_from"]] if "derived_from" in spec else []) \
+        + list(spec.get("reflects", [])) + list(spec.get("foreign_keys", {}).values())
+    for n in nxt:
+        reachable(schema, n, seen)
+    return seen
+
+
+def leaks(name):
+    # Does the naive check allow this name while it reaches private rows?
+    allowed = name not in PRIVATE           # the bug: exact string, typed name
+    return allowed and bool(reachable(SCHEMA, name) & PRIVATE)
+
+
+def oracle_bypasses():
+    # Keyed on the table reached, not the string typed: counting strings scores
+    # `DOCUMENTS_FTS` as a miss separate from `documents_fts` and overstates it.
+    out = set()
+    for t in SCHEMA:
+        for candidate in (t, t.upper()):
+            if leaks(candidate):
+                out.add(canonical(candidate))
     return out
 
 
-def can_view(schema, private, name, strict):
-    if canonical(schema, name) is None:
-        return False
-    if not strict:
-        return name not in private             # the bug: exact string, typed name
-    # Authorize the resolved set: deny if anything this request reaches is private.
-    return not (reachable(schema, name) & private)
+# What came back. Hand-written to carry the error modes a real transcript does:
+# correct claims, a confident claim about a table that does not leak, a claim
+# about a table that does not exist, and prose with no testable target in it.
+FINDINGS = {                        # (the name it names, what it claims)
+    "model-A": [("documents_fts", "search index exposes source rows"),
+                ("sqlite_stat1", "statistics tables leak sampled values"),
+                ("public_notes", "notes table looks over-permissive"),
+                (None, "the permission logic may be inconsistent in places")],
+    "model-B": [("documents_fts", "fts shadow table is not permission-checked"),
+                ("DOCUMENTS", "name comparison is case-sensitive, SQLite is not"),
+                ("documents_backup", "backup table is world-readable")],
+    "model-C": [("sqlite_stat1", "internal tables were never enumerated"),
+                ("orgs", "foreign key reaches members"),
+                ("DOCUMENTS", "case folding mismatch")],
+}
 
 
-def audit(schema, private, strict):
-    """Enumerate requests that must be denied, and report any the checker allows.
+def verify(finding):
+    """real | noise | untestable -- the only judgment a machine can make here."""
+    name = finding["request"]
+    if not name:
+        return "untestable"                 # no target: a human has to read it
+    if not reachable(SCHEMA, name):
+        return "noise"                      # a table that does not exist
+    return "real" if leaks(name) else "noise"
 
-    Nothing here knows about a specific vulnerability. It derives the cases to try
-    from the schema, which is why it keeps working as the schema grows.
-    """
-    findings = []
 
-    def probe(name, why):
-        leaked = reachable(schema, name) & private
-        if not leaked:
-            return                             # nothing private behind this name
-        if can_view(schema, private, name, strict):
-            findings.append((name, why, sorted(leaked)))
+def run_audit(rounds):
+    # Collect across rounds. Repeats are most of what actually arrives.
+    collected = []
+    for r in range(rounds):
+        for model, items in FINDINGS.items():
+            # Round 1 reports two claims; each later round repeats them and adds one.
+            for request, claim in items[:min(len(items), r + 2)]:
+                collected.append({"request": request, "claim": claim,
+                                  "model": model, "round": r + 1})
+    return collected
 
-    for table in schema:
-        probe(table, "requested directly")
-        # Only worth trying a case variant where a deny exists to evade. Probing
-        # every casing of every table re-reports the same hole many times over.
-        if table in private:
-            probe(table.upper(), "same table, different case")
 
-    return findings
+def triage(collected):
+    # Group by target; count how many distinct models reported each one.
+    groups = {}
+    for f in collected:
+        key = f["request"] or f["claim"]
+        g = groups.setdefault(key, {"verdict": verify(f), "models": set(), "n": 0})
+        g["models"].add(f["model"])
+        g["n"] += 1
+    return groups
 
 
 def main():
-    mode = "STRICT (authorize the resolved set)" if STRICT else "NAIVE (authorize the typed name)"
-    print(f"operator marked private: {', '.join(sorted(PRIVATE))}")
-    print(f"checker: {mode}\n")
+    collected = run_audit(ROUNDS)
+    groups = triage(collected)
+    truth = oracle_bypasses()
 
-    findings = audit(SCHEMA, PRIVATE, STRICT)
-    if not findings:
-        print("no bypasses found — every request that reaches private data is denied")
-    else:
-        print(f"{len(findings)} bypass(es) found:\n")
-        for name, why, leaked in findings:
-            print(f"  request {name!r} ({why})")
-            print(f"    allowed, but reaches: {', '.join(leaked)}")
+    print(f"{len(collected)} raw findings across {ROUNDS} rounds and "
+          f"{len(FINDINGS)} models -> {len(groups)} distinct claims\n")
 
-    # The same audit under the other setting, so the run proves the fix rather than
-    # asserting it. This is the assertion to put in your own test suite.
-    other = audit(SCHEMA, PRIVATE, not STRICT)
-    print(f"\nsame audit with STRICT={not STRICT}: {len(other)} bypass(es)")
-    print("\nEvery finding is a permission check that was present and correct about")
-    print("the name it was given, and wrong about the data that name reaches.")
+    MARK = {"real": "REAL ", "noise": "noise", "untestable": "?????"}
+    for key, g in sorted(groups.items(), key=lambda kv: (-len(kv[1]["models"]), kv[0])):
+        print(f"  {MARK[g['verdict']]}  {len(g['models'])} model(s)  {str(key)[:52]}")
+
+    real = {canonical(k) for k, g in groups.items() if g["verdict"] == "real"}
+    n_real = sum(1 for g in groups.values() if g["verdict"] == "real")
+    print(f"\nverified real: {n_real} of {len(groups)} distinct claims "
+          f"({100 * n_real / len(groups):.0f}% precision)")
+
+    # Agreement is the only triage signal available before you write any tests.
+    for label, keep in (("reported by one model", lambda n: n == 1),
+                        ("reported by two or more", lambda n: n >= 2)):
+        bucket = [g for g in groups.values() if keep(len(g["models"]))]
+        hit = sum(1 for g in bucket if g["verdict"] == "real")
+        print(f"  {label}: {hit}/{len(bucket)} real")
+
+    missed = truth - real
+    print(f"\noracle finds {len(truth)} reachable private tables; "
+          f"the models named {len(real)}.")
+    if missed:
+        print(f"nobody reported: {', '.join(sorted(missed))}")
+    print("\nThe models told you which shapes to enumerate. The oracle gives you")
+    print("coverage, and it keeps working on tables added next month.")
 
 
 if __name__ == "__main__":

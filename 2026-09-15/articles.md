@@ -12,19 +12,19 @@
 
 ### 2. [Datasette 1.0a39 changelog](https://docs.datasette.io/en/latest/changelog.html)
 **Source**: Datasette documentation | **Date**: 10 September 2026 | **Read time**: ~10 min
-> The actual evidence for the argument, and worth reading as a list rather than as release notes.
-> Case-insensitive table and view names, full-text search index tables checking permission on their
-> source, `sqlite_stat1` through `sqlite_stat4` denied by default, `?_through=` requiring the
-> intermediate table, foreign-key APIs respecting `view-table`. Five different fixes, one shape:
-> the check was asked about the wrong target. The 0.65.4 entry backports the same set to stable.
+> What the audit actually turned up, and the reason to read it here is calibration: this is the
+> yield of several rounds across three models, reviewed by two people. Case-insensitive table names,
+> search index tables checking permission on their source, `sqlite_stat1` through `sqlite_stat4`
+> denied by default, `?_through=` requiring the intermediate table. The bug class is covered in
+> depth by this site's 2026-09-11 session; here it is the worked example the pipeline is pointed at.
 
 ### 3. [API1:2023 Broken Object Level Authorization](https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/)
 **Source**: OWASP API Security Top 10 | **Date**: 2023 edition | **Read time**: ~10 min
-> The bug class under the name the rest of the industry uses, and the reason it sits at number one
-> on that list. Useful for the framing this session leaves out: OWASP treats it as a per-object
-> check problem, where this article treats it as a name-resolution problem. Both are true, and the
-> resolution view is what makes it testable — you can enumerate a schema, but you cannot enumerate
-> "every object" in the abstract.
+> The bug class under the name the rest of the industry uses, and the reason to read it is that it
+> tells you what your oracle has to answer. OWASP frames this as a per-object check problem, which
+> is correct and not directly testable — you cannot enumerate "every object" in the abstract. Turning
+> it into a question your own schema can answer is the step that makes an audit's output checkable,
+> and it is the step this session argues you do before running any models.
 
 ### 4. [From Naptime to Big Sleep: Using Large Language Models To Catch Vulnerabilities In Real-World Code](https://projectzero.google/2024/10/from-naptime-to-big-sleep.html)
 **Source**: Big Sleep team, Google Project Zero and DeepMind | **Date**: 1 November 2024 | **Read time**: ~20 min

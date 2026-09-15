@@ -5,176 +5,165 @@
 **Date**: 2026-09-15
 **Level**: Start here
 **For**: Using tools
-**Hook**: A permission check can be present, correct, and still hand over the table it was guarding.
-**Engineer's view**: This is an over-eager serializer. You once authorized a read of one user and returned their whole organization with it, because the check ran on the record while the response walked the graph. Your permission check is correct about the name it was given and silent about the rows that name reaches.
-**TLDR**: Your permission check guards the object the caller named. The bug is everything else that reaches the same rows.
+**Hook**: Three models audited one codebase and sent back seven claims. Four were real, and a test found the one bug all three missed.
+**Engineer's view**: This is a flaky test suite you learned to ignore. An audit by three models returns claims the way a noisy linter returns warnings — some real, some invented, some you cannot even check. Until you can settle a claim mechanically, the pile is not findings. It is homework.
+**TLDR**: A coding-agent audit does not return bugs. It returns claims, and in the run below barely half of them survived checking.
 **Time to read**: ~10 minutes
 
 ## Explain Like I'm 5
 
-Imagine a library with one shelf you are not allowed to browse. The librarian checks your card at that shelf and turns you away. That part works every time.
+Imagine hiring three inspectors who never get tired. You send them through a building and ask them to try every door. They come back with a long list of doors they say were unlocked.
 
-But the card catalog in the lobby lists every book on that shelf, with a summary of each. The returns cart holds the books that came off it this morning. And the sign on the shelf spells its name in capital letters, while the librarian's list has it in small letters, so she does not think they are the same shelf.
+Some of those doors really were unlocked. Some were locked all along. One is a door that does not exist. And one genuinely unlocked door is on nobody's list.
 
-Nobody unlocked anything. The books got out anyway.
+So you do not act on the list. You cut a master key and walk every door yourself. You use their list for one thing only: to learn which kinds of doors are worth walking.
 
 ## The Problem
 
-You have shipped this bug, and it had nothing to do with AI. You wrote an endpoint that returns one user. It checks that the caller is allowed to read that user, loads the record, and hands it to the serializer.
+You have shipped this, and it had nothing to do with AI. You turned on a stricter linter on a codebase that had never run one. It reported nine hundred warnings.
 
-The serializer was helpful. It expanded the organization the user belongs to, and the organization came with its member list. The check ran once, against one user ID. The response carried a hundred people.
+You read the first twenty. You fixed four that were obviously right, opened a ticket for the rest, and moved on. Nobody turned the linter off. Nobody read it either.
 
-Nobody had removed the permission check. It was correct about the thing it was asked about.
+The warnings were real work. They arrived as an unsorted pile with no proof attached, and the pile won.
 
-This is the shape of almost every authorization bug that survives code review. Review reads the check and the check looks right. Tests are written from the same mental picture as the code, so they ask about the same name too. What nobody enumerates is the set of rows a request can actually reach.
+A tool that produces more claims than you can check produces nothing.
 
-Datasette shipped two security releases on 11 September 2026, and the fix list has this shape all the way down. A table the operator had marked private was still reachable under a different capitalization, through its full-text search index, through the database's own statistics tables, and through a foreign key on a public table. Every one of those permission checks existed and passed.
+Point a coding agent at your codebase and ask it for a security audit, and this is exactly what arrives. Datasette's maintainers ran one across three models and several rounds, and the permission bugs it turned up are real and worth knowing — that is [2026-09-11's session](#2026-09-11). This one is about the other half, the half that decides whether an audit is worth running twice: what you do with the pile.
 
-They were found by pointing three coding agents at the project over several rounds. The fix: stop authorizing the name the caller typed, and authorize every table that name can reach.
+The fix: stop reading the findings, and build something that settles each one mechanically. Then use the models for the only thing they are uniquely good at here — telling you which shapes to check.
 
 ```figure
 { "kind": "system",
-  "title": "The whole argument: one request, two things you could authorize",
+  "title": "The whole argument: what an audit returns, and what settles it",
   "lanes": [
-    { "t": "the caller asks for", "nodes": [
-        { "id": "req", "t": "documents_fts" } ] },
-    { "t": "you authorize", "nodes": [
-        { "id": "typed", "t": "the name they typed", "s": "bad" },
-        { "id": "set",   "t": "everything it reaches", "s": "new" } ] },
-    { "t": "what comes back", "nodes": [
-        { "id": "leak", "t": "private rows, allowed", "s": "bad" },
-        { "id": "deny", "t": "denied", "s": "new" } ] }
+    { "t": "3 models, 3 rounds", "nodes": [
+        { "id": "raw", "t": "25 raw findings" } ] },
+    { "t": "checked mechanically", "nodes": [
+        { "id": "real", "t": "4 real", "s": "ok" },
+        { "id": "noise", "t": "2 noise", "s": "bad" },
+        { "id": "unt", "t": "1 not testable", "s": "neutral" } ] },
+    { "t": "the checker also finds", "nodes": [
+        { "id": "miss", "t": "1 bug nobody reported", "s": "new" } ] }
   ],
   "edges": [
-    { "from": "req",   "to": "typed", "t": "not on the deny list", "s": "bad" },
-    { "from": "req",   "to": "set",   "s": "new" },
-    { "from": "typed", "to": "leak",  "s": "bad" },
-    { "from": "set",   "to": "deny",  "s": "new" } ],
-  "note": "The search index is a different name for the same rows. Nobody wrote a rule about it." }
+    { "from": "raw", "to": "real", "t": "7 distinct", "s": "ok" },
+    { "from": "raw", "to": "noise", "s": "bad" },
+    { "from": "raw", "to": "unt", "s": "neutral" },
+    { "from": "real", "to": "miss", "s": "new" } ],
+  "note": "Twenty-five findings collapse to seven claims. The checker outlives the audit." }
 ```
 
-## The Fix: Authorize What the Request Reaches
+## The Fix: Settle Each Claim With a Checker, Not a Reviewer
 
-Start with the name. A caller asks for `DOCUMENTS`. Your check compares that string against a deny list holding `documents`, finds no match, and allows it. It never reduced the request to its canonical name. SQLite then matches table names without caring about case, and serves the private table.
+A finding is not a bug. It is a sentence a model wrote, and it comes in one of three states. Sorting it into the right one is the whole job, and only the first two can be done by a machine.
 
-The check was a string comparison. The lookup was a case-insensitive match. They disagreed, and the disagreement is the vulnerability.
+- **Real.** It names something specific, and checking shows the something is true.
+- **Noise.** It names something specific, and checking shows it is false. Often confidently so: one model below reported a backup table that is not in the schema.
+- **Not testable.** It names nothing specific. *"The permission logic may be inconsistent in places"* is a sentence no checker can settle, so it costs a human an hour and usually ends in nothing.
 
-That is one route. There are four, and they are worth memorizing because they recur in every system that lets a caller name a thing.
+What settles the first two is an **oracle** — code that answers the audit's question from your own schema, independently of anything a model said. Here it walks the schema and reports which requests reach data they should not. Another class of claim needs a different oracle. The independence is the property that matters.
 
-- **A different spelling of the same name.** Case, trailing whitespace, Unicode forms, URL encoding.
-- **A derived table.** A search index, a materialized view, a cache table. It holds the same rows under its own name.
-- **An engine-internal object.** SQLite's `sqlite_stat1` through `sqlite_stat4` carry row counts and sampled column values for every table, including the private ones.
-- **A relation.** A foreign key, a join, an expanded key. The caller names a public table and the response follows the pointer.
+### Why does the oracle have to be independent?
 
-### Why doesn't the existing check catch this?
+Because otherwise you have measured nothing. If you build the checker out of the cases the model reported, it will confirm every one of them and find nothing else, and you will have written an expensive way to agree with yourself. The oracle has to derive its cases from the system, so it can disagree with the model in both directions. In the run below it does: it rejects two claims and finds one bug no model mentioned.
 
-Because the deny list is written by a person, and a person writes down the tables they know hold sensitive rows. Nobody writes a rule for a search index they forgot exists, or for a statistics table the engine created on its own. The check is not wrong. Its input is incomplete, and it has no way to know that.
+### How do I decide which claims to look at first?
 
-So the fix is not more rules. It is one function that turns a requested name into the resolved set — every table that request can read — and a check that runs over all of it.
+Count how many models said it. That is the only ordering signal available before you have written any tests, and it is a strong one.
 
 ```figure
-{ "kind": "route",
-  "title": "Four names, none of them on the deny list, all reaching private rows",
-  "source": "one request",
-  "parts": [
-    { "t": "DOCUMENTS",     "to": 0, "via": "case-insensitive match", "s": "bad" },
-    { "t": "documents_fts", "to": 0, "via": "search index",           "s": "bad" },
-    { "t": "sqlite_stat1",  "to": 0, "via": "engine statistics",      "s": "bad" },
-    { "t": "orgs",          "to": 1, "via": "foreign key",            "s": "bad" }
+{ "kind": "bars",
+  "title": "Agreement predicts truth, before you have checked anything",
+  "bars": [
+    { "label": "reported by two or more models", "v": 100, "d": "3 of 3 real", "s": "ok" },
+    { "label": "reported by one model only", "v": 25, "d": "1 of 4 real", "s": "bad" }
   ],
-  "dests": [
-    { "t": "documents (private)", "s": "bad" },
-    { "t": "members (private)", "s": "bad" }
-  ],
-  "note": "The statistics tables reach both. These are the five findings code_example.py reports." }
+  "note": "Same 25 findings, same checker. Triage the agreed ones first and the noise waits." }
 ```
 
-### What do I actually ask the agent?
+### When do I stop running rounds?
 
-Not "find security bugs in my code." That returns a list of plausible-sounding findings you then have to disprove one at a time. Ask it to enumerate instead, because enumeration is the part humans skip and the part a model is genuinely good at: list every way a caller can name an object in this codebase, and for each one, list the tables its response can read.
-
-Then you check the list against your permission layer yourself.
+When the marginal round stops paying. Going from two rounds to three took the run below from 15 raw findings to 25, and precision fell from 67% to 57% — the pile grew faster than the truth in it. Measure that on your own repo rather than trusting a number from mine, because it depends on how narrowly you tasked the models.
 
 ## What This Means for You
 
-**When this matters.** You have an endpoint where the caller names something — a table, a file path, a bucket key, a record ID — and you check permission on that name. The more helpful your framework is about expanding relations, the more of this you are carrying.
+**When this matters.** Any time a model hands you a list you are expected to act on: a security audit, an automated code review, a dependency triage, a migration plan. The longer the list, the more this decides whether the tool helped.
 
-**How it affects you.** This class of bug is invisible in review, because the reviewer reads the check and the check is correct. It is also invisible to your tests, which were written from the same mental model as the code and ask about the same names. The two defenses you trust most are the two that cannot see it.
+**How it affects you.** The failure is not that models are wrong. It is that a claim and a verified bug look identical in a list, so the whole pile inherits the trust level of its weakest item. That is why audits get run once and never again, the same way the linter got installed once and never read.
 
-**What to do about it.** Start on paper, before you write any code or run any agent. List the object names your API accepts from a caller. For each one, write down what its response can read. Ten minutes and a text file. Most teams find at least one surprise, and no part of this needs the agent yet.
+**What to do about it.** You can do the first step with output you already have, and it needs nothing built. Take the last automated review or scan anyone on your team ran, and sort twenty of its items into the three states above by hand. Ten minutes. The number worth noticing is how many land in *not testable*, because that bucket is what quietly consumed the week.
 
-Then write the enumeration as a test, so the answer stops being a document that goes stale. That is the next section. The coding-agent audit comes last, because it is the step that produces findings you have to triage, and it is worth much more once you already have a harness to prove a finding real.
+Then write the oracle for one class of claim — one function, derived from your own config. That is the next section. Only after that is it worth running more models or more rounds, because until the checker exists, every extra finding costs you time instead of saving it.
 
 ## Implementing It
 
-Three roles touch this: whoever owns the permission layer, whoever owns the tests, and whoever runs the audit. The third one is the least obvious and the easiest to get wrong.
+Three roles, and the middle one is the one that gets skipped: whoever tasks the models, whoever writes the oracle, and whoever triages what comes back.
 
-**The permission layer.** Add one function that resolves a requested name into the set of tables the response can read, and check permission over the whole set. The full version, with the schema shapes it walks, is in `code_example.py`.
+**Tasking.** Do not ask for bugs. Ask for an enumeration, because enumeration is exhaustive, boring and checkable, which is the shape of work a model is genuinely better at than you. Google's Big Sleep team did the same thing — they handed the model a specific commit and diff and asked for variant analysis of the current code rather than open-ended bug hunting. A prompt that produces triageable output looks like this:
 
-```python
-def reachable(schema, name):
-    """Every table whose rows can be read through a request for `name`."""
-    target = canonical(schema, name)          # case-fold first: the engine does
-    if target is None:
-        return set()
-    out, spec = {target}, schema[target]
-    if "derived_from" in spec:                 # search index, materialized view
-        out |= reachable(schema, spec["derived_from"])
-    for src in spec.get("reflects", []):       # sqlite_stat1..4 and friends
-        out |= reachable(schema, src)
-    for dest in spec.get("foreign_keys", {}).values():
-        out |= reachable(schema, dest)         # joins and expanded keys
-    return out
+```text
+Enumerate, for this schema, every distinct way a caller can name a table,
+including case variants, derived tables and engine-internal tables.
+For each name, list the tables whose rows a request for it can read.
+Output one JSON object per name: {"request": <name>, "reaches": [<tables>]}.
+Do not assess whether anything is a vulnerability.
 ```
 
-Then the check itself is a one-line change, and it is the whole fix:
+That last line is the one that matters. A model asked to judge returns prose; a model asked to list returns rows you can feed to a checker.
+
+**The oracle.** One function, answering the same question from the schema itself. This is the independence that makes the numbers mean anything:
 
 ```python
-# before — correct about the name, silent about the rows
-return name not in private
-
-# after — authorize the resolved set
-return not (reachable(schema, name) & private)
+def leaks(name):
+    """Does the naive check allow this name while it reaches private rows?"""
+    allowed = name not in PRIVATE          # the bug: exact string, typed name
+    return allowed and bool(reachable(SCHEMA, name) & PRIVATE)
 ```
 
-**The tests.** Do not write one test per bug you have heard about. Derive the cases from the schema, so the test keeps working as tables are added:
+**Triage.** Give every finding a verdict, then group by target and count distinct models. `code_example.py` runs the whole pipeline; these are the two pieces to lift:
 
 ```python
-def test_no_private_table_is_reachable():
-    for table in schema:
-        for candidate in (table, table.upper()):
-            leaked = reachable(schema, candidate) & PRIVATE
-            assert not (leaked and can_view(schema, PRIVATE, candidate)), \
-                f"{candidate!r} is allowed but reaches {sorted(leaked)}"
+def verify(finding):
+    """real | noise | untestable -- the only judgment a machine can make."""
+    name = finding["request"]
+    if not name:
+        return "untestable"                # no target: a human has to read it
+    if not reachable(SCHEMA, name):
+        return "noise"                     # a table that does not exist
+    return "real" if leaks(name) else "noise"
+
+groups = {}
+for f in collected:                        # one entry per model per round
+    g = groups.setdefault(f["request"] or f["claim"],
+                          {"verdict": verify(f), "models": set()})
+    g["models"].add(f["model"])
 ```
 
-**The audit.** Run the agent against a checkout, not against a running instance, and never against a system you do not own. Give it the enumeration task, one area at a time, and run several rounds rather than one long session. Datasette's audit used three models from three labs — Claude Fable 5.1, GPT-5.6 Sol and GPT-6 Astra — which matters because different models surface different things and agreement between two of them is a useful signal.
+Sort the groups by `len(g["models"])` descending and work down. Never delete the noise — keep it, because the ratio is your only read on whether the next round is worth running.
 
-The rule that makes the output trustworthy is a process rule, and it is the one worth copying. On Datasette, Alex Garcia and Simon Willison split every issue: one wrote the automated test that demonstrated the problem, the other wrote the fix. No finding was accepted on the agent's description alone, and two people looked at each one.
+**How you know it worked.** Three numbers, and you should be able to say all three out loud. Precision: in the run below, 4 of 7 distinct claims survived, which is 57%. The agreement split: 3 of 3 real when two or more models agreed, against 1 of 4 for single-model claims. And coverage: the oracle found 5 reachable private tables where the models named 4, so `members` was a real bug that three frontier models missed and a twelve-line function caught.
 
-**How you know it worked.** The audit function returns zero findings, and the test above is in CI. Before that, the honest signal is per-finding: a finding is real when a test fails without the fix and passes with it, and it is noise until then. Expect to throw away a good share of what the agent reports. If nothing the agent reports can be turned into a failing test, you have a false-positive list rather than an audit, and the usual cause is asking for bugs instead of asking for an enumeration.
-
-One more signal worth watching: if your resolved sets are all of size one, your `reachable` function is not walking the schema, and it will report a clean bill of health on a system full of holes.
+That last number is the one that tells you the audit worked. If your oracle never finds anything the models missed, it is not independent of them, and you are measuring your own assumptions.
 
 ## When a Coding-Agent Audit Is the Wrong Tool
 
-It cannot tell you your threat model. Whether a row is sensitive is a product question, and the agent will happily flag a public table as a leak and stay silent about the one that matters. If nobody on the team can say who is supposed to see what, an audit will produce activity rather than safety.
+If you cannot write the oracle, do not run the audit. The value of the output is capped by your ability to settle it, and without a checker you have bought a document that makes everyone feel unsafe and tells nobody what to do. Write the checker first. If it turns out the checker alone finds everything, you have saved the model fees.
 
-It is also expensive in the currency you have least of. The two-human rule means every finding costs a test and a review, so a long finding list is a long project. Triage is the real work, and the agent does not do it.
+It cannot supply the threat model either. Whether a row is sensitive is a product decision, and a model will flag a public table while staying quiet about the one that matters. In the run below it did exactly that, reporting a notes table that leaks nothing.
 
-Then there is the responsible part. Run this on code you own. Datasette shipped the fixes and deliberately held back some of the automated tests so that people had time to upgrade before the details were public, which is the same discipline in the other direction. If you find something in a dependency, report it and wait.
+Run it on code you own. Datasette shipped its fixes and deliberately held some tests back so people could upgrade before the details were public, which is the same discipline pointed the other way.
 
 Three questions before you start:
 
-- Can you name, for each table, who is supposed to see it? If not, fix that first.
-- Do you have a way to turn a finding into a failing test in under an hour?
-- If the agent produced thirty findings, who is triaging them, and when?
+- Can you write, today, a function that settles the class of claim you expect back?
+- Does that function derive its cases from your system rather than from the model's list?
+- If two models disagree, do you know which one you would check first?
 
 ## Glossary
 
-- **permission check** — the code that decides whether this caller may read the thing they asked for.
-- **canonical name** — the single spelling an identifier resolves to, after case and encoding are normalized.
-- **resolved set** — every table whose rows a single request can read, not just the one named.
-- **derived table** — a table built from another, such as a search index, holding the same rows.
-- **coding-agent audit** — pointing a coding model at a checkout to enumerate how its data can be reached.
-- **threat model** — the written statement of who may see what, which an audit assumes and cannot supply.
+- **finding** — one claim from an audit: a sentence a model wrote, not yet a bug.
+- **oracle** — code that answers the audit's question from your own system, independently of the model.
+- **triage** — sorting findings by verdict and agreement so the checkable ones get checked first.
+- **precision** — the share of distinct claims that survive checking; 57% in the run in the Code tab.
+- **not testable** — a finding naming nothing specific, so no checker can settle it either way.
+- **variant analysis** — handing a model one known bug and asking where else that shape occurs.

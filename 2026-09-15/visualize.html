@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
-<title>Which requests reach the table you marked private</title>
+<title>What a coding-agent audit costs you to triage</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -15,75 +15,76 @@
   .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
   .lbl { font-size: 11.5px; color: #9aa5c4; font-weight: 650; letter-spacing: .05em;
          text-transform: uppercase; margin: 0 0 8px; }
-  .seg { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  label.sl { display: block; font-size: 12px; color: #9aa5c4; margin-bottom: 5px; }
+  label.sl b { color: #dfe4f2; font-weight: 650; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  .seg { display: flex; gap: 6px; margin-top: 13px; align-items: center; flex-wrap: wrap;
+         border-top: 1px solid #1c2130; padding-top: 13px; }
   button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
            background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
   button[aria-pressed="true"] { background: rgba(124,140,248,.16); border-color: rgba(124,140,248,.55); color: #e8ecfb; }
   button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
   .reset { margin-left: auto; }
-  .routes { margin-top: 14px; padding-top: 13px; border-top: 1px solid #1c2130; }
-  .chk { display: flex; gap: 16px; flex-wrap: wrap; }
-  .chk label { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #cdd5ee; cursor: pointer; }
-  input[type=checkbox] { accent-color: #7c8cf8; width: 15px; height: 15px; }
   .cols { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-top: 18px; }
   h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 9px;
        letter-spacing: .05em; text-transform: uppercase; }
-  .r { display: grid; grid-template-columns: 1fr 74px; gap: 9px; align-items: baseline;
-       padding: 7px 10px; border-radius: 6px; background: #10131f; border: 1px solid #1c2130;
+  .r { display: grid; grid-template-columns: 1fr 66px 74px; gap: 9px; align-items: baseline;
+       padding: 6px 10px; border-radius: 6px; background: #10131f; border: 1px solid #1c2130;
        margin-bottom: 4px; font-size: 12.5px; }
-  .r.leak { border-color: rgba(224,136,95,.5); background: rgba(224,136,95,.09); }
-  .r.safe { opacity: .62; }
+  .r.real { border-color: rgba(110,200,150,.45); background: rgba(110,200,150,.08); }
+  .r.noise { opacity: .55; }
+  .r.untestable { border-color: rgba(224,136,95,.45); background: rgba(224,136,95,.08); }
   .r code { font-size: 12px; color: #e8ecfb; }
-  .r .why { display: block; color: #8f9ab8; font-size: 11.5px; }
-  .v { text-align: right; font-size: 11px; font-weight: 650; letter-spacing: .03em; text-transform: uppercase; }
-  .v.bad { color: #e0885f; } .v.ok { color: #6ec896; }
-  .big { font-size: 30px; font-variant-numeric: tabular-nums; line-height: 1.1; }
-  .big.bad { color: #e0885f; } .big.ok { color: #6ec896; }
-  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 12px 14px; margin-bottom: 10px; }
-  .stat p { margin: 4px 0 0; font-size: 12px; color: #8f9ab8; }
-  .note { margin-top: 16px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+  .agree { color: #8f9ab8; font-size: 11.5px; text-align: right; }
+  .v { text-align: right; font-size: 11px; font-weight: 650; text-transform: uppercase; }
+  .v.real { color: #6ec896; } .v.noise { color: #6f7a99; } .v.untestable { color: #e0885f; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 13px; margin-bottom: 9px; }
+  .big { font-size: 27px; font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .big.ok { color: #6ec896; } .big.bad { color: #e0885f; }
+  .stat p { margin: 3px 0 0; font-size: 12px; color: #8f9ab8; }
+  .note { margin-top: 14px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
           background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
   .note b { color: #fff; }
 </style>
 </head>
 <body>
 <main data-visualizer="2026-09-15">
-  <h1>Which requests reach the table you marked private</h1>
-  <p class="sub">The operator marked <code>documents</code> and <code>members</code> private. Nothing else has a rule written about it. Every request below is checked and answered live.</p>
+  <h1>What a coding-agent audit costs you to triage</h1>
+  <p class="sub">The same three model transcripts as the Code tab. Change how many models and rounds you run, then decide whether you have a checker to settle what comes back.</p>
 
   <div class="panel">
-    <p class="lbl">The permission check authorizes</p>
-    <div class="seg">
-      <button id="typed" aria-pressed="true">the name the caller typed</button>
-      <button id="set" aria-pressed="false">everything that name reaches</button>
-      <button class="reset" id="reset">Reset</button>
-    </div>
-    <div class="routes">
-      <p class="lbl">What exists in this schema</p>
-      <div class="chk">
-        <label><input type="checkbox" id="rCase" checked> engine matches names case-insensitively</label>
-        <label><input type="checkbox" id="rFts" checked> a search index on <code>documents</code></label>
-        <label><input type="checkbox" id="rStat" checked> <code>sqlite_stat1</code> is reachable</label>
-        <label><input type="checkbox" id="rFk" checked> <code>orgs</code> has a foreign key to <code>members</code></label>
+    <div class="grid">
+      <div>
+        <label class="sl" for="models">Models in the audit: <b id="mv">3</b></label>
+        <input type="range" id="models" min="1" max="3" step="1" value="3">
       </div>
+      <div>
+        <label class="sl" for="rounds">Rounds each: <b id="rv">3</b></label>
+        <input type="range" id="rounds" min="1" max="4" step="1" value="3">
+      </div>
+    </div>
+    <div class="seg">
+      <span style="font-size:12px;color:#9aa5c4">To settle a claim you have</span>
+      <button id="noOracle" aria-pressed="false">a human reading it</button>
+      <button id="oracle" aria-pressed="true">a checker</button>
+      <button class="reset" id="reset">Reset</button>
     </div>
   </div>
 
   <div class="cols">
     <div>
-      <h2>Every request the audit tries</h2>
+      <h2>Distinct claims that came back</h2>
       <div id="rows"></div>
     </div>
     <div>
-      <h2>Result</h2>
-      <div class="stat">
-        <div class="big" id="count">0</div>
-        <p id="countsub">requests allowed that reach private rows</p>
-      </div>
-      <div class="stat">
-        <div class="big ok" id="other">0</div>
-        <p>bypasses under the other setting, for comparison</p>
-      </div>
+      <h2>What it costs, what it caught</h2>
+      <div class="stat"><div class="big" id="reads">0</div>
+        <p id="readsub">claims a human has to read</p></div>
+      <div class="stat"><div class="big ok" id="prec">0%</div>
+        <p id="precsub">of distinct claims survived checking</p></div>
+      <div class="stat"><div class="big" id="miss">0</div>
+        <p>real bugs no model reported, found by the checker</p></div>
       <div class="note" id="note"></div>
     </div>
   </div>
@@ -91,137 +92,156 @@
 <script>
 "use strict";
 
-function buildSchema(o) {
-  var s = {
-    public_notes: {},
-    documents: { private: true },
-    members: { private: true },
-    orgs: {}
-  };
-  if (o.fts) s.documents_fts = { derived_from: "documents" };
-  if (o.stat) s.sqlite_stat1 = { reflects: ["documents", "members"] };
-  if (o.fk) s.orgs = { foreign_keys: { owner_id: "members" } };
-  return s;
-}
+var SCHEMA = {
+  public_notes: {},
+  documents: { priv: true },
+  members: { priv: true },
+  documents_fts: { derived: "documents" },
+  sqlite_stat1: { reflects: ["documents", "members"] },
+  orgs: { fks: ["members"] }
+};
+var PRIVATE = ["documents", "members"];
 
-// Resolve a typed name the way the engine does, not the way a string compares.
-function canonical(schema, name, caseless) {
-  var keys = Object.keys(schema), i;
-  for (i = 0; i < keys.length; i++) {
-    if (keys[i] === name) return keys[i];
-  }
-  if (!caseless) return null;
-  for (i = 0; i < keys.length; i++) {
-    if (keys[i].toLowerCase() === name.toLowerCase()) return keys[i];
-  }
+// The same three transcripts as code_example.py: [name it names, what it claims].
+var FINDINGS = [
+  ["model-A", [["documents_fts", "search index exposes source rows"],
+               ["sqlite_stat1", "statistics tables leak sampled values"],
+               ["public_notes", "notes table looks over-permissive"],
+               [null, "the permission logic may be inconsistent in places"]]],
+  ["model-B", [["documents_fts", "fts shadow table is not permission-checked"],
+               ["DOCUMENTS", "name comparison is case-sensitive, SQLite is not"],
+               ["documents_backup", "backup table is world-readable"]]],
+  ["model-C", [["sqlite_stat1", "internal tables were never enumerated"],
+               ["orgs", "foreign key reaches members"],
+               ["DOCUMENTS", "case folding mismatch"]]]
+];
+
+function canonical(name) {
+  var k = Object.keys(SCHEMA), i;
+  for (i = 0; i < k.length; i++) if (k[i].toLowerCase() === String(name).toLowerCase()) return k[i];
   return null;
 }
-
-// Every table whose rows can be read through a request for `name`.
-function reachable(schema, name, caseless, seen) {
-  var target = canonical(schema, name, caseless);
-  if (target === null) return {};
-  seen = seen || {};
-  if (seen[target]) return seen;
-  seen[target] = true;
-  var spec = schema[target];
-  if (spec.derived_from) reachable(schema, spec.derived_from, caseless, seen);
-  (spec.reflects || []).forEach(function (src) { reachable(schema, src, caseless, seen); });
-  Object.keys(spec.foreign_keys || {}).forEach(function (col) {
-    reachable(schema, spec.foreign_keys[col], caseless, seen);
-  });
+function reachable(name, seen) {
+  var t = canonical(name);
+  if (t === null) return seen || [];
+  seen = seen || [];
+  if (seen.indexOf(t) >= 0) return seen;
+  seen.push(t);
+  var s = SCHEMA[t], nxt = (s.derived ? [s.derived] : []).concat(s.reflects || [], s.fks || []);
+  nxt.forEach(function (n) { reachable(n, seen); });
   return seen;
 }
-
-function privateHit(schema, names) {
-  return Object.keys(names).filter(function (n) { return schema[n] && schema[n].private; });
+function hitsPrivate(name) {
+  return reachable(name).filter(function (t) { return PRIVATE.indexOf(t) >= 0; });
 }
-
-function canView(schema, name, caseless, strict) {
-  if (canonical(schema, name, caseless) === null) return false;
-  if (!strict) {
-    return !(schema[name] && schema[name].private);   // exact string, typed name
-  }
-  return privateHit(schema, reachable(schema, name, caseless)).length === 0;
+// The oracle: does the naive check allow this name while it reaches private rows?
+function leaks(name) {
+  return PRIVATE.indexOf(name) < 0 && hitsPrivate(name).length > 0;
 }
-
-function audit(schema, caseless, strict) {
-  var probes = [];
-  Object.keys(schema).forEach(function (t) {
-    probes.push({ name: t, why: "requested directly" });
-    if (schema[t].private) probes.push({ name: t.toUpperCase(), why: "same table, different case" });
+function verify(name) {
+  if (!name) return "untestable";
+  if (canonical(name) === null) return "noise";
+  return leaks(name) ? "real" : "noise";
+}
+function oracleTruth() {
+  var out = [];
+  Object.keys(SCHEMA).forEach(function (t) {
+    [t, t.toUpperCase()].forEach(function (c) {
+      var k = leaks(c) ? canonical(c) : null;
+      if (k && out.indexOf(k) < 0) out.push(k);
+    });
   });
-  return probes.map(function (p) {
-    var leaked = privateHit(schema, reachable(schema, p.name, caseless));
-    var allowed = canView(schema, p.name, caseless, strict);
-    return { name: p.name, why: p.why, leaked: leaked, allowed: allowed,
-             bypass: allowed && leaked.length > 0 };
-  });
+  return out;
 }
 
-var strict = false;
+var hasOracle = true;
 
 function render() {
-  var opts = {
-    fts: document.getElementById("rFts").checked,
-    stat: document.getElementById("rStat").checked,
-    fk: document.getElementById("rFk").checked
-  };
-  var caseless = document.getElementById("rCase").checked;
-  var schema = buildSchema(opts);
+  var nModels = +document.getElementById("models").value;
+  var nRounds = +document.getElementById("rounds").value;
+  document.getElementById("mv").textContent = nModels;
+  document.getElementById("rv").textContent = nRounds;
 
-  var results = audit(schema, caseless, strict);
-  var bypasses = results.filter(function (r) { return r.bypass; });
-  var otherCount = audit(schema, caseless, !strict).filter(function (r) { return r.bypass; }).length;
+  var raw = 0, groups = {};
+  for (var r = 0; r < nRounds; r++) {
+    FINDINGS.slice(0, nModels).forEach(function (m) {
+      var items = m[1].slice(0, Math.min(m[1].length, r + 2));
+      items.forEach(function (f) {
+        raw++;
+        var key = f[0] || f[1];
+        if (!groups[key]) groups[key] = { name: f[0], claim: f[1], verdict: verify(f[0]), models: [] };
+        if (groups[key].models.indexOf(m[0]) < 0) groups[key].models.push(m[0]);
+      });
+    });
+  }
 
-  document.getElementById("rows").innerHTML = results.map(function (r) {
-    var cls = r.bypass ? "leak" : "safe";
-    var verdict = r.bypass ? '<span class="v bad">bypass</span>'
-                : r.allowed ? '<span class="v ok">allowed</span>'
-                            : '<span class="v ok">denied</span>';
-    var why = r.leaked.length
-      ? r.why + " &middot; reaches " + r.leaked.join(", ")
-      : r.why + " &middot; nothing private behind it";
-    return '<div class="r ' + cls + '"><span><code>' + r.name + '</code>'
-         + '<span class="why">' + why + '</span></span>' + verdict + '</div>';
+  var keys = Object.keys(groups).sort(function (a, b) {
+    return groups[b].models.length - groups[a].models.length || a.localeCompare(b);
+  });
+  document.getElementById("rows").innerHTML = keys.map(function (k) {
+    var g = groups[k];
+    return '<div class="r ' + g.verdict + '"><span><code>'
+      + (g.name || g.claim.slice(0, 40) + "…") + '</code></span>'
+      + '<span class="agree">' + g.models.length + ' model' + (g.models.length > 1 ? 's' : '') + '</span>'
+      + '<span class="v ' + g.verdict + '">' + (hasOracle ? g.verdict : "unknown") + '</span></div>';
   }).join("");
 
-  var c = document.getElementById("count");
-  c.textContent = bypasses.length;
-  c.className = "big " + (bypasses.length ? "bad" : "ok");
-  document.getElementById("countsub").textContent = bypasses.length === 1
-    ? "request allowed that reaches private rows"
-    : "requests allowed that reach private rows";
-  document.getElementById("other").textContent = otherCount;
+  var nReal = keys.filter(function (k) { return groups[k].verdict === "real"; }).length;
+  var nUnt = keys.filter(function (k) { return groups[k].verdict === "untestable"; }).length;
+  // Without a checker every distinct claim costs a human read. With one, only the
+  // claims naming nothing specific do -- the rest are settled mechanically.
+  var reads = hasOracle ? nUnt : keys.length;
+
+  var el = document.getElementById("reads");
+  el.textContent = reads;
+  el.className = "big " + (hasOracle ? "ok" : "bad");
+  document.getElementById("readsub").textContent = reads === 1
+    ? "claim a human has to read" : "claims a human has to read";
+
+  var pr = document.getElementById("prec");
+  pr.textContent = hasOracle ? Math.round(100 * nReal / keys.length) + "%" : "—";
+  pr.className = "big " + (hasOracle ? "ok" : "");
+  document.getElementById("precsub").textContent = hasOracle
+    ? nReal + " of " + keys.length + " distinct claims survived checking"
+    : "unknowable without a checker";
+
+  var realNames = keys.filter(function (k) { return groups[k].verdict === "real"; })
+                      .map(function (k) { return canonical(groups[k].name); });
+  var missed = oracleTruth().filter(function (t) { return realNames.indexOf(t) < 0; });
+  var mi = document.getElementById("miss");
+  mi.textContent = hasOracle ? missed.length : "?";
+  mi.className = "big " + (hasOracle && missed.length ? "ok" : "");
 
   var note = document.getElementById("note");
-  if (strict && bypasses.length === 0) {
-    note.innerHTML = "<b>Nothing gets through.</b> Authorizing the resolved set closes every route at once, without a single new rule in the deny list. Switch a route off above and the count on the left stays at zero — that is the point. The fix does not depend on knowing which routes exist.";
-  } else if (!strict && bypasses.length === 0) {
-    note.innerHTML = "<b>No routes left.</b> With every route switched off there is nothing to reach, so even the naive check looks correct. This is the schema the deny list was written for, and the one that never survives contact with a real database.";
+  if (!hasOracle) {
+    note.innerHTML = "<b>Every claim costs a person an hour, and none of them is settled.</b> "
+      + keys.length + " claims, no verdicts, no way to know what you missed. This is the pile that "
+      + "gets skimmed once and filed, the same way the linter did. Switch the checker on.";
   } else {
-    note.innerHTML = "<b>" + bypasses.length + " request" + (bypasses.length === 1 ? "" : "s")
-      + " allowed, each reaching a table nobody granted.</b> None of these names is on the deny list, because a person wrote that list and a person writes down the tables they know about. Turn routes off one at a time to see what each contributes.";
+    note.innerHTML = "<b>The checker settles " + (keys.length - nUnt) + " of " + keys.length
+      + " claims and leaves " + nUnt + " for a human.</b> It also found "
+      + (missed.length ? missed.join(", ") + ", which no model reported"
+                       : "nothing the models missed — at this setting they covered it")
+      + ". Raising rounds adds raw findings faster than it adds true ones.";
   }
   reportHeight();
 }
 
-function setMode(s) {
-  strict = s;
-  document.getElementById("typed").setAttribute("aria-pressed", s ? "false" : "true");
-  document.getElementById("set").setAttribute("aria-pressed", s ? "true" : "false");
+function setOracle(v) {
+  hasOracle = v;
+  document.getElementById("oracle").setAttribute("aria-pressed", v ? "true" : "false");
+  document.getElementById("noOracle").setAttribute("aria-pressed", v ? "false" : "true");
   render();
 }
-document.getElementById("typed").addEventListener("click", function () { setMode(false); });
-document.getElementById("set").addEventListener("click", function () { setMode(true); });
-["rCase", "rFts", "rStat", "rFk"].forEach(function (id) {
-  document.getElementById(id).addEventListener("change", render);
+document.getElementById("oracle").addEventListener("click", function () { setOracle(true); });
+document.getElementById("noOracle").addEventListener("click", function () { setOracle(false); });
+["models", "rounds"].forEach(function (id) {
+  document.getElementById(id).addEventListener("input", render);
 });
 document.getElementById("reset").addEventListener("click", function () {
-  ["rCase", "rFts", "rStat", "rFk"].forEach(function (id) {
-    document.getElementById(id).checked = true;
-  });
-  setMode(false);
+  document.getElementById("models").value = 3;
+  document.getElementById("rounds").value = 3;
+  setOracle(true);
 });
 
 function reportHeight() {
