@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Which requests reach the table you marked private</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .lbl { font-size: 11.5px; color: #9aa5c4; font-weight: 650; letter-spacing: .05em;
+         text-transform: uppercase; margin: 0 0 8px; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed="true"] { background: rgba(124,140,248,.16); border-color: rgba(124,140,248,.55); color: #e8ecfb; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .routes { margin-top: 14px; padding-top: 13px; border-top: 1px solid #1c2130; }
+  .chk { display: flex; gap: 16px; flex-wrap: wrap; }
+  .chk label { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #cdd5ee; cursor: pointer; }
+  input[type=checkbox] { accent-color: #7c8cf8; width: 15px; height: 15px; }
+  .cols { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-top: 18px; }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 9px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  .r { display: grid; grid-template-columns: 1fr 74px; gap: 9px; align-items: baseline;
+       padding: 7px 10px; border-radius: 6px; background: #10131f; border: 1px solid #1c2130;
+       margin-bottom: 4px; font-size: 12.5px; }
+  .r.leak { border-color: rgba(224,136,95,.5); background: rgba(224,136,95,.09); }
+  .r.safe { opacity: .62; }
+  .r code { font-size: 12px; color: #e8ecfb; }
+  .r .why { display: block; color: #8f9ab8; font-size: 11.5px; }
+  .v { text-align: right; font-size: 11px; font-weight: 650; letter-spacing: .03em; text-transform: uppercase; }
+  .v.bad { color: #e0885f; } .v.ok { color: #6ec896; }
+  .big { font-size: 30px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .big.bad { color: #e0885f; } .big.ok { color: #6ec896; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 12px 14px; margin-bottom: 10px; }
+  .stat p { margin: 4px 0 0; font-size: 12px; color: #8f9ab8; }
+  .note { margin-top: 16px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-15">
+  <h1>Which requests reach the table you marked private</h1>
+  <p class="sub">The operator marked <code>documents</code> and <code>members</code> private. Nothing else has a rule written about it. Every request below is checked and answered live.</p>
+
+  <div class="panel">
+    <p class="lbl">The permission check authorizes</p>
+    <div class="seg">
+      <button id="typed" aria-pressed="true">the name the caller typed</button>
+      <button id="set" aria-pressed="false">everything that name reaches</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+    <div class="routes">
+      <p class="lbl">What exists in this schema</p>
+      <div class="chk">
+        <label><input type="checkbox" id="rCase" checked> engine matches names case-insensitively</label>
+        <label><input type="checkbox" id="rFts" checked> a search index on <code>documents</code></label>
+        <label><input type="checkbox" id="rStat" checked> <code>sqlite_stat1</code> is reachable</label>
+        <label><input type="checkbox" id="rFk" checked> <code>orgs</code> has a foreign key to <code>members</code></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h2>Every request the audit tries</h2>
+      <div id="rows"></div>
+    </div>
+    <div>
+      <h2>Result</h2>
+      <div class="stat">
+        <div class="big" id="count">0</div>
+        <p id="countsub">requests allowed that reach private rows</p>
+      </div>
+      <div class="stat">
+        <div class="big ok" id="other">0</div>
+        <p>bypasses under the other setting, for comparison</p>
+      </div>
+      <div class="note" id="note"></div>
+    </div>
+  </div>
+</main>
+<script>
+"use strict";
+
+function buildSchema(o) {
+  var s = {
+    public_notes: {},
+    documents: { private: true },
+    members: { private: true },
+    orgs: {}
+  };
+  if (o.fts) s.documents_fts = { derived_from: "documents" };
+  if (o.stat) s.sqlite_stat1 = { reflects: ["documents", "members"] };
+  if (o.fk) s.orgs = { foreign_keys: { owner_id: "members" } };
+  return s;
+}
+
+// Resolve a typed name the way the engine does, not the way a string compares.
+function canonical(schema, name, caseless) {
+  var keys = Object.keys(schema), i;
+  for (i = 0; i < keys.length; i++) {
+    if (keys[i] === name) return keys[i];
+  }
+  if (!caseless) return null;
+  for (i = 0; i < keys.length; i++) {
+    if (keys[i].toLowerCase() === name.toLowerCase()) return keys[i];
+  }
+  return null;
+}
+
+// Every table whose rows can be read through a request for `name`.
+function reachable(schema, name, caseless, seen) {
+  var target = canonical(schema, name, caseless);
+  if (target === null) return {};
+  seen = seen || {};
+  if (seen[target]) return seen;
+  seen[target] = true;
+  var spec = schema[target];
+  if (spec.derived_from) reachable(schema, spec.derived_from, caseless, seen);
+  (spec.reflects || []).forEach(function (src) { reachable(schema, src, caseless, seen); });
+  Object.keys(spec.foreign_keys || {}).forEach(function (col) {
+    reachable(schema, spec.foreign_keys[col], caseless, seen);
+  });
+  return seen;
+}
+
+function privateHit(schema, names) {
+  return Object.keys(names).filter(function (n) { return schema[n] && schema[n].private; });
+}
+
+function canView(schema, name, caseless, strict) {
+  if (canonical(schema, name, caseless) === null) return false;
+  if (!strict) {
+    return !(schema[name] && schema[name].private);   // exact string, typed name
+  }
+  return privateHit(schema, reachable(schema, name, caseless)).length === 0;
+}
+
+function audit(schema, caseless, strict) {
+  var probes = [];
+  Object.keys(schema).forEach(function (t) {
+    probes.push({ name: t, why: "requested directly" });
+    if (schema[t].private) probes.push({ name: t.toUpperCase(), why: "same table, different case" });
+  });
+  return probes.map(function (p) {
+    var leaked = privateHit(schema, reachable(schema, p.name, caseless));
+    var allowed = canView(schema, p.name, caseless, strict);
+    return { name: p.name, why: p.why, leaked: leaked, allowed: allowed,
+             bypass: allowed && leaked.length > 0 };
+  });
+}
+
+var strict = false;
+
+function render() {
+  var opts = {
+    fts: document.getElementById("rFts").checked,
+    stat: document.getElementById("rStat").checked,
+    fk: document.getElementById("rFk").checked
+  };
+  var caseless = document.getElementById("rCase").checked;
+  var schema = buildSchema(opts);
+
+  var results = audit(schema, caseless, strict);
+  var bypasses = results.filter(function (r) { return r.bypass; });
+  var otherCount = audit(schema, caseless, !strict).filter(function (r) { return r.bypass; }).length;
+
+  document.getElementById("rows").innerHTML = results.map(function (r) {
+    var cls = r.bypass ? "leak" : "safe";
+    var verdict = r.bypass ? '<span class="v bad">bypass</span>'
+                : r.allowed ? '<span class="v ok">allowed</span>'
+                            : '<span class="v ok">denied</span>';
+    var why = r.leaked.length
+      ? r.why + " &middot; reaches " + r.leaked.join(", ")
+      : r.why + " &middot; nothing private behind it";
+    return '<div class="r ' + cls + '"><span><code>' + r.name + '</code>'
+         + '<span class="why">' + why + '</span></span>' + verdict + '</div>';
+  }).join("");
+
+  var c = document.getElementById("count");
+  c.textContent = bypasses.length;
+  c.className = "big " + (bypasses.length ? "bad" : "ok");
+  document.getElementById("countsub").textContent = bypasses.length === 1
+    ? "request allowed that reaches private rows"
+    : "requests allowed that reach private rows";
+  document.getElementById("other").textContent = otherCount;
+
+  var note = document.getElementById("note");
+  if (strict && bypasses.length === 0) {
+    note.innerHTML = "<b>Nothing gets through.</b> Authorizing the resolved set closes every route at once, without a single new rule in the deny list. Switch a route off above and the count on the left stays at zero — that is the point. The fix does not depend on knowing which routes exist.";
+  } else if (!strict && bypasses.length === 0) {
+    note.innerHTML = "<b>No routes left.</b> With every route switched off there is nothing to reach, so even the naive check looks correct. This is the schema the deny list was written for, and the one that never survives contact with a real database.";
+  } else {
+    note.innerHTML = "<b>" + bypasses.length + " request" + (bypasses.length === 1 ? "" : "s")
+      + " allowed, each reaching a table nobody granted.</b> None of these names is on the deny list, because a person wrote that list and a person writes down the tables they know about. Turn routes off one at a time to see what each contributes.";
+  }
+  reportHeight();
+}
+
+function setMode(s) {
+  strict = s;
+  document.getElementById("typed").setAttribute("aria-pressed", s ? "false" : "true");
+  document.getElementById("set").setAttribute("aria-pressed", s ? "true" : "false");
+  render();
+}
+document.getElementById("typed").addEventListener("click", function () { setMode(false); });
+document.getElementById("set").addEventListener("click", function () { setMode(true); });
+["rCase", "rFts", "rStat", "rFk"].forEach(function (id) {
+  document.getElementById(id).addEventListener("change", render);
+});
+document.getElementById("reset").addEventListener("click", function () {
+  ["rCase", "rFts", "rStat", "rFk"].forEach(function (id) {
+    document.getElementById(id).checked = true;
+  });
+  setMode(false);
+});
+
+function reportHeight() {
+  parent.postMessage({ type: "adl-visualize-height",
+                       height: document.documentElement.scrollHeight }, "*");
+}
+addEventListener("load", reportHeight);
+new ResizeObserver(reportHeight).observe(document.documentElement);
+render();
+</script>
+</body>
+</html>
