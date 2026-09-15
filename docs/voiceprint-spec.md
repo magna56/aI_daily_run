@@ -15,22 +15,29 @@ Working name. Alternatives: *Still You*, *Trueprint*, *Baseline*.
 
 ## 1. The problem, stated honestly
 
-Someone writes a cover letter or a personal statement. They run it through an AI to tighten it. The
-AI hands back something fluent, balanced, and slightly anonymous. They edit it further. Now they
-cannot tell how much of their own voice survived, and they are about to send it to a committee that
-reads 300 of these and has started flagging the ones that read like a language model.
+Someone writes something — a letter, an essay, an outreach email, a speech. They run it through an
+AI to tighten it. The AI hands back something fluent, balanced, and slightly anonymous. They edit it
+further. Now they cannot tell how much of their own voice survived.
 
-The anxiety is real but the usual framing is wrong. The failure mode is almost never *"a detector
-caught me."* Detectors are noisy and committees know it — they produce false positives at rates that
-make them unusable as evidence, and they are notably worse on non-native English writers. What
-actually sinks an application is softer and more damaging:
+Two versions of the same moment, at opposite ends of the stakes:
 
-> **"This could have been written by any of the 300 people in this pile."**
+> A manager writes twelve reassignment letters, runs them through an AI, and gets twelve letters
+> that read identically. The people receiving them will notice.
+>
+> Someone rewrites their own newsletter and it comes back sounding like a press release. Nobody is
+> judging them. They just hate it.
 
-AI editing strips specifics, flattens rhythm, removes the odd opinion, and deletes the failure
-stories. What is left is *competent and interchangeable*. That is the thing to fix, and fixing it
-happens to also fix the detector worry — because the cure is putting real, specific, personal
-material back in, not laundering the prose.
+Both are this product's user. Where the stakes are high, a second worry gets attached: *will the
+reader think I used AI?* That worry is real but usually misdirected. Detectors are noisy enough
+that the people using them know it — false-positive rates make them unusable as evidence, and they
+misfire hardest on non-native English writers. The damage is softer:
+
+> **"This could have been written by anyone."**
+
+AI editing strips specifics, flattens rhythm, removes the odd opinion, and deletes the stories about
+things going wrong. What is left is *competent and interchangeable*. That is the thing to fix, and
+fixing it happens to also settle the detector worry — because the cure is putting real, specific,
+personal material back in, not laundering the prose.
 
 So the product is **not** an AI humanizer. It is a **voice-fidelity and authorship-provenance tool.**
 That distinction is the whole design, the whole guardrail, and the whole marketing position.
@@ -92,7 +99,7 @@ weights here are **selected by which assistant the user names** (§4), not one g
 15. Antithesis scaffolds (*not only X but also Y*, *it isn't X, it's Y*, *while X, Y*)
 16. Empty closers — final paragraphs that introduce no noun not already used above
 
-**Concreteness** — the one that actually wins interviews.
+**Concreteness** — the one that most makes a document yours rather than anyone's.
 
 17. Specificity density: proper nouns + numerals + dates + units + tool names per 100 words
 18. Count of sentences containing **zero** concrete referents
@@ -105,7 +112,7 @@ Three subscores, never one. A single number invites gaming and hides the useful 
 | Score | Definition | Shown as |
 |-------|------------|----------|
 | **Voice match** | Weighted distance from the user's fingerprint (metrics 1–11) | 0–100 vs *your* baseline, not vs "human" |
-| **Concreteness** | Metrics 17–19, absolute scale | Per-paragraph, with the empty sentences listed |
+| **Concreteness** | Metrics 17–19, absolute scale | Per-unit, with the empty sentences listed |
 | **Tell density** | Metrics 12–16 per 1,000 words | Highlighted spans, dismissible |
 
 ---
@@ -254,8 +261,8 @@ concreteness check, the tool does not write a plausible number. It asks:
 > here. What was the actual number, and what did you give up to get it?*
 
 The user types the answer. The tool works it in. This is better output *and* it is the ethical
-line — a tool that fabricates biographical detail for an application is a tool for committing fraud,
-and this one structurally cannot.
+line — a tool that invents biographical detail on someone's behalf is a tool for lying in their
+name, and this one structurally cannot.
 
 **Unanswered questions cut the sentence, they do not fill it.** A user who skips a question gets a
 shorter document, not an invented one, and the export names what was removed so nothing vanishes
@@ -287,7 +294,7 @@ edits at that point rather than gamifying the number.
 | No assistant leaderboard | Per-model profiles (§4) are never aggregated into a ranking of which assistant hides best. Voice-stripping comparisons are fine; evasion comparisons are not |
 | Baseline honesty | If the "your writing" samples themselves score high on tell density, warn: *your baseline looks AI-assisted; the fingerprint will be unreliable* |
 | Privacy | Metrics run client-side. Only the rewrite call leaves the browser. No storage in v0, no training on user text, stated plainly |
-| Disclosure, not concealment | Export includes an optional, honest AI-assistance disclosure line the user can paste into their application |
+| Disclosure, not concealment | Export includes an optional, honest AI-assistance disclosure line the user can paste in wherever it is relevant |
 
 That last row matters more than it looks. The market is drifting toward *disclosed* AI assistance
 being normal and acceptable. A product that helps you say "I drafted this, used an AI editor,
@@ -309,7 +316,7 @@ Deliberately boring. The differentiated part is the metric set and the diff, not
 | Rewrite | One serverless function (Vercel/CF Workers) proxying Claude, holding the key | Only network call |
 | Model | `claude-sonnet-5` for rewrites | Style-matching from few-shot exemplars is the task it is good at |
 | Uploads | `mammoth` (.docx), `pdf.js` (.pdf text layer), plain read for .md/.txt — all client-side | No upload endpoint means no document store to leak |
-| Export | `docx` npm package, generated in the browser | Applicants live in Word |
+| Export | `docx` npm package, generated in the browser | Most people's documents live in Word |
 | Hosting | Cloudflare Pages + one Function | Same shape as theaicommit.com — known quantity |
 | Storage | None in v0 | Ship faster, privacy claim is trivially true |
 
@@ -334,34 +341,51 @@ against. That is an acceptable trade for five days, on two conditions — the UI
 
 ## 9. Who pays
 
-| Segment | Document | Urgency |
-|---------|----------|---------|
-> **Audience correction.** The job-application framing below came from one person's problem and is
-> narrower than the product. The real shape is *any document where a named human is accountable for
-> the words*: reassignment and staffing letters, performance reviews, recommendation letters,
-> internal memos, grant sections, personal essays. A manager who runs twelve reassignment letters
-> through an AI and gets twelve identical-sounding letters has exactly this problem and is not job
-> hunting. `docs/voiceprint-build-spec.md` §1 carries the corrected framing; the segments here are
-> examples, not the market.
+> **Audience correction — read this before the table.** The segments below are examples, not the
+> market, and this spec narrowed the audience twice before getting it right: first to job
+> applicants, then to people writing formal letters. **The audience is anyone.** It is defined by a
+> moment, not a profession or a document type: *you wrote something, you ran it through an AI, it
+> came back less like you, and that bothers you.* Salespeople rewriting outreach, students
+> tightening essays, a manager writing reassignment letters, someone drafting a wedding speech or
+> complaining to their landlord. The stakes run from *a committee will judge me* down to *I just
+> don't like how it reads*, and the product works the same at both ends.
+>
+> This is not only a marketing note — it changes the build. Short documents need sentence-level
+> rather than paragraph-level flagging; casual register must be preserved rather than smoothed into
+> business prose; and some users are repeat users, which the two-document free tier does not fit.
+> `docs/voiceprint-build-spec.md` §1 carries the consequences.
 
-| **Academic job seekers** | Research / teaching / diversity statements, cover letters | Very high, seasonal, high stakes |
-| Grad + professional school applicants | SOPs, personal statements | Very high, seasonal |
-| Career switchers | Cover letters at volume | Medium, bursty |
-| Students | Coursework where AI editing is permitted but authorship is assessed | High |
+| Segment | Document | Shape of use |
+|---------|----------|--------------|
+| **Anyone who noticed** | Whatever they just ran through an AI | The default. Do not design past it |
+| Salespeople, recruiters, founders | Outreach, proposals, posts, changelogs | **Repeat** - daily or weekly, short documents |
+| Students | Essays, applications, coursework where editing is allowed but authorship is assessed | Bursty, term-shaped |
+| Managers | Reassignment letters, reviews, recommendations | Batches - twelve letters that must not read identically |
+| Applicants | Statements, cover letters | One-off, high stakes, seasonal |
 | Later: comms teams | House voice across writers | Steady, B2B pricing |
+
+The repeat row is the commercially interesting one and the one a two-document free tier fits worst -
+somebody rewriting outreach every day exhausts it before lunch. Do not build for them in v1; do
+notice if they show up.
 
 **Pricing.** Job hunting is bursty, so subscriptions fit badly:
 
 - **Free** — one document, analysis only, no rewrite. The scores are the hook.
-- **$12 one-off** — "application pack": 5 documents, rewrites, .docx export, provenance report.
+- **$12 one-off** — "document pack": 5 documents, rewrites, .docx export, provenance report.
 - **$19/mo** — repeat writers and consultants.
 
 Lead with the one-off. Someone three days from a deadline will pay $12 and will not sign up for a
 subscription.
 
-**Wedge:** academic job market forums and subreddits in hiring season. The pitch is not "beat AI
-detection" — it is *"your statement got smoothed into everyone else's; here's exactly what it lost."*
-That framing is shareable in places where the evasion framing would get the post removed.
+**Wedge: the analysis is the ad.** Anyone can run it on their own text in thirty seconds, for free,
+and the output is inherently shareable — *"ChatGPT deleted 62% of the numbers and every contraction
+from my writing, here's the diff."* That screenshot travels in writing, sales, student and general
+AI communities alike, and it needs no audience segmentation because everyone who has pasted
+something into an AI recognizes it.
+
+The pitch is never "beat AI detection." It is *"here is exactly what the AI took out of your
+writing."* The evasion framing would get the same post removed from most of those communities; this
+one gets upvoted in all of them.
 
 ---
 
@@ -406,14 +430,15 @@ anything real, and the per-model view should be pulled rather than shipped as de
 Everything in v0 can be done by hand in about an hour. Useful as a sanity check on whether the
 product is worth building, and useful immediately to anyone with a deadline this week.
 
-1. **The only-me test.** Sentence by sentence: could another applicant in your field have written
-   this exact sentence? If yes, it is doing nothing for you. Replace it with a fact only you have.
+1. **The only-me test.** Sentence by sentence: could anyone else have written this exact sentence?
+   If yes, it is doing nothing for you. Replace it with something only you would say or only you
+   would know.
 2. **Put the numbers back.** AI deletes specifics. Dates, headcounts, durations, tool names, the
    name of the thing that broke. "Improved the process" → "cut the nightly batch from 11 hours to
    40 minutes, mostly by deleting one join."
-3. **Restore one failure.** AI drafts are relentlessly positive and consequence-free. One paragraph
-   about something that did not work, and what you did next, reads as human more than any stylistic
-   trick — and committees remember it.
+3. **Restore one failure.** AI drafts are relentlessly positive and consequence-free. A line about
+   something that did not work, and what you did next, reads as human more than any stylistic
+   trick — and it is what readers remember.
 4. **Read it aloud.** Anything you would never say out loud, rewrite. This catches most of it.
 5. **Break the rhythm.** Find three paragraphs where every sentence is 18–25 words. Add a short one.
    Four words is fine.

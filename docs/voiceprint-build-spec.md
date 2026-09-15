@@ -15,24 +15,44 @@ is wrong.
 A web app where someone uploads writing they know is theirs, uploads a document an AI has edited,
 and gets back a version that sounds like them again.
 
-### Who it is for — broader than the first draft assumed
+### Who it is for — anyone
 
-The product spec's examples were job applications. That was one person's problem, not the market.
-The real shape is **any document where being the author is the point**:
+This got narrowed twice while the spec was being written, first to job applicants, then to people
+writing formal letters. Both were wrong. **Do not define the audience by document type at all.**
 
-| Document | Why AI editing hurts it |
-|----------|-------------------------|
-| Reassignment and staffing letters | A manager writes twelve, runs them through AI, and all twelve read identically. The recipient notices |
-| Performance reviews | Generic praise is worse than no praise; specifics are the entire value |
-| Recommendation letters | The reader is calibrating on *your* voice across the letters you have written |
-| Applications and statements | Competing against hundreds of documents that had the same edit applied |
-| Internal memos, grant sections, personal essays | Written by a named person to people who know them |
+The audience is defined by a *moment*, not a profession or a genre:
 
-The common factor is not job-seeking. It is that **a named human is accountable for the words**, and
-smoothing removes what made them accountable — the specifics, the rhythm, the willingness to say
-something that could be argued with.
+> You wrote something. You ran it through an AI. It came back better organized and less like you,
+> and that bothers you.
 
-Nothing in the build is audience-specific. Do not hardcode application-shaped language into the UI.
+That happens to a salesperson rewriting outreach, a student tightening an essay, a manager writing
+reassignment letters, someone drafting a wedding speech, a founder writing a changelog, somebody
+complaining to their landlord. The stakes run from *a committee will judge me for this* down to
+*I just don't like how it reads*, and the product works the same at both ends. Someone annoyed that
+their own newsletter sounds like a press release is as real a user as an applicant.
+
+Three consequences for the build, which is why this section exists rather than just being a
+marketing note:
+
+**Documents are often short.** A sales email is 150 words, not 1,000. Paragraph-level flagging
+barely works on three paragraphs, so short documents need sentence-level flagging — see §11. The
+cost model in §15 assumes ~1,000 words; short documents are cheaper, which is fine, but they are
+also the common case and the UI must not look empty when only two spans are flagged.
+
+**Register varies and must be preserved.** The tell lexicon and the rewrite constraints were drafted
+against formal prose (*"eager to contribute"*). Casual writing has different tells — *Absolutely!*,
+*Here's the thing:*, *game-changer*, sudden emoji, a bulleted list where a sentence was. The
+constraints must never push a casual writer toward professional prose. Returning someone to
+themselves means keeping their register, including *lol* and a sentence fragment.
+
+**Some people are repeat users.** An applicant uses this twice, ever. A salesperson would use it
+twenty times a week. Two free documents is right for the first and wrong for the second. v1 keeps
+the cap at two for everyone; the repeat segment is the one that would plausibly pay later, so the
+schema tracks documents per user (§6) rather than a single boolean.
+
+Nothing in the build is audience-specific. Do not hardcode application-shaped, workplace-shaped, or
+academic-shaped language into the UI — the word is "document", not "statement", "letter", or
+"essay".
 
 ### Scope for v1
 
@@ -459,7 +479,11 @@ Do not use a three-item list of abstract nouns.
 Do not use "not only X but also Y" or "it's not X, it's Y".
 Never state a fact not present in the author's answers below.
 If a specific is missing, write the sentence shorter rather than inventing one.
+Register: casual. Keep fragments, keep "lol", do not make this more professional.
 ```
+
+The register line is not decoration. Without it the model drifts every document toward business
+prose, which for a casual writer is the same failure the original AI edit made.
 
 That last pair of lines is the never-invent rule from the product spec, enforced at the prompt
 level. It is also enforced structurally: the server never sends a fact the client did not send it.
@@ -555,6 +579,12 @@ src/
 Tell profiles are **static JSON assets, not code**. The quarterly refresh the product spec requires
 is then a file swap, and a stale profile is visible in its filename.
 
+Each profile carries two lexicons, `formal` and `casual`, because the tells differ by register: a
+smoothed cover letter says *eager to contribute*, a smoothed Slack post says *Absolutely!* and
+*Here's the thing:*. Pick the lexicon from the author's own baseline (contraction rate and mean
+sentence length separate the two cleanly), never from the document being fixed — the document has
+already been pushed toward formal, which is the problem.
+
 Session state lives in memory plus `sessionStorage` for crash recovery. Nothing in `localStorage`,
 nothing that outlives the tab — consistent with §2.1.
 
@@ -589,6 +619,30 @@ Watch three things specifically:
 - **Unicode.** Curly apostrophes, em dashes, non-breaking spaces. Normalize identically on both
   sides (`NFC`) before tokenizing.
 - **Float formatting.** Round at the same places or parity tests fail on noise.
+
+### Short documents need sentence-level flagging
+
+The Python script drops paragraphs under 12 words and ranks whole paragraphs. That is right for a
+1,000-word statement and useless for a 150-word sales email, where the entire document is three
+paragraphs and flagging one of them says almost nothing.
+
+The TypeScript engine adds a second mode, chosen by length rather than by the user:
+
+| Document | Mode | Unit |
+|----------|------|------|
+| ≥ 400 words | paragraph | Rank paragraphs, as today |
+| < 400 words | sentence | Rank sentences; tells, specificity and length-band checks all work unchanged at sentence granularity |
+
+The signals do not change — only what they are attached to. Variance-based checks (`sent_len_sd`
+within a unit) are already suppressed on small samples and simply stay off in sentence mode.
+
+Parity tests cover paragraph mode only, since it is what the Python script implements. Sentence
+mode gets its own fixtures and is allowed to diverge; note that clearly in the test file so a
+future reader does not "fix" it back into parity.
+
+**The baseline still needs 400 words even when the document is 150.** That is not a bug — a
+fingerprint from 150 words is noise. It does mean the friction is worst exactly where the document
+is smallest, which is the funnel risk in §17.
 
 ---
 
@@ -715,10 +769,17 @@ being built — and the traffic tells you whether to build them at all.
    before the free tier's model is locked in.
 2. **Is 2 documents right?** A user with one document who never returns is a worse outcome than a
    slightly higher bill. Watch how many people use their second credit before tuning.
-3. **What counts as "another sample you wrote"** for someone who mostly writes email? The product
-   assumes people can find 600 words. Phase 3's funnel number answers this, and it is the biggest
-   unvalidated assumption in the whole design.
+3. **Where does a normal person find 400 words they wrote?** This is the biggest unvalidated
+   assumption in the design, and it got harder once the audience stopped being academics with a
+   folder of statements. Sent email is the one source almost everybody has — "paste three emails
+   you sent" is probably a better prompt than "upload a writing sample", and it costs nothing to
+   test in Phase 3. If the `upload_baseline ÷ signin` rate is bad, this is the first thing to
+   change, before anything about rewriting.
 4. **Do we need alignment between the original and the draft** to be smarter than token overlap?
    Only if the `originalText` field in `/api/questions` turns out to be frequently wrong.
-5. **Deletion.** v1 deletes on request. Automatic deletion of inactive accounts after N months is
+5. **Is the credit model the wrong shape for repeat users?** Two documents fits someone with one
+   application to fix. It does not fit a salesperson who would run this on outreach every day —
+   and that person is the one who would plausibly pay. Do not build for them in v1, but watch
+   whether anyone burns both credits within an hour; that is the signal.
+6. **Deletion.** v1 deletes on request. Automatic deletion of inactive accounts after N months is
    easy to add and worth doing before there is much data to delete.
