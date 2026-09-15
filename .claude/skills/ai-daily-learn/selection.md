@@ -119,13 +119,30 @@ to a category that has them.
 `articles.md` further reading. Never open arXiv first unless the paper budget is open *and* the
 category is Tier C.
 
+**Cadence is the second axis, and it is the one that was missing.** Primary tells you what may be
+built on; it does not tell you whether the source has anything new today. Measured on 2026-09-15,
+`vllm.ai/blog` published five posts in four days while `ai.meta.com/blog` had nothing dated for
+seven weeks — both were Primary, and they are not interchangeable on a Tuesday. Three roles:
+
+| role | cadence | use it as |
+| --- | --- | --- |
+| **spine** | several times a week | what you can actually build on today |
+| **reference** | monthly or slower | excellent when the topic matches; never the default |
+| **noticing** | daily digests, aggregators | find the primary, then cite the primary |
+
+Entries below are tagged where it matters. **When a category's spine has nothing today, take
+another category that is also due — do not fall through to arXiv and a link blog.** That fall-through
+is exactly how 2026-09-11 and 2026-09-15 ended up on the same project four days apart.
+
 ### Every day, whatever is due
 
 - https://news.ycombinator.com/ — **noticing only, never cited.** Framing, and what practitioners
   are actually arguing about. Follow the link out and cite what it points at.
 - https://simonwillison.net/ — the single best filter for "does this matter to an engineer"
 - https://www.latent.space/ — AI engineering practice, interviews, what shipped and why
-- https://www.deeplearning.ai/the-batch/ — Andrew Ng's weekly. Its real value is the
+- https://www.deeplearning.ai/the-batch/ — `[noticing]` Andrew Ng's weekly, and a **curated
+  roundup rather than original reporting**, so it is a route to a primary and never a
+  citation. Its real value is the
   research-to-practice bridge: it catches developments the harness-focused feeds miss and frames
   them for people who build rather than train. Strongest as the **industry-analysis slot in
   `articles.md`** and as a way to notice a topic; weakest as the primary source, because it
@@ -154,6 +171,10 @@ and describe something the reader already has installed.
 - **Primary** — https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md
 - **Primary** — https://docs.claude.com/en/docs/claude-code/overview (hooks, skills, subagents,
   settings; pair a changelog line with the doc that explains it)
+- **Primary** `[spine]` — https://code.visualstudio.com/updates — monthly, and roughly
+  three-quarters of each release note is now AI: agent automations, voice mode, the Agents window
+  in 1.137 (9 September 2026). The highest-reach surface on this whole list for the widest reader
+  tier, and it was missing until 2026-09-15.
 - **Primary** — https://cursor.com/changelog
 - **Primary** — https://www.anthropic.com/engineering — harness design, context, agent patterns
 - **Primary** — https://github.com/openai/codex/releases and
@@ -205,24 +226,37 @@ this whole list.
 
 - **Primary** — https://docs.claude.com/en/release-notes/api and
   https://platform.openai.com/docs/changelog — dated API changes beat launch posts
-- **Primary** — https://developers.googleblog.com/ — the practical Google feed
-- **Primary** — https://ai.meta.com/blog/ — Llama, PyTorch, real production numbers
+- **Primary** — https://developers.googleblog.com/ and
+  https://ai.google.dev/gemini-api/docs/changelog — the practical Google feed, plus the dated
+  Gemini API changelog, which is the one to build on for the same reason as above
+- **Primary** `[reference]` — https://ai.meta.com/blog/ — Llama, PyTorch, real production
+  numbers, but roughly one post a fortnight and nothing dated for seven weeks as of
+  2026-09-15. Check it, do not plan around it.
 - Secondary — https://huggingface.co/blog, https://artificialanalysis.ai/ (measured comparison
   rather than vendor claims), https://cookbook.openai.com/ and
   https://github.com/openai/openai-cookbook
 - Secondary, other labs — https://mistral.ai/news, https://qwenlm.github.io/blog/,
   https://api-docs.deepseek.com/news/, https://cohere.com/blog, https://www.together.ai/blog,
-  https://allenai.org/blog. **Build on the technical report or model card, never the launch
+  https://allenai.org/blog, and for xAI https://docs.x.ai/ plus
+  https://huggingface.co/xai-org for model cards and weights. **Build on the technical report or model card, never the launch
   post.** An open-weights release with a real report is a session; the announcement of it is the
   press release this site exists not to be.
 
-**Fetchability, checked:** every `openai.com` surface — `/news/`, `/index/`, `/research/` — 403s
-to WebFetch, not just the blog. Route around it via the platform changelog, the cookbook (site or
-GitHub repo), or HN. `x.ai/news` 403s the same way.
+**Fetchability, checked and re-confirmed 2026-09-15:** every `openai.com` surface — `/news/`,
+`/index/`, `/research/` — 403s to WebFetch, and so does `x.ai/news`. This is not a nuisance, it is
+a gate: rule 4 says *verified, not remembered*, so a source you cannot fetch cannot be built on at
+all. Route to the fetchable first-party surfaces instead — `platform.openai.com/docs/changelog`,
+`cookbook.openai.com`, `developers.openai.com`, `docs.x.ai`, `huggingface.co/xai-org`. Those are
+the **better** citation anyway, for a reason already in this file: build on the changelog, the docs
+or the model card, never the launch post. Use HN only to notice that something shipped; following
+it here and citing it was a rejection two sessions already shipped with.
 
 ### AI in Production  ·  `For: Shipping AI`  ·  target 1-2 per 10
 
-- **Primary** — https://blog.vllm.ai/ — serving internals with numbers
+- **Primary** `[spine]` — https://vllm.ai/blog — serving internals with numbers, several posts
+  a week (KV-cache offloading, agentic serving, per-accelerator optimization). The most
+  under-used source on this list: prescribed since the beginning and cited zero times, which the
+  old `blog.vllm.ai` address — now a 301 — probably explains.
 - **Primary** — https://modal.com/blog and https://www.baseten.co/blog/ — inference economics
 - **Primary** — https://lmsys.org/blog/ — SGLang, throughput, scheduling
 - **Primary** — https://engineering.fb.com/ (and `/category/ai-research/`) — Meta's *engineering*
@@ -440,8 +474,17 @@ normal outcome, not an error, and say what you looked at and why none of it clea
 - **Primary** — https://arxiv.org/list/cs.AI/recent, https://arxiv.org/list/cs.LG/recent,
   https://arxiv.org/list/cs.CL/recent
 - **Primary** — https://huggingface.co/papers — the daily filter; use it instead of raw listings
-- **Primary** — https://www.anthropic.com/research and https://transformer-circuits.pub/ —
-  interpretability and alignment research with unusual mechanical detail
+- **Primary** `[spine]` — https://www.anthropic.com/research — active, several posts a month
+  (10, 9 and 4 September 2026 at the time of writing). **Not the same surface as
+  `anthropic.com/engineering`**, which is a daily-lab source with a much slower cadence; the two
+  are easy to conflate and only this one is a Frontier feed.
+- **Primary** `[reference]` — https://transformer-circuits.pub/ — interpretability with unusual
+  mechanical detail, but monthly to quarterly. Reach for it when the topic matches; it cannot
+  carry a slot on demand.
+- **Primary** `[spine]` — https://research.google/blog/ — several posts a week, and distinct from
+  DeepMind's blog. Read it with a filter: much of it is science applications (genomics, climate,
+  connectomics) that this audience has no use for, and the engineer-relevant work — tool-use
+  datasets, forecasting foundation models — sits in the same feed.
 - **Primary** — https://deepmind.google/discover/blog/ and https://ai.meta.com/research/
 - **Primary** — https://www.interconnects.ai/ — post-training and model reviews from someone who
   trains them. Excellent for *finding* the thing worth explaining; go to the primary source to
