@@ -195,15 +195,15 @@ write into the repo's README so it survives a growth-hungry quarter.
 
 ## 5. The screen
 
-Single page. Four upload slots and one assistant picker, collapsing to one working view, ending in a
+Single page. Four inputs and one assistant picker, collapsing to one working view, ending in a
 download.
 
-**Uploads, entirely in the browser.** Drag-and-drop or file picker for each of the four inputs,
-with paste as a fallback for people working from a web editor. `.docx`, `.txt`, `.md` and `.pdf`
-(text-layer only) are parsed client-side — `mammoth` for Word, `pdf.js` for PDF — so the files never
-leave the machine. No upload endpoint exists in v0, which makes the privacy claim structural rather
-than a policy: there is nowhere for a document to be stored even by accident. The only network call
-in the whole product is the per-paragraph rewrite.
+**Paste first, upload second.** Each input is a textarea, with "or upload a file" underneath.
+Someone who has just used ChatGPT has the text in their clipboard; a student is in Google Docs, a
+salesperson in their mail client. Leading with a file picker adds a download-then-upload round trip
+to the commonest path in the product. Files still matter — `.docx`, `.txt`, `.md` and `.pdf`
+(text-layer only) are parsed client-side with `mammoth` and `pdf.js` — they are just the second
+path.
 
 A scanned PDF with no text layer is rejected with a clear message rather than sent to OCR. That is
 a v2 problem.
@@ -315,7 +315,7 @@ Deliberately boring. The differentiated part is the metric set and the diff, not
 | Profile builder | Offline Node script: corpus → one fixed edit prompt per assistant → lift table | Reuses the same metric module as the app. Run quarterly, never in production |
 | Rewrite | One serverless function (Vercel/CF Workers) proxying Claude, holding the key | Only network call |
 | Model | `claude-sonnet-5` for rewrites | Style-matching from few-shot exemplars is the task it is good at |
-| Uploads | `mammoth` (.docx), `pdf.js` (.pdf text layer), plain read for .md/.txt — all client-side | No upload endpoint means no document store to leak |
+| Inputs | Textarea first; `mammoth` (.docx), `pdf.js` (.pdf text layer), plain read for .md/.txt as the file path | Paste is how most people already have their text |
 | Export | `docx` npm package, generated in the browser | Most people's documents live in Word |
 | Hosting | Cloudflare Pages + one Function | Same shape as theaicommit.com — known quantity |
 | Storage | None in v0 | Ship faster, privacy claim is trivially true |
@@ -324,7 +324,7 @@ Deliberately boring. The differentiated part is the metric set and the diff, not
 
 | | Days | Ships |
 |---|------|-------|
-| **v0** | 1–5 | Upload 4 files, pick the assistant → three scores, A→B drift table, paragraph heat map, tell highlighting. Ships with hand-seeded profiles for the three assistants. **No LLM at all.** This is already sellable and costs nothing to run. |
+| **v0** | 1–5 | Paste or upload 4 inputs, pick the assistant → three scores, A→B drift table, paragraph heat map, tell highlighting. Ships with hand-seeded profiles for the three assistants. **No LLM at all.** This is already sellable and costs nothing to run. |
 | **v0.5** | 6–9 | Per-paragraph rewrite, seeded on user samples and the source assistant's drift signature, with the question-asking behavior |
 | **v1** | 10–14 | Profile builder run for real (replaces the hand-seeded lists), assistant auto-detect and the "Not sure" path, .docx export, provenance report, saved voiceprints (accounts) |
 | v2 | later | Google Docs add-on — meet the writing where it happens; OCR for scanned PDFs |

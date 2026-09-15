@@ -94,7 +94,7 @@ These are constraints, not aspirations. Each one rules something out.
 ```
 ┌─ Browser ─────────────────────────────────────────────────┐
 │  Preact SPA                                                │
-│   ├─ mammoth / pdf.js      parse .docx .pdf .md .txt       │
+│   ├─ paste box (primary)   + mammoth / pdf.js for files    │
 │   ├─ voiceprint.ts         fingerprint, drift, paragraphs  │  ← all local
 │   ├─ docx                  export                          │
 │   └─ session state in memory + sessionStorage              │
@@ -120,7 +120,7 @@ These are constraints, not aspirations. Each one rules something out.
         │  D1: users,    │   │  R2: encrypted text       │
         │  voiceprints,  │──▶│   baselines/<user>/…      │
         │  documents,    │   │   docs/<user>/<doc>/…     │
-        │  daily_spend   │   │   (opt-in, 30-day TTL)    │
+        │  daily_spend   │   │   encrypted per user      │
         └────────────────┘   └──────────────────────────┘
 ```
 
@@ -256,11 +256,17 @@ the risk is concentrated in the working document. Separate them.
 |------|------|---------|-----|
 | **1. Fingerprint** | ~40 numbers: sentence stats, contraction rate, punctuation profile, specificity | **On** | Not prose. Writing cannot be reconstructed from it. Lets a returning user analyze a new document instantly with no upload |
 | **2. Baseline exemplars** | ~600–1,000 words the user chose as "things I wrote" | **On, revocable** | The funnel fix. Rewriting needs real sample text for style matching; numbers are not enough |
-| **3. Working documents** | The original, the AI version, the draft, the rewrite | **Off** | Enables resume-after-close and history. Also the most sensitive thing in the system — a reassignment letter names a real employee |
+| **3. Working documents** | The original, the AI version, the draft, the rewrite | **On** | Resume after closing the tab, and a history the user can come back to. This is what people expect from an account, and v1 takes that default |
 | **4. Corpus use** | Tier-3 documents used to build measured tell profiles | **Off, separate consent** | Real pre-AI/post-AI pairs are the ideal corpus for §4 of the product spec and near-impossible to get otherwise. Never bundle this with tier 3 |
 
-Tier 4 deserves its own sentence: a user agreeing to *store* their document has not agreed to let it
-train anything. Two checkboxes, worded differently, never pre-ticked together.
+Tiers 1–3 are on for v1. Tier 4 stays off and separately consented, and that is not caution — it is
+a different thing being asked. **A user agreeing to store their document has not agreed to let it
+train anything.** Two checkboxes, worded differently, never pre-ticked together.
+
+Because tier 3 is now on by default, it has to be *disclosed*, not buried: one plain line at first
+use ("we keep your documents in your account so you can come back to them — you can delete any of
+them, any time") and a visible off switch. A default that a user would be annoyed to discover is a
+default that needs saying out loud.
 
 ### Encryption
 
@@ -290,11 +296,17 @@ Store `iv || ciphertext`. Rotating the master secret means re-wrapping, so versi
 |--------|----------|
 | Fingerprint | Until account deletion |
 | Baseline exemplars | Until the user replaces or deletes them |
-| Working documents | **30 days**, enforced by an R2 lifecycle rule *and* an `expires_at` check in code |
+| Working documents | Until the user deletes them, or the account goes inactive (§17) |
 | Corpus copies (tier 4) | Until consent is withdrawn |
 
-Two enforcement paths for working documents is deliberate: a lifecycle rule that silently stops
-applying is a quiet failure, and the code check turns it into a loud one.
+**Indefinite, deliberately.** An earlier draft expired documents after 30 days. With tier 3 off that
+was a sensible blast-radius limit; with it on by default it becomes a trap — a user who finds their
+document gone from their own account has been surprised by a safety feature, which is the worst kind
+of surprise. Keep them, make deletion obvious, and purge with inactive accounts instead.
+
+The cost of that choice is a larger standing blast radius, which is why the encryption above is not
+optional. If business users ever arrive, configurable retention becomes a requirement rather than a
+nicety — note it now so it is not a surprise later.
 
 ### Deletion has to be real
 
@@ -315,10 +327,10 @@ Storage is not a cost decision here; it is only a risk decision.
 The old claim — *there is nowhere to put your document* — was structurally true and a genuine
 differentiator. It is gone. Do not replace it with a vaguer version of itself. Say what is true:
 
-> We store the writing samples you give us, so you don't have to upload them again. We don't store
-> the documents you're fixing unless you ask us to, and those are deleted after 30 days. Everything
-> is encrypted with a key specific to your account. You can delete any of it, and deletion means the
-> bytes are gone.
+> We keep your writing samples and your documents in your account, so you can come back to them and
+> so you never have to upload your samples twice. Everything is encrypted with a key specific to
+> your account. We don't use any of it to train or improve anything unless you separately say yes.
+> You can delete any of it or all of it, and deletion means the bytes are gone.
 
 ---
 
@@ -349,8 +361,8 @@ CREATE TABLE voiceprints (
   exemplar_key   TEXT                    -- R2 key; NULL if the user declined tier 2
 );
 
--- One row per document a user starts rewriting. Text is stored only when
--- stored = 1 (tier 3, off by default), and then only under r2_prefix.
+-- One row per document a user starts rewriting. Text lives in R2 under
+-- r2_prefix when stored = 1, which is the v1 default.
 CREATE TABLE documents (
   id                 TEXT PRIMARY KEY,       -- client-generated UUID
   user_id            TEXT NOT NULL REFERENCES users(id),
@@ -363,13 +375,13 @@ CREATE TABLE documents (
   voice_match_before INTEGER,
   voice_match_after  INTEGER,
   exported           INTEGER NOT NULL DEFAULT 0,
-  stored             INTEGER NOT NULL DEFAULT 0,   -- tier 3 consent
-  r2_prefix          TEXT,                          -- NULL unless stored
-  expires_at         INTEGER,                       -- NULL unless stored; created_at + 30d
-  corpus_consent     INTEGER NOT NULL DEFAULT 0     -- tier 4, separately given
+  source             TEXT NOT NULL DEFAULT 'paste', -- paste | docx | pdf | md | txt
+  title              TEXT,                           -- filename, or first words of pasted text
+  stored             INTEGER NOT NULL DEFAULT 1,     -- tier 3, on in v1
+  r2_prefix          TEXT,                           -- NULL only if the user turned storage off
+  corpus_consent     INTEGER NOT NULL DEFAULT 0      -- tier 4, separately given
 );
-CREATE INDEX idx_documents_user    ON documents(user_id, created_at);
-CREATE INDEX idx_documents_expires ON documents(expires_at) WHERE expires_at IS NOT NULL;
+CREATE INDEX idx_documents_user ON documents(user_id, created_at);
 
 CREATE TABLE daily_spend (
   day            TEXT PRIMARY KEY,           -- YYYY-MM-DD, UTC
@@ -690,6 +702,7 @@ src/
   main.tsx
   state.ts                 signals: docs, fingerprint, flagged, answers, rewrites
   parse/
+    paste.ts               the primary path - see below
     docx.ts                mammoth
     pdf.ts                 pdf.js, text layer only
     text.ts
@@ -703,9 +716,51 @@ src/
   export/
     docx.ts
   ui/
-    Upload.tsx  Scores.tsx  DriftTable.tsx  ParagraphList.tsx
+    Input.tsx   Scores.tsx  DriftTable.tsx  ParagraphList.tsx
     Interview.tsx  Rewrite.tsx  Export.tsx
 ```
+
+### Paste is the primary input, not a fallback
+
+Someone who has just used ChatGPT has the text in their clipboard, not in a `.docx`. A student works
+in Google Docs, a salesperson in their mail client, a founder in a web editor — none of them have a
+file to give you. **Each of the four inputs is a textarea first, with "or upload a file" underneath.**
+Getting this ordering backwards adds a download-then-upload round trip to the most common path in
+the product.
+
+Files still matter — Word documents are real — but they are the second path, not the first.
+
+**Pasted text loses paragraph structure, and the splitter has to cope.** The Python engine splits on
+blank lines, which pasted text often does not have. Normalize before analyzing:
+
+```ts
+export function splitParagraphs(raw: string): string[] {
+  const t = raw.replace(/\r\n?/g, "\n").normalize("NFC").trim();
+
+  // 1. Blank lines present — the normal case, and what the Python engine assumes.
+  if (/\n[ \t]*\n/.test(t)) return t.split(/\n[ \t]*\n/).map(p => p.trim()).filter(Boolean);
+
+  // 2. Single newlines only (a textarea, or a copy out of a web editor). Treat a line
+  //    as its own paragraph when lines are substantial; otherwise it is wrapped prose
+  //    and the newlines are noise, so rejoin them.
+  const lines = t.split("\n").map(l => l.trim()).filter(Boolean);
+  if (lines.length > 1) {
+    const avg = lines.reduce((n, l) => n + l.split(/\s+/).length, 0) / lines.length;
+    if (avg >= 15) return lines;
+    return [lines.join(" ")];
+  }
+
+  // 3. One unbroken blob. Do not guess at paragraph boundaries — fall through to
+  //    sentence mode (§11), which needs no paragraph structure at all.
+  return [t];
+}
+```
+
+Case 3 is why sentence mode earns its place twice over: it is the answer for short documents *and*
+the answer for a 900-word paste with no line breaks, which is common and otherwise unanalyzable at
+paragraph granularity.
+
+Pasted text has no filename, so `documents.title` falls back to the first six words plus a date.
 
 Tell profiles are **static JSON assets, not code**. The quarterly refresh the product spec requires
 is then a file swap, and a stale profile is visible in its filename.
@@ -792,7 +847,7 @@ is smallest, which is the funnel risk in §17.
 | Forged identity | Full RS256 verification against Google's JWKS, plus `aud` / `iss` / `exp` / `email_verified` |
 | Bot signups | Turnstile on `/api/auth/google` |
 | Using us as a free rewriting API | Google account + 2 documents + rate limit + per-doc cap. The product spec's baseline gate also means a caller must supply 400 words of real writing first |
-| Stored document exposure | Envelope encryption per user (§5a): a dumped R2 bucket is ciphertext without the Worker's master secret. Working documents off by default and deleted after 30 days, so the standing blast radius is baselines, not reassignment letters |
+| Stored document exposure | Envelope encryption per user (§5a): a dumped R2 bucket is ciphertext without the Worker's master secret. v1 keeps documents indefinitely, so encryption and working deletion carry the weight that a short retention window used to |
 | Document leakage via logs | Never log request or response bodies. `console.log(body)` during a debugging session is the realistic way this leaks, and it now also lands in Workers logs that outlive the request |
 | Cross-user access | Every R2 key is prefixed with the authenticated `userId` and built server-side from the session, never from a request field. No endpoint accepts a raw R2 key |
 | Consent drift | Tier 3 and tier 4 are separate columns, separate checkboxes, never pre-ticked. Storing is not training |
@@ -864,7 +919,6 @@ wrangler secret put SESSION_SECRET
 wrangler secret put TURNSTILE_SECRET
 wrangler secret put STORAGE_MASTER_KEY
 wrangler r2 bucket create voiceprint-docs
-wrangler r2 bucket lifecycle add voiceprint-docs --prefix docs/ --expire-days 30
 npm run build && wrangler deploy
 ```
 
@@ -898,15 +952,15 @@ deadline-week spike from surprising you.
 |-------|------|-------|
 | **1** | 1–2 | Worker skeleton, D1 schema, Google sign-in end to end, `/api/me` |
 | **2** | 3–5 | Engine port + parity tests. **Nothing below this is trustworthy until parity passes** |
-| **3** | 6–7 | Upload, parse, analyze, scores, drift table, paragraph list — no Claude yet. Shippable and free to run |
+| **3** | 6–7 | Paste and upload, parse, analyze, scores, drift table, paragraph/sentence list — no Claude yet. Shippable and free to run |
 | **4** | 8–9 | `/api/questions`, interview UI |
 | **5** | 10–12 | `/api/rewrite`, streaming, credits, caps, spend ceiling, degraded mode |
-| **6** | 13–14 | .docx export, what-was-cut list, before/after, privacy page |
-| **7** | 15–16 | Storage: R2 + envelope encryption, `/api/voiceprint`, saved-baseline path in `/api/rewrite`, history, deletion endpoints |
+| **6** | 13–15 | Storage: R2 + envelope encryption, `/api/voiceprint`, saved-baseline path in `/api/rewrite`, history, deletion |
+| **7** | 16–17 | .docx export, what-was-cut list, before/after, privacy page |
 
-Phase 7 is last but should not be cut. Until it ships, every returning user re-uploads their
-baseline — which is the step the funnel is most likely to die on, so the value of storage is highest
-exactly where the current design is weakest.
+Storage moved ahead of export because it is no longer an add-on: with tiers 1–3 on by default, the
+account *is* the product on a second visit. Until it ships, every returning user re-uploads their
+baseline — the step the funnel is most likely to die on.
 
 Phase 3 is a real launch. An analyzer that costs nothing to serve and tells someone which
 paragraphs stopped sounding like them is worth putting in front of users while phases 4–6 are
@@ -928,9 +982,10 @@ being built — and the traffic tells you whether to build them at all.
    anything about rewriting.
 4. **Do we need alignment between the original and the draft** to be smarter than token overlap?
    Only if the `originalText` field in `/api/questions` turns out to be frequently wrong.
-5. **Does anyone actually accept tier 3?** The value of storing working documents is assumed, not
-   shown. If almost nobody opts in, drop it and keep only baselines — less code, less risk, nearly
-   all the benefit.
+5. **Does anyone turn tier 3 off?** v1 stores working documents by default. If a noticeable share
+   of users switch it off, or ask where their documents went, the default is wrong and the earlier
+   opt-in design was right. Instrument the toggle; it is one boolean and it answers a question that
+   would otherwise be argued about.
 6. **Is the credit model the wrong shape for repeat users?** Two documents fits someone with one
    application to fix. It does not fit a salesperson who would run this on outreach every day —
    and that person is the one who would plausibly pay. Do not build for them in v1, but watch
