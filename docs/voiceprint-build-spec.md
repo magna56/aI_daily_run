@@ -70,9 +70,12 @@ mobile app, any non-Google identity provider.
 
 These are constraints, not aspirations. Each one rules something out.
 
-1. **Documents are never stored.** No R2 bucket, no `text` column, no log line containing user
-   prose. This is not a policy we promise — it is an absence of anywhere to put it. It rules out
-   server-side session state and forces the client to resend context on every call.
+1. **Storage is tiered and consented, never all-or-nothing.** An earlier draft stored nothing at
+   all, which made privacy structural but forced every returning user to re-upload 400 words of
+   their own writing — the highest-friction step in the product. We now store, in four tiers with
+   separate defaults and separate consent (§5a). The rule that survives: **nothing is stored that
+   the user did not choose to store**, and the working document — usually the sensitive one — is
+   off by default.
 2. **The measurement is free; only generation costs money.** Everything deterministic runs in the
    browser. The paywall-shaped boundary sits exactly at the Claude call, which is also the only
    place spend can run away.
@@ -113,11 +116,12 @@ These are constraints, not aspirations. Each one rules something out.
         │  logs, spend,  │        │  claude-sonnet-5 │
         │  retries       │        └──────────────────┘
         └────────────────┘
-        ┌────────────────┐
-        │  D1: users,    │   counters and outcomes only.
-        │  documents,    │   no document text, ever.
-        │  daily_spend   │
-        └────────────────┘
+        ┌────────────────┐   ┌──────────────────────────┐
+        │  D1: users,    │   │  R2: encrypted text       │
+        │  voiceprints,  │──▶│   baselines/<user>/…      │
+        │  documents,    │   │   docs/<user>/<doc>/…     │
+        │  daily_spend   │   │   (opt-in, 30-day TTL)    │
+        └────────────────┘   └──────────────────────────┘
 ```
 
 One request path costs money: `/api/rewrite`. Everything else is free to serve.
@@ -136,13 +140,13 @@ One request path costs money: `/api/rewrite`. Everything else is free to serve.
 | **Rate Limiting binding** | `/api/rewrite`, `/api/auth` | Native, no Redis, no counter table |
 | **Turnstile** | Sign-in | Stops scripted account creation. Free |
 | **Analytics Engine** | Funnel events | Funnel without a third-party tracker, which would contradict §2.1 |
-| **Secrets** | API keys | `wrangler secret put` |
+| **R2** | Stored baselines and (opt-in) working documents | Blobs, cheap, write-once. Envelope-encrypted per user (§5a) so a leaked bucket is not readable prose |
+| **Secrets** | API keys, the storage master key | `wrangler secret put` |
 
 ### Deliberately not used
 
 | Service | Why not |
 |---------|---------|
-| **R2** | Storing documents is the one thing we promise not to do. Not creating the bucket is the strongest form of that promise |
 | **KV** | Sessions are signed cookies; JWKS caching uses the Cache API. Nothing else needs it |
 | **Durable Objects** | Credit accounting is a D1 transaction at this volume. Revisit only if a concurrency bug proves otherwise |
 | **Queues** | The user is watching. Every call is synchronous |
@@ -243,6 +247,81 @@ add a `sessions_revoked_after` timestamp on the user row and compare against `ia
 
 ---
 
+## 5a. Storage: four tiers, four decisions
+
+Storing everything and storing nothing are both wrong. The value is concentrated in the baseline;
+the risk is concentrated in the working document. Separate them.
+
+| Tier | What | Default | Why |
+|------|------|---------|-----|
+| **1. Fingerprint** | ~40 numbers: sentence stats, contraction rate, punctuation profile, specificity | **On** | Not prose. Writing cannot be reconstructed from it. Lets a returning user analyze a new document instantly with no upload |
+| **2. Baseline exemplars** | ~600–1,000 words the user chose as "things I wrote" | **On, revocable** | The funnel fix. Rewriting needs real sample text for style matching; numbers are not enough |
+| **3. Working documents** | The original, the AI version, the draft, the rewrite | **Off** | Enables resume-after-close and history. Also the most sensitive thing in the system — a reassignment letter names a real employee |
+| **4. Corpus use** | Tier-3 documents used to build measured tell profiles | **Off, separate consent** | Real pre-AI/post-AI pairs are the ideal corpus for §4 of the product spec and near-impossible to get otherwise. Never bundle this with tier 3 |
+
+Tier 4 deserves its own sentence: a user agreeing to *store* their document has not agreed to let it
+train anything. Two checkboxes, worded differently, never pre-ticked together.
+
+### Encryption
+
+R2 encrypts at rest, which protects against a lost disk and not against a leaked credential. For
+this document set that is not enough, so add envelope encryption:
+
+```ts
+// Per-user key, derived from a master secret held as a Worker secret.
+// A dumped bucket is ciphertext; decrypting it needs the Worker's secret too.
+async function userKey(masterSecret: string, userId: string): Promise<CryptoKey> {
+  const base = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(masterSecret), "HKDF", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "HKDF", hash: "SHA-256",
+      salt: new TextEncoder().encode("voiceprint.v1"),
+      info: new TextEncoder().encode(userId) },
+    base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+```
+
+Store `iv || ciphertext`. Rotating the master secret means re-wrapping, so version the key
+(`voiceprint.v1`) from day one rather than discovering you cannot rotate.
+
+### Retention
+
+| Object | Lifetime |
+|--------|----------|
+| Fingerprint | Until account deletion |
+| Baseline exemplars | Until the user replaces or deletes them |
+| Working documents | **30 days**, enforced by an R2 lifecycle rule *and* an `expires_at` check in code |
+| Corpus copies (tier 4) | Until consent is withdrawn |
+
+Two enforcement paths for working documents is deliberate: a lifecycle rule that silently stops
+applying is a quiet failure, and the code check turns it into a loud one.
+
+### Deletion has to be real
+
+- `DELETE /api/documents/:id` — R2 objects and the D1 row, immediately.
+- `DELETE /api/voiceprint` — exemplars and fingerprint.
+- `DELETE /api/me` — everything, including corpus copies, then the user row.
+
+A deletion flag that leaves bytes in a bucket is not deletion. Test it by deleting and then
+attempting a direct R2 `get`.
+
+### What this costs
+
+Text is tiny. 10,000 users at ~10KB of baseline each is 100MB, comfortably inside R2's free tier.
+Storage is not a cost decision here; it is only a risk decision.
+
+### The honest privacy statement
+
+The old claim — *there is nowhere to put your document* — was structurally true and a genuine
+differentiator. It is gone. Do not replace it with a vaguer version of itself. Say what is true:
+
+> We store the writing samples you give us, so you don't have to upload them again. We don't store
+> the documents you're fixing unless you ask us to, and those are deleted after 30 days. Everything
+> is encrypted with a key specific to your account. You can delete any of it, and deletion means the
+> bytes are gone.
+
+---
+
 ## 6. Data model
 
 ```sql
@@ -258,8 +337,20 @@ CREATE TABLE users (
   status         TEXT NOT NULL DEFAULT 'active'   -- active | blocked
 );
 
--- One row per document a user starts rewriting. Note what is absent:
--- no title, no text, no paragraphs, no questions, no answers.
+-- Tier 1 + 2 (see 5a). One row per user. The fingerprint is numbers; the
+-- exemplars live in R2 under exemplar_key, encrypted.
+CREATE TABLE voiceprints (
+  user_id        TEXT PRIMARY KEY REFERENCES users(id),
+  updated_at     INTEGER NOT NULL,
+  fingerprint    TEXT NOT NULL,          -- JSON, ~40 numbers
+  word_count     INTEGER NOT NULL,
+  sample_count   INTEGER NOT NULL,
+  register       TEXT NOT NULL,          -- formal | casual, drives lexicon choice
+  exemplar_key   TEXT                    -- R2 key; NULL if the user declined tier 2
+);
+
+-- One row per document a user starts rewriting. Text is stored only when
+-- stored = 1 (tier 3, off by default), and then only under r2_prefix.
 CREATE TABLE documents (
   id                 TEXT PRIMARY KEY,       -- client-generated UUID
   user_id            TEXT NOT NULL REFERENCES users(id),
@@ -271,9 +362,14 @@ CREATE TABLE documents (
   questions_used     INTEGER NOT NULL DEFAULT 0,
   voice_match_before INTEGER,
   voice_match_after  INTEGER,
-  exported           INTEGER NOT NULL DEFAULT 0
+  exported           INTEGER NOT NULL DEFAULT 0,
+  stored             INTEGER NOT NULL DEFAULT 0,   -- tier 3 consent
+  r2_prefix          TEXT,                          -- NULL unless stored
+  expires_at         INTEGER,                       -- NULL unless stored; created_at + 30d
+  corpus_consent     INTEGER NOT NULL DEFAULT 0     -- tier 4, separately given
 );
-CREATE INDEX idx_documents_user ON documents(user_id, created_at);
+CREATE INDEX idx_documents_user    ON documents(user_id, created_at);
+CREATE INDEX idx_documents_expires ON documents(expires_at) WHERE expires_at IS NOT NULL;
 
 CREATE TABLE daily_spend (
   day            TEXT PRIMARY KEY,           -- YYYY-MM-DD, UTC
@@ -286,7 +382,11 @@ CREATE TABLE daily_spend (
 );
 ```
 
-Two things worth noticing.
+Three things worth noticing.
+
+**The `voiceprints` table is what makes a second visit cheap.** A returning user lands with their
+fingerprint already loaded and can analyze a new document with zero uploads. That is the single
+biggest funnel improvement available, and it is one small table.
 
 **`voice_match_before` and `voice_match_after` are the product metric**, stored for free as two
 integers. Median improvement across documents tells you whether the thing works better than any
@@ -325,6 +425,22 @@ ON CONFLICT(id) DO UPDATE SET last_seen_at = ?3, email = ?2;
 
 `rewritesAvailable` is false when the daily spend ceiling is hit, so the client can show the
 degraded state before the user writes anything.
+
+### `GET | PUT | DELETE /api/voiceprint`
+
+```
+GET    ← { fingerprint, wordCount, sampleCount, register, hasExemplars, updatedAt } | 404
+PUT    → { samples: string[], fingerprint, register }   -- client computes the fingerprint
+       ← { ok, wordCount, sampleCount }
+DELETE ← { ok }
+```
+
+`PUT` encrypts the joined samples and writes them to `baselines/<userId>/current`, then upserts the
+row. The client still computes the fingerprint — the engine only exists in the browser, and there is
+no reason to port it twice.
+
+Reject a `PUT` under 400 words with `{ reason: "baseline_too_short" }`. The gate belongs on the
+server too, not only in the UI.
 
 ### `POST /api/questions`
 
@@ -374,14 +490,25 @@ output_config: {
 }
 ```
 
+### `GET /api/documents` · `DELETE /api/documents/:id` · `DELETE /api/me`
+
+History, per-document deletion, account deletion. `GET` returns metadata always and text only for
+documents where `stored = 1`. The two `DELETE`s remove R2 objects before the D1 rows, so a failure
+mid-way leaves an orphaned row rather than orphaned bytes.
+
 ### `POST /api/rewrite`
 
 The only expensive endpoint. Streams.
 
 ```
-→ { docId, paragraph, answers: string[], constraints: {...}, exemplars: [...], assistant }
+→ { docId, paragraph, answers: string[], constraints: {...}, assistant,
+    exemplars?: string[] }        -- omitted when the server has a stored baseline
 ← text/event-stream  (Anthropic SSE, passed through)
 ```
+
+When `exemplars` is absent the Worker loads and decrypts the stored baseline. That is the common
+path once a user has been here before, and it is strictly better than the client resending — see
+§8.
 
 Order of operations matters:
 
@@ -395,12 +522,8 @@ Order of operations matters:
 6. Call Claude, stream the body straight back.
 7. After the stream closes, record usage (see §9).
 
-The client sends `exemplars` and `constraints` on every call because the server stores nothing.
-That is the cost of §2.1 and it is worth paying.
-
-**The client must serialize the style block byte-identically across every call in a session.**
-Sort keys, fix number formatting, no timestamps. A single varying byte moves the cache prefix and
-the hit rate silently drops to zero. See §8.
+If the request carries a stored `docId` with `stored = 1`, persist the accepted rewrite alongside
+the original under `docs/<userId>/<docId>/` after the stream closes, via `ctx.waitUntil`.
 
 ---
 
@@ -463,6 +586,14 @@ Three rules that keep it working:
   and it expires, they pay one more write. Do not build keep-alive requests for a free tier.
 - **Verify it.** Log `usage.cache_read_input_tokens`. If it is zero across a session, something in
   the style block is varying between calls and the cache is doing nothing.
+
+**Stored baselines make the cache more reliable, not just more convenient.** When the client
+resent exemplars on every call, a byte-identical prefix depended on the browser serializing the
+style block the same way every time — sorted keys, fixed number formatting, no timestamps — and a
+single stray byte silently dropped the hit rate to zero with no error anywhere. With the baseline
+in R2, the **Worker** renders that block from one code path, so identical bytes are the default
+rather than a discipline. Keep the client path working for first-time users, and make both paths
+call the same `renderStyleBlock()` so they cannot drift.
 
 ### Constraints, generated from the measurement
 
@@ -585,8 +716,14 @@ smoothed cover letter says *eager to contribute*, a smoothed Slack post says *Ab
 sentence length separate the two cleanly), never from the document being fixed — the document has
 already been pushed toward formal, which is the problem.
 
-Session state lives in memory plus `sessionStorage` for crash recovery. Nothing in `localStorage`,
-nothing that outlives the tab — consistent with §2.1.
+Session state lives in memory plus `sessionStorage` for crash recovery. Nothing in `localStorage`:
+anything meant to outlive the tab belongs in the account (§5a), where the user can see and delete
+it, not in browser storage they will never think to clear.
+
+Storage consent is UI, not a settings page. Tier 2 is offered at the moment it pays off — *"save
+these samples so you don't have to find them again?"* — right after the first successful analysis.
+Tier 3 is offered only if the user does something that implies wanting it, such as closing a
+half-finished document. Tier 4 is never offered inline; it lives in account settings, off.
 
 A scanned PDF with no text layer is rejected with a clear message. OCR is a later problem.
 
@@ -655,12 +792,16 @@ is smallest, which is the funnel risk in §17.
 | Forged identity | Full RS256 verification against Google's JWKS, plus `aud` / `iss` / `exp` / `email_verified` |
 | Bot signups | Turnstile on `/api/auth/google` |
 | Using us as a free rewriting API | Google account + 2 documents + rate limit + per-doc cap. The product spec's baseline gate also means a caller must supply 400 words of real writing first |
-| Document leakage | No storage layer exists. Do not log request bodies — `console.log(body)` in a debugging session is the realistic way this promise gets broken |
+| Stored document exposure | Envelope encryption per user (§5a): a dumped R2 bucket is ciphertext without the Worker's master secret. Working documents off by default and deleted after 30 days, so the standing blast radius is baselines, not reassignment letters |
+| Document leakage via logs | Never log request or response bodies. `console.log(body)` during a debugging session is the realistic way this leaks, and it now also lands in Workers logs that outlive the request |
+| Cross-user access | Every R2 key is prefixed with the authenticated `userId` and built server-side from the session, never from a request field. No endpoint accepts a raw R2 key |
+| Consent drift | Tier 3 and tier 4 are separate columns, separate checkboxes, never pre-ticked. Storing is not training |
 | XSS | CSP allowing only self and `accounts.google.com`. Preact escapes by default; no `dangerouslySetInnerHTML` on user text |
 | PII | Email and Google `sub`. Deletion endpoint removes both rows. Say so in the privacy page |
 
-The privacy page should state plainly: *we store your email and counts of what you did. We do not
-store your documents, and there is no system here that could.*
+The privacy page uses the wording in §5a. The old claim — *there is nowhere to put your document* —
+was structurally true and is no longer available; replacing it with a vaguer version of the same
+sentence would be worse than the honest one.
 
 ---
 
@@ -709,6 +850,7 @@ voiceprint/
   "compatibility_date": "2026-09-15",
   "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
   "d1_databases": [{ "binding": "DB", "database_name": "voiceprint", "database_id": "…" }],
+  "r2_buckets": [{ "binding": "DOCS", "bucket_name": "voiceprint-docs" }],
   "analytics_engine_datasets": [{ "binding": "AE", "dataset": "voiceprint_events" }],
   "ratelimits": [{ "name": "RL", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } }],
   "vars": { "CF_ACCOUNT_ID": "…", "GOOGLE_CLIENT_ID": "…", "DAILY_USD_CAP": "10" }
@@ -720,6 +862,9 @@ wrangler d1 execute voiceprint --file=db/schema.sql
 wrangler secret put ANTHROPIC_API_KEY
 wrangler secret put SESSION_SECRET
 wrangler secret put TURNSTILE_SECRET
+wrangler secret put STORAGE_MASTER_KEY
+wrangler r2 bucket create voiceprint-docs
+wrangler r2 bucket lifecycle add voiceprint-docs --prefix docs/ --expire-days 30
 npm run build && wrangler deploy
 ```
 
@@ -735,6 +880,7 @@ registered in the Google Cloud console.
 |---|------|
 | Workers paid plan | $5/month |
 | D1 | Free tier covers it comfortably — three small tables, a handful of writes per user |
+| R2 | Free tier. 10,000 users at ~10KB of baseline is 100MB against a 10GB allowance |
 | Static assets, AI Gateway, Turnstile | Free |
 | Analytics Engine | Included in the Workers plan |
 | **Infrastructure** | **~$5/month** |
@@ -756,6 +902,11 @@ deadline-week spike from surprising you.
 | **4** | 8–9 | `/api/questions`, interview UI |
 | **5** | 10–12 | `/api/rewrite`, streaming, credits, caps, spend ceiling, degraded mode |
 | **6** | 13–14 | .docx export, what-was-cut list, before/after, privacy page |
+| **7** | 15–16 | Storage: R2 + envelope encryption, `/api/voiceprint`, saved-baseline path in `/api/rewrite`, history, deletion endpoints |
+
+Phase 7 is last but should not be cut. Until it ships, every returning user re-uploads their
+baseline — which is the step the funnel is most likely to die on, so the value of storage is highest
+exactly where the current design is weakest.
 
 Phase 3 is a real launch. An analyzer that costs nothing to serve and tells someone which
 paragraphs stopped sounding like them is worth putting in front of users while phases 4–6 are
@@ -769,17 +920,20 @@ being built — and the traffic tells you whether to build them at all.
    before the free tier's model is locked in.
 2. **Is 2 documents right?** A user with one document who never returns is a worse outcome than a
    slightly higher bill. Watch how many people use their second credit before tuning.
-3. **Where does a normal person find 400 words they wrote?** This is the biggest unvalidated
-   assumption in the design, and it got harder once the audience stopped being academics with a
-   folder of statements. Sent email is the one source almost everybody has — "paste three emails
-   you sent" is probably a better prompt than "upload a writing sample", and it costs nothing to
-   test in Phase 3. If the `upload_baseline ÷ signin` rate is bad, this is the first thing to
-   change, before anything about rewriting.
+3. **Where does a normal person find 400 words they wrote?** Still the biggest unvalidated
+   assumption, and storage only halves it: it removes the problem on visit two and leaves it fully
+   intact on visit one, which is where people quit. Sent email is the one source almost everybody
+   has — "paste three emails you sent" is probably a better prompt than "upload a writing sample",
+   and it costs nothing to test in Phase 3. If `upload_baseline ÷ signin` is bad, fix this before
+   anything about rewriting.
 4. **Do we need alignment between the original and the draft** to be smarter than token overlap?
    Only if the `originalText` field in `/api/questions` turns out to be frequently wrong.
-5. **Is the credit model the wrong shape for repeat users?** Two documents fits someone with one
+5. **Does anyone actually accept tier 3?** The value of storing working documents is assumed, not
+   shown. If almost nobody opts in, drop it and keep only baselines — less code, less risk, nearly
+   all the benefit.
+6. **Is the credit model the wrong shape for repeat users?** Two documents fits someone with one
    application to fix. It does not fit a salesperson who would run this on outreach every day —
    and that person is the one who would plausibly pay. Do not build for them in v1, but watch
    whether anyone burns both credits within an hour; that is the signal.
-6. **Deletion.** v1 deletes on request. Automatic deletion of inactive accounts after N months is
-   easy to add and worth doing before there is much data to delete.
+7. **Automatic deletion of inactive accounts** after N months. Easy to add, and much easier to add
+   before there is data to delete than after.
