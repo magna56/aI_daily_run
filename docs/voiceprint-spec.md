@@ -336,6 +336,14 @@ against. That is an acceptable trade for five days, on two conditions — the UI
 
 | Segment | Document | Urgency |
 |---------|----------|---------|
+> **Audience correction.** The job-application framing below came from one person's problem and is
+> narrower than the product. The real shape is *any document where a named human is accountable for
+> the words*: reassignment and staffing letters, performance reviews, recommendation letters,
+> internal memos, grant sections, personal essays. A manager who runs twelve reassignment letters
+> through an AI and gets twelve identical-sounding letters has exactly this problem and is not job
+> hunting. `docs/voiceprint-build-spec.md` §1 carries the corrected framing; the segments here are
+> examples, not the market.
+
 | **Academic job seekers** | Research / teaching / diversity statements, cover letters | Very high, seasonal, high stakes |
 | Grad + professional school applicants | SOPs, personal statements | Very high, seasonal |
 | Career switchers | Cover letters at volume | Medium, bursty |
