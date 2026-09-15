@@ -1,0 +1,5 @@
+/api/*  /api/:splat  200
+/frontier-2026-09-05-the-two-things-missing-from-most-coding-agent-requests/* /2026-09-06-the-two-things-missing-from-most-coding-agent-requests/ 301
+/2026-09-05-how-an-mcp-tool-puts-a-clickable-app-inside-the-chat/* /2026-09-05-how-an-mcp-tool-sends-back-an-image-a-file-or-audio/ 301
+/frontier-2026-09-13-why-the-two-best-layers-to-prune-are-the-wrong-pair/* /frontier-2026-09-13-how-to-choose-what-to-cut-when-you-shrink-a-model/ 301
+/*  /index.html  200

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Q, K, V and the growing KV cache</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0a1210;--panel:#13201c;--line:#2a4138;--ink:#eefaf4;--muted:#9ab5aa;--mint:#74e0a3;--gold:#ffd166;--blue:#7ec8e3;--red:#ff8b7a}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 10% 0,#173028 0,transparent 42%),var(--bg);color:var(--ink);font:15px/1.45 ui-sans-serif,system-ui,sans-serif}
+    [data-visualizer]{max-width:1120px;margin:auto;padding:clamp(16px,4vw,40px)}
+    .kicker{color:var(--mint);font:800 11px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}
+    h1{font-size:clamp(24px,4vw,40px);line-height:1.08;margin:6px 0 8px}
+    .lede{max-width:760px;color:var(--muted);margin:0 0 18px}
+    .controls{display:grid;grid-template-columns:1fr 1fr auto auto;gap:14px;align-items:end;background:var(--panel);border:1px solid var(--line);padding:14px;border-radius:14px}
+    label{font-weight:700}output{float:right;color:var(--gold);font-variant-numeric:tabular-nums}
+    input[type=range]{display:block;width:100%;margin-top:8px;accent-color:var(--mint)}
+    button{padding:9px 12px;border-radius:9px;border:1px solid #3d5c50;background:#173028;color:var(--ink);font-weight:700;cursor:pointer}
+    button[aria-pressed="true"]{border-color:var(--mint);color:var(--mint)}
+    button:focus-visible,input:focus-visible{outline:3px solid #74e0a366;outline-offset:2px}
+    .qkv{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+    .box{border:1px solid var(--line);border-radius:12px;padding:12px;background:#0f1a16}
+    .box h2{margin:0 0 6px;font-size:13px}
+    .box p{margin:0;color:var(--muted);font-size:13px}
+    .box.q{border-top:3px solid var(--gold)}
+    .box.k{border-top:3px solid var(--blue)}
+    .box.v{border-top:3px solid var(--mint)}
+    .heat{display:grid;gap:3px;margin-top:8px}
+    .heat-row{display:grid;grid-template-columns:28px repeat(4,1fr);gap:3px;align-items:center}
+    .cell{height:22px;border-radius:4px;display:grid;place-items:center;font:700 10px ui-monospace,monospace;color:#06110c}
+    .lab{color:var(--muted);font-size:11px}
+    .split{display:grid;grid-template-columns:1.1fr .9fr;gap:14px;margin-top:14px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+    .card h2{margin:0 0 8px;font-size:15px}
+    .cache{display:flex;align-items:end;gap:3px;min-height:90px;margin:12px 0}
+    .col{flex:1;background:#1a2e27;border-radius:3px 3px 0 0;display:flex;flex-direction:column-reverse}
+    .col i{display:block;height:8px;margin-top:2px;border-radius:2px}
+    .col i.k{background:var(--blue)}.col i.v{background:var(--mint)}.col i.re{background:var(--red)}
+    .nums{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .nums div{background:#0f1a16;border-radius:10px;padding:10px}
+    .nums b{display:block;color:var(--muted);font-size:11px;text-transform:uppercase}
+    .nums strong{font-size:22px;font-variant-numeric:tabular-nums}
+    .note{color:var(--muted);font-size:13px;margin:10px 0 0}
+    @media(max-width:800px){.controls,.qkv,.split{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer="how-the-forward-pass-runs">
+  <div class="kicker">Forward pass · engineer terms</div>
+  <h1>Query now. Reuse the index.</h1>
+  <p class="lede">Q is what this token looks for, K is how a past token wants to be found, V is the payload you mix in. A feature is just one of those vectors. The KV cache keeps K and V so the next word does not rebuild the whole prefix.</p>
+  <section class="controls" aria-label="Sequence controls">
+    <label>Prompt tokens <output id="nOut" for="n">16</output>
+      <input id="n" type="range" min="4" max="64" step="4" value="16">
+    </label>
+    <label>New tokens <output id="tOut" for="t">16</output>
+      <input id="t" type="range" min="4" max="64" step="4" value="16">
+    </label>
+    <button id="cache" type="button" aria-pressed="true">KV cache on</button>
+    <button id="reset" type="button">Reset</button>
+  </section>
+  <section class="qkv" aria-label="Q K V">
+    <div class="box q"><h2>Q · query</h2><p>The lookup for the token you are writing now. One new row per decode step.</p></div>
+    <div class="box k"><h2>K · key</h2><p>The index entry each past token published. Cached so you do not re-project it.</p></div>
+    <div class="box v"><h2>V · value</h2><p>The payload mixed in after the soft join. Also cached, per layer and head.</p></div>
+  </section>
+  <section class="split">
+    <article class="card">
+      <h2>Toy attention weights (4 tokens)</h2>
+      <div class="heat" id="heat" role="img" aria-label="Attention weight grid"></div>
+      <p class="note">Softmax rows. A later layer just reads these mixed vectors — that is all “features” has to mean here.</p>
+    </article>
+    <article class="card">
+      <h2>Cache growth vs recompute</h2>
+      <div class="cache" id="cacheViz" aria-hidden="true"></div>
+      <div class="nums">
+        <div><b>K/V projections</b><strong id="proj">—</strong></div>
+        <div><b>vs the other mode</b><strong id="ratio">—</strong></div>
+      </div>
+      <p class="note" id="scale"></p>
+    </article>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $=s=>document.querySelector(s);
+  const nEl=$("#n"), tEl=$("#t"), cacheBtn=$("#cache");
+  const W=[[0.29,0.18,0.31,0.22],[0.18,0.29,0.35,0.19],[0.21,0.20,0.43,0.16],[0.26,0.22,0.30,0.22]];
+  function proj(n,t,cache){return cache?n+t:Array.from({length:t},(_,i)=>n+i+1).reduce((a,b)=>a+b,0);}
+  function shade(p){const g=Math.round(40+p*200);return `rgb(${Math.round(g*0.4)},${g},${Math.round(g*0.7)})`;}
+  function render(){
+    const n=+nEl.value, t=+tEl.value, cache=cacheBtn.getAttribute("aria-pressed")==="true";
+    $("#nOut").textContent=n; $("#tOut").textContent=t;
+    cacheBtn.textContent=cache?"KV cache on":"KV cache off";
+    $("#heat").innerHTML='<div class="heat-row"><span></span><span class="lab">k0</span><span class="lab">k1</span><span class="lab">k2</span><span class="lab">k3</span></div>'+
+      W.map((row,i)=>`<div class="heat-row"><span class="lab">q${i}</span>${row.map(v=>`<span class="cell" style="background:${shade(v)}">${v.toFixed(2)}</span>`).join("")}</div>`).join("");
+    const cols=Math.min(20, n+t);
+    $("#cacheViz").innerHTML=Array.from({length:cols},(_,i)=>{
+      const isPrompt=i<Math.round(cols*n/(n+t));
+      if(cache) return `<div class="col" title="${isPrompt?"prefill":"decode"}"><i class="v"></i><i class="k"></i></div>`;
+      return `<div class="col">${"<i class='re'></i>".repeat(isPrompt?2:3)}</div>`;
+    }).join("");
+    const yes=proj(n,t,true), no=proj(n,t,false), used=cache?yes:no, other=cache?no:yes;
+    $("#proj").textContent=used.toLocaleString();
+    $("#ratio").textContent=(other/used).toFixed(1)+"×";
+    const no2=proj(4096,512,false), yes2=proj(4096,512,true);
+    $("#scale").textContent=`This slider: ${no.toLocaleString()} without cache vs ${yes.toLocaleString()} with. At 4,096+512 (the write-up): ${no2.toLocaleString()} vs ${yes2.toLocaleString()} — 484×.`;
+  }
+  nEl.addEventListener("input",render); tEl.addEventListener("input",render);
+  cacheBtn.addEventListener("click",()=>{
+    const on=cacheBtn.getAttribute("aria-pressed")!=="true";
+    cacheBtn.setAttribute("aria-pressed", String(on));
+    render();
+  });
+  $("#reset").addEventListener("click",()=>{nEl.value=16;tEl.value=16;cacheBtn.setAttribute("aria-pressed","true");render();});
+  render();
+  const reportHeight=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

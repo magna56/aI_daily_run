@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'" />
+<title>How a coding-agent hook decides to fire</title>
+<style>
+  :root {
+    --bg: #111217; --ink: #e7e2d8; --muted: #9a9488; --dim: #857f70;
+    --line: rgba(255,255,255,.11); --card: rgba(255,255,255,.03);
+    --accent: #a78bfa; --accent2: #c4b5fd;
+    --yes: #6ec18e; --no: #d9744e;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 20px 16px 28px; }
+  h1 { font-size: 17px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 13.5px; margin: 0 0 18px; }
+
+  .field { margin: 0 0 12px; }
+  .field label { display: block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin: 0 0 5px; }
+  .field input {
+    width: 100%; font-family: var(--mono); font-size: 13.5px; padding: 9px 11px;
+    background: rgba(0,0,0,.28); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px;
+  }
+  .field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
+  .presets button {
+    font-family: var(--mono); font-size: 11.5px; padding: 5px 9px; cursor: pointer;
+    background: var(--card); color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px;
+  }
+  .presets button:hover { color: var(--ink); border-color: var(--accent); }
+  .presets button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .chain { display: grid; gap: 10px; margin: 0 0 16px; }
+  .step { border: 1px solid var(--line); border-left: 3px solid var(--dim); border-radius: 8px; padding: 11px 13px; background: var(--card); }
+  .step.pass { border-left-color: var(--yes); }
+  .step.fail { border-left-color: var(--no); }
+  .step.skip { opacity: .45; }
+  .step h2 { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 0 0 6px; font-weight: 600; }
+  .verdict { font-family: var(--mono); font-size: 13px; font-weight: 700; }
+  .verdict.y { color: var(--yes); } .verdict.n { color: var(--no); }
+  .step p { margin: 5px 0 0; font-size: 13px; color: var(--muted); }
+  .step code { font-family: var(--mono); background: rgba(167,139,250,.13); padding: 1px 5px; border-radius: 4px; color: var(--accent2); }
+
+  .parts { margin: 7px 0 0; display: flex; flex-wrap: wrap; gap: 5px; }
+  .part { font-family: var(--mono); font-size: 11.5px; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+  .part.hit { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 700; }
+
+  .out { border: 1px solid var(--line); border-radius: 8px; padding: 13px; background: rgba(0,0,0,.22); }
+  .out .big { font-family: var(--mono); font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+  .out p { margin: 0; font-size: 13px; color: var(--muted); }
+  .presets button.reset { margin-left: auto; border-color: var(--accent); color: var(--accent2); }
+  .note { margin: 14px 0 0; font-size: 12.5px; color: var(--dim); border-left: 2px solid var(--line); padding-left: 11px; }
+</style>
+</head>
+<body>
+<div class="wrap" data-visualizer="2026-08-25">
+  <h1>How a hook decides to fire</h1>
+  <p class="sub">Two filters, in order, as documented. Change the tool-name matcher, the command <code>if</code>, or the command itself &mdash; and watch which layer lets the handler run, or skips it with no log.</p>
+
+  <div class="presets" id="presets"><button type="button" id="reset" class="reset">Reset</button></div>
+
+  <div class="field">
+    <label for="matcher">matcher &mdash; filters on tool name</label>
+    <input id="matcher" value="Bash" spellcheck="false" />
+  </div>
+  <div class="field">
+    <label for="rule">if &mdash; filters on tool input</label>
+    <input id="rule" value="Bash(rm *)" spellcheck="false" />
+  </div>
+  <div class="field">
+    <label for="cmd">the command the agent wants to run</label>
+    <input id="cmd" value="echo $(rm -rf /)" spellcheck="false" />
+  </div>
+
+  <div class="chain">
+    <div class="step" id="s1"><h2>1 · matcher</h2><div id="s1b"></div></div>
+    <div class="step" id="s2"><h2>2 · if condition</h2><div id="s2b"></div></div>
+  </div>
+  <div class="out" id="out"></div>
+  <p class="note" id="note"></p>
+</div>
+
+<script>
+(function () {
+  var EXACT_ONLY = /^[A-Za-z0-9_\-, |,]+$/;
+  var ASSIGNMENT = /^\s*(?:[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|\S*)\s+)+/;
+  var SUBST = /\$\(([^()]*)\)|`([^`]*)`/g;
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
+
+  function matcherMode(m) {
+    if (!m || m === "*") return "match-all";
+    return EXACT_ONLY.test(m) ? "exact-list" : "regex-unanchored";
+  }
+  function matchesTool(m, tool) {
+    var mode = matcherMode(m);
+    if (mode === "match-all") return true;
+    if (mode === "exact-list") return m.split(/[|,]/).map(function (x) { return x.trim(); }).indexOf(tool) !== -1;
+    try { return new RegExp(m).test(tool); } catch (e) { return false; }
+  }
+  function subcommands(cmd) {
+    var out = [], inner = [], mm;
+    SUBST.lastIndex = 0;
+    while ((mm = SUBST.exec(cmd)) !== null) inner.push(mm[1] || mm[2]);
+    cmd.replace(SUBST, " ").split(/&&|\|\||[;|\n]/).forEach(function (p) {
+      p = p.replace(ASSIGNMENT, "").trim();
+      if (p) out.push(p);
+    });
+    inner.forEach(function (n) { out = out.concat(subcommands(n)); });
+    return out;
+  }
+  function globToRe(g) {
+    return new RegExp("^" + g.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
+  }
+  function parseRule(r) {
+    var m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)\s*$/.exec(r);
+    return m ? { tool: m[1], pat: m[2] } : { tool: (r || "").trim(), pat: null };
+  }
+
+  var els = ["matcher", "rule", "cmd", "s1", "s1b", "s2", "s2b", "out", "note"].reduce(function (a, id) { a[id] = document.getElementById(id); return a; }, {});
+
+  var PRESETS = [
+    ["assignments stripped", "Bash", "Bash(git *)", "FOO=bar git push"],
+    ["chain split", "Bash", "Bash(git *)", "npm test && git push"],
+    ["descends into $()", "Bash", "Bash(rm *)", "echo $(rm -rf /)"],
+    ["harmless $()", "Bash", "Bash(rm *)", "echo $(date)"],
+    ["just a string", "Bash", "Bash(rm *)", 'echo "rm is dangerous"'],
+    ["unanchored regex", "mcp__github__.*", "Bash(rm *)", "rm x"],
+    ["nothing catches it", "Bash", "Bash(rm *)", "find . -delete"]
+  ];
+
+  function render() {
+    var matcher = els.matcher.value, rule = els.rule.value, cmd = els.cmd.value;
+    var tool = parseRule(rule).tool || "Bash";
+
+    var mode = matcherMode(matcher);
+    var m1 = matchesTool(matcher, tool);
+    els.s1.className = "step " + (m1 ? "pass" : "fail");
+    els.s1b.innerHTML =
+      '<span class="verdict ' + (m1 ? "y" : "n") + '">' + (m1 ? "fires" : "stops here") + "</span>" +
+      "<p>Mode is <code>" + mode + "</code>, decided by the characters in the string &mdash; not by intent. " +
+      (mode === "regex-unanchored"
+        ? "No <code>^</code>/<code>$</code>, so it matches anywhere inside the tool name."
+        : "Exact match against a <code>|</code>-separated list.") + "</p>";
+
+    var parsed = parseRule(rule), parts = [], m2 = false;
+    if (!m1) {
+      els.s2.className = "step skip";
+      els.s2b.innerHTML = '<span class="verdict">not reached</span><p>The matcher already rejected this call.</p>';
+    } else if (parsed.pat === null) {
+      m2 = true;
+      els.s2.className = "step pass";
+      els.s2b.innerHTML = '<span class="verdict y">fires</span><p>No argument pattern, so every input matches.</p>';
+    } else {
+      parts = subcommands(cmd);
+      var re = globToRe(parsed.pat);
+      m2 = parts.some(function (p) { return re.test(p); });
+      els.s2.className = "step " + (m2 ? "pass" : "fail");
+      els.s2b.innerHTML =
+        '<span class="verdict ' + (m2 ? "y" : "n") + '">' + (m2 ? "fires" : "stops here") + "</span>" +
+        "<p>The shell would really run these &mdash; assignments stripped, chains split, <code>$()</code> descended into. Highlighted ones match <code>" + esc(parsed.pat) + "</code>:</p>" +
+        '<div class="parts">' + (parts.length ? parts.map(function (p) {
+          return '<span class="part' + (re.test(p) ? " hit" : "") + '">' + esc(p) + "</span>";
+        }).join("") : '<span class="part">(nothing)</span>') + "</div>";
+    }
+
+    var fires = m1 && m2;
+    els.out.innerHTML =
+      '<p class="big" style="color:' + (fires ? "var(--yes)" : "var(--no)") + '">' +
+      (fires ? "handler runs" : "handler never runs") + "</p>" +
+      "<p>" + (fires
+        ? "Your script is invoked and must still re-check the input itself — the <code>if</code> is best-effort and fails open."
+        : "No handler, no log line, no prompt. Nothing records that a rule was considered and skipped.") + "</p>";
+
+    els.note.textContent = fires
+      ? "Every match above is documented behaviour. The rule is cleverer than most people expect — and still not an enforcement boundary."
+      : "This is the direction that matters: silent misses. A command the pattern cannot describe passes without a trace, which is why hard policy belongs in permissions.deny.";
+
+    postHeight();
+  }
+
+  var box = document.getElementById("presets");
+  PRESETS.forEach(function (p) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = p[0];
+    b.addEventListener("click", function () {
+      els.matcher.value = p[1]; els.rule.value = p[2]; els.cmd.value = p[3]; render();
+    });
+    box.appendChild(b);
+  });
+  ["matcher", "rule", "cmd"].forEach(function (id) { els[id].addEventListener("input", render); });
+
+  // Back to the article's own example -- the one whose result the write-up quotes.
+  var DEFAULTS = { matcher: "Bash", rule: "Bash(rm *)", cmd: "echo $(rm -rf /)" };
+  document.getElementById("reset").addEventListener("click", function () {
+    els.matcher.value = DEFAULTS.matcher;
+    els.rule.value = DEFAULTS.rule;
+    els.cmd.value = DEFAULTS.cmd;
+    render();
+  });
+
+  function postHeight() {
+    try {
+      parent.postMessage({
+        type: "adl-visualize-height",
+        height: document.documentElement.scrollHeight
+      }, "*");
+    } catch (e) {}
+  }
+  window.addEventListener("load", postHeight);
+  if (window.ResizeObserver) new ResizeObserver(postHeight).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>

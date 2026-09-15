@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#111217" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Privacy Policy — The AI Commit</title>
+<meta name="description" content="What data The AI Commit collects — localStorage, optional GitHub sign-in, and the newsletter — and what it doesn't." />
+<style>
+  :root {
+    --bg: #111217; --ink: #e7e2d8; --muted: #9a9488; --dim: #857f70;
+    --line: rgba(255,255,255,.10); --accent: #a78bfa; --accent2: #c4b5fd;
+    --sans: "Source Sans 3", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); color: var(--ink); background: var(--bg); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 56px 24px 90px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .back { font-family: var(--mono); font-size: 12.5px; color: var(--dim); margin-bottom: 28px; display: inline-block; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  .updated { font-family: var(--mono); font-size: 12px; color: var(--dim); margin: 0 0 40px; text-transform: uppercase; letter-spacing: .06em; }
+  h2 { font-size: 17px; margin: 36px 0 10px; color: var(--ink); }
+  p, li { color: #cfcabf; font-size: 14.5px; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  code { font-family: var(--mono); font-size: 13px; background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; }
+  .note { border-left: 2px solid var(--accent); padding: 4px 0 4px 16px; margin: 20px 0; color: var(--muted); font-size: 13.5px; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 40px 0; }
+  footer { color: var(--dim); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← The AI Commit</a>
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated 2026-08-23</p>
+
+  <p>The AI Commit (theaicommit.com) is a solo, personal project. This page explains
+  plainly what data the site touches and what it doesn't. You can read and run everything
+  here without an account. The two optional exceptions are GitHub sign-in (to publish a
+  gist from the Code tab) and the newsletter (if you type in an email).</p>
+
+  <h2>What we collect</h2>
+  <p>Most of what the site stores never leaves your browser. It's kept in
+  <code>localStorage</code>:</p>
+  <ul>
+    <li><strong>Reading progress</strong> — which sessions you've marked as read, so the
+    grid can show you what's new. Per-browser, never leaves your device.</li>
+    <li><strong>Code editor edits</strong> — if you modify a <code>code_example.py</code>
+    in the interactive Run panel, your edit is cached locally for 24 hours so a refresh
+    doesn't lose it. Same as above: local only, expires automatically.</li>
+    <li><strong>GitHub sign-in</strong> — the Code tab has an optional "Publish to GitHub"
+    button that creates a private Gist of your (possibly edited) copy of a code example
+    in your own GitHub account. Signing in uses GitHub's standard OAuth flow: after you
+    authorize, GitHub sends a one-time code that a small serverless function
+    (Cloudflare Pages Function) exchanges for an access token — that exchange does not
+    log, store, or retain anything; it forwards the code and returns the token. The
+    resulting token and your GitHub username are then kept in your browser's
+    <code>localStorage</code> — not in a cookie, not in our database. Publishing a gist
+    calls GitHub's API directly from your browser using that token; we never see the
+    gist's content. Sign out anytime from the Code tab to remove the token from your
+    browser (this doesn't revoke it on GitHub's side — do that from
+    <a href="https://github.com/settings/applications" target="_blank" rel="noopener">github.com/settings/applications</a>
+    if you want to fully revoke access).</li>
+  </ul>
+
+  <h2>Newsletter</h2>
+  <p>If you subscribe, we store the email address you typed so we can send you one email
+  when a new daily session ships. That's the only reason we keep it.</p>
+  <ul>
+    <li><strong>What we store</strong> — your email, whether the subscription is active or
+    unsubscribed, an unsubscribe token, and timestamps for those events. Nothing else:
+    no name, no job title, no tracking pixel, no open or click analytics.</li>
+    <li><strong>Where it lives</strong> — a Cloudflare D1 database in our Cloudflare
+    account, reached only by the signup / confirm / unsubscribe / send Functions on
+    theaicommit.com. The GitHub Pages mirror has no server of its own; a signup from
+    that mirror is posted to theaicommit.com.</li>
+    <li><strong>Who else sees it</strong> — if mail is configured, the welcome and
+    session emails are sent through
+    <a href="https://resend.com/" target="_blank" rel="noopener">Resend</a>, who process
+    the address solely to deliver those messages. We don't sell, rent, or share the list.</li>
+    <li><strong>How to leave</strong> — every newsletter includes an unsubscribe link that
+    marks the address unsubscribed immediately. You can also email
+    <a href="mailto:theaicommit@gmail.com">theaicommit@gmail.com</a> and we'll do it.</li>
+  </ul>
+
+  <h2>What our host sees</h2>
+  <p>The site is served by Cloudflare Pages. Like essentially any web host, Cloudflare's
+  edge servers process standard connection metadata to serve requests and defend against
+  abuse — things like your IP address and request timing, in server logs we don't
+  separately collect or analyze ourselves. See
+  <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare's privacy policy</a>
+  for what they do with that.</p>
+
+  <h2>No cookies, no tracking, no ads</h2>
+  <p>We don't set cookies, run analytics scripts, embed third-party trackers, or serve
+  ads. The only client-side storage is the <code>localStorage</code> described above —
+  including the GitHub sign-in state, which is a token in <code>localStorage</code>,
+  not a cookie or a session we track.</p>
+
+  <h2>Running code in your browser</h2>
+  <p>The Code tab lets you execute <code>code_example.py</code> directly in your browser
+  via <a href="https://pyodide.org/" target="_blank" rel="noopener">Pyodide</a> (Python
+  compiled to WebAssembly), loaded from a CDN (jsdelivr). That execution happens entirely
+  on your device — nothing you run is sent to us. jsdelivr's own handling of that request
+  is governed by their policies, not ours.</p>
+
+  <h2>Children's privacy</h2>
+  <p>This site is not directed at children under 13, and we don't knowingly collect
+  personal information from them. If you believe a child subscribed, email
+  <a href="mailto:theaicommit@gmail.com">theaicommit@gmail.com</a> and we'll delete the
+  address.</p>
+
+  <h2>If this changes</h2>
+  <div class="note">
+  Comments and a fuller account system are still on the table. Anything that collects
+  more than an email for the newsletter will be described here before it ships, not
+  after.
+  </div>
+
+  <h2>Contact</h2>
+  <p>Questions about this policy: <a href="mailto:theaicommit@gmail.com">theaicommit@gmail.com</a></p>
+
+  <hr />
+  <footer>
+    <a href="/terms.html">Terms & Conditions</a> · <a href="/">Home</a>
+  </footer>
+</div>
+</body>
+</html>

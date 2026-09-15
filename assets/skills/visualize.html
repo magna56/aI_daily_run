@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Skill vs Hook vs Sub-agent</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1018;--panel:#141b27;--line:#2c3a4f;--ink:#eef4ff;--muted:#93a1b5;--lime:#bef264;--blue:#7dd3fc;--orange:#fb923c;--pink:#f472b6;--red:#fb7185}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0,#1c2a1a 0,transparent 38%),var(--bg);color:var(--ink);font:15px/1.45 ui-sans-serif,system-ui,sans-serif}
+    [data-visualizer]{max-width:1120px;margin:auto;padding:clamp(16px,3vw,36px)}
+    .kicker{color:var(--lime);font:800 11px/1 ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}
+    h1{font-size:clamp(24px,4vw,38px);line-height:1.08;margin:6px 0 8px}p{color:var(--muted);margin:0 0 16px;max-width:760px}
+    button,input,select{font:inherit;color:var(--ink);background:#1b2433;border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+    button{cursor:pointer;font-weight:750}button:hover,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #bef26466;outline-offset:2px;border-color:var(--lime)}
+    .row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:end;margin-bottom:14px}
+    .row label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:700}.row input{width:100%}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .card h2{font-size:13px;margin:0 0 10px}
+    .skill{border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0;background:#101720}
+    .skill.on{border-color:var(--lime);box-shadow:inset 3px 0 0 var(--lime)}
+    .skill b{display:block;font:700 12px ui-monospace,monospace}
+    .skill small{display:block;color:var(--muted);margin-top:3px}
+    .bar{display:flex;height:28px;border-radius:8px;overflow:hidden;margin:10px 0}
+    .bar span{display:flex;align-items:center;justify-content:center;font:700 11px/1 ui-monospace,monospace;color:#0b1018}
+    .cat{background:var(--blue)}.bod{background:var(--lime)}.dump{background:var(--red)}.hook{background:#334155}.sub{background:var(--orange)}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+    .stat span{display:block;font-size:11px;color:var(--muted)}.stat strong{font-size:22px;font-variant-numeric:tabular-nums}
+    .note{font-size:13px;color:var(--muted);min-height:3.2em}
+    @media(max-width:800px){.row,.grid,.stats{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer="skills">
+  <div class="kicker">Progressive disclosure</div>
+  <h1>The catalog is cheap. The body loads on a phrase.</h1>
+  <p>Type a request. The harness keeps four descriptions in the prefix; only a matching skill’s body is appended. A hook still costs zero prompt words. Dumping every body costs all of them, every turn.</p>
+  <div class="row">
+    <label>User phrase<input id="phrase" type="text" value="review this pull request please" autocomplete="off"></label>
+    <label>Compare as<select id="mode">
+      <option value="skill">Skill (on demand)</option>
+      <option value="dump">Dump every body into always-on</option>
+      <option value="hook">Hook (event script)</option>
+      <option value="sub">Sub-agent</option>
+    </select></label>
+    <button id="reset" type="button">Reset</button>
+  </div>
+  <div class="grid">
+    <section class="card">
+      <h2>Catalog — frontmatter only, every turn</h2>
+      <div id="skills"></div>
+    </section>
+    <section class="card">
+      <h2>What occupies the prefix</h2>
+      <div class="bar" id="bar" aria-label="Prefix composition"></div>
+      <p class="note" id="explain"></p>
+      <div id="body" class="skill" hidden></div>
+    </section>
+  </div>
+  <div class="stats">
+    <div class="card stat"><span>Catalog words</span><strong id="cat">59</strong></div>
+    <div class="card stat"><span>This mode</span><strong id="now">0</strong></div>
+    <div class="card stat"><span>Always-on dump</span><strong id="dump">109</strong></div>
+    <div class="card stat"><span>Loaded skill</span><strong id="which">—</strong></div>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const SKILLS = [
+    {name:"review-pr", triggers:["review","pull request","pr"], description:"Reviews a pull request. Use when the user asks to review a PR or diff.", body:"Checklist: scope, tests, error paths, secrets. Comment on the diff, not the vibe."},
+    {name:"commit-msg", triggers:["commit","commit message"], description:"Writes a commit message. Use when the user asks for a commit message.", body:"Format: type(scope): summary. Body says why. No trailing period on the subject."},
+    {name:"deploy-web", triggers:["deploy","ship","release"], description:"Deploys the web app. Use when the user asks to deploy, ship, or release.", body:"Run tests, bump the tag, deploy the already-built folder, then smoke-check /health."},
+    {name:"sql-style", triggers:["sql","query","postgres"], description:"Applies warehouse SQL style. Use when the user writes SQL or a query.", body:"Lowercase keywords, explicit column lists, no SELECT *. Filter in WHERE, not HAVING."}
+  ];
+  const words = t => t.split(/\s+/).filter(Boolean).length;
+  const CAT = SKILLS.reduce((n,s) => n + words(s.name) + words(s.description), 0);
+  const DUMP = CAT + SKILLS.reduce((n,s) => n + words(s.body), 0);
+  const $ = id => document.getElementById(id);
+  function match(phrase) {
+    const q = phrase.toLowerCase();
+    return SKILLS.find(s => s.triggers.some(t => q.includes(t))) || null;
+  }
+  function render() {
+    const phrase = $("phrase").value;
+    const mode = $("mode").value;
+    const skill = match(phrase);
+    $("skills").innerHTML = SKILLS.map(s =>
+      `<div class="skill${s===skill?" on":""}"><b>/${s.name}</b><small>${s.description}</small></div>`
+    ).join("");
+    let n = CAT, label = "catalog only", bar = `<span class="cat" style="flex:${CAT}">catalog ${CAT}</span>`;
+    $("body").hidden = true;
+    if (mode === "skill" && skill) {
+      n = CAT + words(skill.body);
+      label = `catalog + /${skill.name} body`;
+      bar += `<span class="bod" style="flex:${words(skill.body)}">body ${words(skill.body)}</span>`;
+      $("body").hidden = false;
+      $("body").innerHTML = `<b>Loaded /${skill.name}</b><small>${skill.body}</small>`;
+    } else if (mode === "dump") {
+      n = DUMP;
+      label = "every SKILL.md body, every turn";
+      bar = `<span class="cat" style="flex:${CAT}">catalog ${CAT}</span><span class="dump" style="flex:${DUMP-CAT}">all bodies ${DUMP-CAT}</span>`;
+    } else if (mode === "hook") {
+      n = 0;
+      label = "hook runs outside the model — 0 prompt words";
+      bar = `<span class="hook" style="flex:1">hook · 0 words in the prefix</span>`;
+    } else if (mode === "sub") {
+      n = 440;
+      label = "400-word child setup + 40-word summary back to parent";
+      bar = `<span class="sub" style="flex:400">child 400</span><span class="bod" style="flex:40">summary 40</span>`;
+    } else if (mode === "skill" && !skill) {
+      label = "no description matched — catalog stays cheap";
+    }
+    $("bar").innerHTML = bar;
+    $("cat").textContent = CAT;
+    $("now").textContent = n;
+    $("dump").textContent = DUMP;
+    $("which").textContent = skill ? "/"+skill.name : "none";
+    $("explain").textContent = label + ". A skill is a file the harness loads, not a smaller model.";
+  }
+  $("phrase").addEventListener("input", render);
+  $("mode").addEventListener("change", render);
+  $("reset").addEventListener("click", () => {$("phrase").value="review this pull request please";$("mode").value="skill";render();});
+  render();
+  const post = () => parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(post).observe(document.documentElement); post();
+})();
+</script>
+</body>
+</html>
