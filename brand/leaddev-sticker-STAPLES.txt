@@ -1,0 +1,28 @@
+The AI Commit — LeadDev stickers (Staples print handoff)
+=======================================================
+
+RECOMMENDED (cool shape engineers notice):
+  File:   brand/leaddev-hex-sticker-staples.pdf
+  Ask for: Custom DIE-CUT stickers · HEXAGON · ~3 in flat-to-flat
+  Show them: brand/leaddev-hex-sticker-staples-guides.png
+             (magenta line = cut path)
+  Material: matte vinyl / matte adhesive (less glare in conference halls)
+  Qty: enough for random tables + a few for laptops
+
+EASIER SAME-DAY FALLBACK (no die-cut):
+  File:   brand/leaddev-sticker-staples.pdf
+  Ask for: Custom stickers · 4 in × 3 in · rounded corners if available
+  Looks like a dark terminal window — still very "software engineer"
+  Page size is 4.25×3.25 in (0.125 in bleed already included)
+
+SPECS BOTH FILES SHARE:
+  300 DPI · 0.125 in bleed · keep text ≥0.25 in from trim
+  QR → https://theaicommit.com/
+
+AT THE COUNTER, SAY:
+  "Custom stickers, matte, upload this PDF. Prefer the hexagon die-cut;
+   if die-cut isn't available today, print the 4×3 terminal PDF instead."
+
+PREVIEWS:
+  brand/leaddev-hex-sticker-preview.png
+  brand/leaddev-sticker-preview.png
