@@ -222,7 +222,7 @@ exempt by date in `build.js`, so republishing the back catalog never trips it.
 - The user asks why the site did not update after running this skill → it was never supposed to.
   Point at `make deploy` or `/ai-daily-learn-publish`; this is not a bug in this skill.
 
-There is no "site deploy failed" case here, unlike `ai-daily-learn-publish` — there is no deploy
+There is no "site deploy incomplete" case here, unlike `ai-daily-learn-publish` — there is no deploy
 attempt to fail. Everything else that can go wrong is on the GitHub side, covered above.
 
 ## Scope

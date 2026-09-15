@@ -447,6 +447,29 @@ function mixRows() {
   return rows;
 }
 
+// Source concentration over the same trailing window. Added 2026-09-15 after two
+// sessions four days apart were built on the same project, reached through the
+// same practitioner's blog. Category balance cannot see this: both sessions were
+// in different categories and the mix called them both fine. A domain appearing
+// in 3+ of the last 10 is not automatically wrong -- arxiv.org always will be --
+// but it is the number that tells you to open journal.md before picking.
+const SOURCE_CONCENTRATION_FLOOR = 3;
+
+function mixSources(rows) {
+  const counts = new Map();
+  for (const r of rows.slice(-MIX_WINDOW)) {
+    const raw = readIfExists(path.join(ROOT, r.id, "articles.md")) || "";
+    const hosts = new Set();
+    for (const m of raw.matchAll(/\]\((https?:\/\/([^/)]+)[^)]*)\)/g)) {
+      hosts.add(m[2].replace(/^www\./, ""));
+    }
+    for (const h of hosts) counts.set(h, (counts.get(h) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, n]) => n >= SOURCE_CONCENTRATION_FLOOR)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
 function mixSummary(rows) {
   const win = rows.slice(-MIX_WINDOW);
   const tier = { A: 0, B: 0, C: 0 };
@@ -535,6 +558,15 @@ function printMix() {
   }
   console.log("\n  Level");
   for (const l of LEVELS) console.log(`          ${l.padEnd(16)} ${String(sum.level[l]).padStart(2)}/${n}`);
+
+  const heavy = mixSources(rows);
+  if (heavy.length) {
+    console.log("\n  Sources (domains in 3+ of the last " + n + ")");
+    for (const [host, c] of heavy) {
+      console.log(`    ${String(c).padStart(2)}/${n}  ${host}`);
+    }
+    console.log("          a single project or practitioner here means check journal.md for a repeat");
+  }
 
   const drift = mixDrift(sum);
   const dueTier = Object.entries(MIX_BANDS.tier).filter(([t, b]) => sum.tier[t] < b[0]).map(([t]) => `Tier ${t}`);

@@ -38,9 +38,15 @@ die()  { printf '[publish] ERROR: %s\n' "$*" >&2; exit 1; }
 
 PAGES_URL="https://theaicommit.com"
 
-# Rebuild and republish the reader site (gh-pages) after the source lands on
-# main. Deliberately non-fatal: the session itself is already safely pushed, and
-# a missing node or a Pages hiccup must not read as "the session was lost".
+# Rebuild and republish the reader site after the source lands on main.
+# deploy.sh publishes ONE local build to two hosts — Cloudflare Pages
+# (theaicommit.com, primary) and the gh-pages branch (mirror) — and reports
+# each separately below, because they fail independently and only one of them
+# is the site readers actually visit.
+#
+# Deliberately non-fatal: the session itself is already safely pushed, and a
+# missing node or a Pages hiccup must not read as "the session was lost". It
+# must not read as "published" either — see the note inside.
 deploy_site() {
   if [ ! -x ./deploy.sh ]; then
     say "no deploy.sh in $ROOT — skipping site refresh"
@@ -50,12 +56,75 @@ deploy_site() {
     say "WARN: node not found — site not refreshed; run 'make deploy' in $ROOT later"
     return 0
   fi
+
   say "refreshing the reader site"
-  if ./deploy.sh >/dev/null 2>&1; then
-    say "site updated -> $PAGES_URL/#$SESSION"
-  else
-    say "WARN: site deploy failed — run 'make deploy' in $ROOT to retry"
+
+  # Capture deploy.sh's output rather than discarding it. This was >/dev/null
+  # until 2026-09-14, which made every outcome look identical from here:
+  # deploy.sh treats a Cloudflare failure as non-fatal and still exits 0, so
+  # this function printed "site updated" while theaicommit.com — the PRIMARY
+  # host — went on serving the previous build. The exit code reports only the
+  # build and the gh-pages push, so each host has to be read out of the log.
+  mkdir -p "$ROOT/.logs"
+  local log="$ROOT/.logs/deploy-$(date -u +%Y%m%dT%H%M%SZ).log"
+  local rc=0
+  ./deploy.sh >"$log" 2>&1 || rc=$?
+
+  local gh_ok=0
+  grep -q '^==> gh-pages done' "$log" && gh_ok=1
+
+  # Cloudflare has three outcomes, and "skipped" (no token, no npx,
+  # SKIP_CLOUDFLARE=1) is not "published" — it leaves the primary host stale
+  # just as surely as a failure does, so it must not read as success.
+  local cf="failed"
+  if grep -q '^==> Cloudflare Pages done' "$log"; then
+    cf="ok"
+  elif grep -qi 'skipping Cloudflare Pages' "$log"; then
+    cf="skipped"
   fi
+
+  if [ "$gh_ok" = "1" ]; then
+    say "  gh-pages   (mirror):  ok"
+  else
+    say "  gh-pages   (mirror):  FAILED"
+  fi
+  case "$cf" in
+    ok)      say "  Cloudflare (primary): ok" ;;
+    skipped) say "  Cloudflare (primary): SKIPPED — theaicommit.com still serves the previous build" ;;
+    *)       say "  Cloudflare (primary): FAILED — theaicommit.com still serves the previous build" ;;
+  esac
+
+  # The newsletter reaches real subscribers and cannot be recalled, so its
+  # response is the one line worth surfacing unconditionally. deploy.sh only
+  # attempts it when Cloudflare published, and D1's issues table is the
+  # idempotency lock, so a re-run answers already_sent instead of mailing
+  # twice. A Frontier publish sends nothing new for the same reason: the
+  # newest *daily* session is unchanged and has already been mailed.
+  local nl
+  if grep -q 'newsletter send failed' "$log"; then
+    say "  newsletter:           FAILED — list unchanged, retry with 'make deploy'"
+  elif grep -q 'no newsletter secret' "$log"; then
+    say "  newsletter:           skipped (no secret in Keychain)"
+  else
+    nl=$(grep -A1 '^==> Sending newsletter' "$log" | grep -m1 '^ *{' | sed 's/^ *//')
+    [ -n "${nl:-}" ] && say "  newsletter:           $nl"
+  fi
+
+  if [ "$rc" != "0" ]; then
+    say "WARN: deploy.sh exited $rc — the build or the gh-pages push failed. Last lines:"
+    tail -5 "$log" | sed 's/^/[publish]       /'
+  fi
+
+  if [ "$rc" = "0" ] && [ "$gh_ok" = "1" ] && [ "$cf" = "ok" ]; then
+    say "site updated -> $PAGES_URL/#$LINT_ID"
+    return 0
+  fi
+
+  # Deliberately still non-fatal: the session is safely on main either way.
+  # But it must never read as published when the primary host is stale.
+  say "WARN: site deploy incomplete — $SESSION is on main but NOT fully live."
+  say "      retry with 'make deploy' in $ROOT; full log: $log"
+  return 0
 }
 
 [ -d "$ROOT" ] || die "$ROOT does not exist"

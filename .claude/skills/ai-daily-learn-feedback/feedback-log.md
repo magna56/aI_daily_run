@@ -1491,3 +1491,112 @@ now skipped.
   in the body — every check the spec offered returned green. A title rule set can be complete and
   still miss "can the reader tell what this is about", because that question is upstream of all
   of them.
+
+## 2026-09-14 — publish.sh / deploy reporting
+- **Note**: "publish.sh printed `site updated` while swallowing deploy.sh's output, so neither the
+  Cloudflare result nor the newsletter response was visible" — raised after the 2026-09-14 publish,
+  where confirming the newsletter had actually been sent required re-running `make deploy` by hand.
+  The user's instruction was "Yes please fix".
+- **Verdict**: standing rule (a site/tooling fix, not a content rule)
+- **Changed**: `ai-daily-learn-publish/scripts/publish.sh` — `deploy_site()` no longer discards
+  `deploy.sh`'s output. It captures the run to `.logs/deploy-<UTC>.log` and reports the two hosts
+  separately plus the newsletter response. `site updated` is now printed **only** when the build,
+  gh-pages and Cloudflare all succeeded; every other outcome prints `WARN: site deploy incomplete`
+  and the log path. The root cause is that `deploy.sh` treats a Cloudflare failure as non-fatal and
+  still exits 0, so the exit code publish.sh was branching on reported only the build and the
+  mirror — the primary host could be stale behind a success message. Cloudflare `SKIPPED` (missing
+  Keychain token, no `npx`, `SKIP_CLOUDFLARE=1`) is reported as stale too, because it leaves
+  theaicommit.com on the previous build exactly as a failure does.
+- **Changed**: `ai-daily-learn-publish/SKILL.md` — the paragraph that documented the coarse message
+  as a known limitation now documents the per-host lines instead, with a sample block, and says to
+  read `Cloudflare (primary)` as the one that matters. `ai-daily-learn-discuss-publish/SKILL.md`
+  and `ai-daily-learn-github/SKILL.md` updated for the renamed warning.
+- **Also fixed**: the success line built its deep link from the directory name, so a Frontier
+  publish printed `#frontier/YYYY-MM-DD` instead of the real `#frontier-YYYY-MM-DD` anchor. It now
+  uses `LINT_ID`, which already performs that conversion for the content gate.
+- **Not changed**: `deploy.sh` keeps its non-fatal Cloudflare behaviour. The gh-pages push has
+  already succeeded by that point, and making a Cloudflare hiccup fatal would throw away a good
+  mirror publish. The defect was the reporting, not the tolerance.
+
+## 2026-09-15 — 2026-09-15
+- **Note**: "today's article has barely anything to di wuth AI why?"
+- **Verdict**: standing rule — nothing in the spec required the article's *subject* to be AI. The
+  whole site is an AI log, so the spec assumed it and never checked it.
+- **Measured**: `topic.md` was 28 AI-word hits in 2,180 words (~1%). `## The Fix` spent 474 words
+  on name resolution with two passing mentions of a model. **`code_example.py` and
+  `visualize.html` contained zero AI words**, and so did the ELI5. Deleting "coding agent" leaves a
+  complete application-security article.
+- **Changed**: `selection.md` — new **"The subject test — is the AI the subject, or just how you
+  found it?"** before the source quality gates. Names the failure shape (a source of the form *"we
+  pointed a model at X and found Y"* contains two candidate articles, and the one about Y wins by
+  default because it is more implementable), gives the **deletion test**, carries the 09-15 ✗ with
+  a ✓ for the same source written with the audit as the subject, and records that the category
+  name, the `coding-agents` tag and the title all read as AI while the body did not — so a title
+  naming the AI is not evidence the article is about it.
+- **Changed**: `SKILL.md` Step 6 — `code_example.py` must implement the AI mechanism; if it has no
+  model, prompt, agent loop, protocol message, training step, token accounting or inference cost,
+  it is the wrong file. Scoped deliberately to `code_example.py` and **not** to `visualize.html`,
+  because five back-catalog visualizers have no AI vocabulary while being squarely on subject.
+
+- **Second note, found while investigating and not raised by the user**: 2026-09-15 is a **repeat
+  of 2026-09-11**, *"How an AI Audit Found Three Names for One Protected Table"*. Same Datasette
+  security releases, same bug class, same three mechanisms, same two-human protocol, same `STRICT`
+  flip in the code. Two of five sources identical, both the dated primaries. This is very likely
+  the real cause of the note: the reader had already had the AI-centered version of this story on
+  the 11th, and got the AI-removed version on the 15th.
+- **Verdict**: compliance gap — the **Not a repeat** gate already existed and was not run.
+- **Changed**: `selection.md` — that gate now reads "and you ran the two checks below", with two
+  `grep` commands and the discriminating rule: **a hit on a dated source disqualifies, a hit on an
+  evergreen doc does not**, because the Claude Code changelog and the hooks doc each legitimately
+  appear in three sessions.
+- **Changed**: `SKILL.md` Step 1 — "reading the audience mix is not reading the journal", named as
+  the substitution that actually happened, because the mix answers which category is due and
+  cannot see a repeat of last week's subject within that category.
+- **Not changed**: two `build.js` lints were prototyped and **both rejected for crying wolf**,
+  which the spec warns about explicitly. (a) Zero-AI-words in an artifact fired on 12 files across
+  the catalog, most of them legitimate visualizers. (b) Session pairs sharing 2+ external sources
+  fired on 4 pairs, of which 3 were evergreen reference docs — 1-in-4 precision. Both survive as
+  research-time commands in `selection.md`, where a human dismisses a false hit in two seconds,
+  rather than as build warnings on 76 sessions that get switched off.
+- **Not changed**: the published 2026-09-15 session. Offered to the user; the newsletter already
+  reached 8 subscribers, so the options are live and theirs to pick.
+
+## 2026-09-15 — 2026-09-15 (second pass: rewrite + why the sourcing skewed)
+- **Note**: "Please do a rewrite do not change the title" and "How to make this doesn't happen in
+  the future and also the recent article used a datasette as the source find out why the skewed and
+  updated the skill"
+- **Rewrite shipped.** Title and URL unchanged, so no redirect. The audit *pipeline* is now the
+  subject and the permission bugs are the worked example, linking to 2026-09-11 rather than
+  repeating it. Measured AI content: `topic.md` 28 -> 77 hits, `code_example.py` 0 -> 31,
+  `visualize.html` 0 -> 30. `code_example.py` now triages three model transcripts (25 raw findings
+  -> 7 distinct, 57% precision, agreement 3/3 vs 1/4, one real bug all three models missed).
+
+- **Why the sourcing skewed — root cause, measured**: `simonwillison.net` is cited in **14
+  sessions, the third most-cited domain on the site**, behind only `arxiv.org` (33) and
+  `github.com` (21) — and it is one person's blog. He also maintains Datasette and LLM. A
+  practitioner blog used as the daily discovery feed supplies the *subject* as well as the lead, so
+  his projects arrive repeatedly. It was 3 of the last 10 dailies when 09-15 was picked.
+- **Verdict**: standing rule, plus a missing mechanical check.
+- **Changed**: `build.js` — `--mix` now prints a **Sources** block listing any domain in 3+ of the
+  trailing 10, with `SOURCE_CONCENTRATION_FLOOR = 3`. This is the fix that actually prevents
+  recurrence: the picker already runs `--mix` every day, and category balance is structurally blind
+  to two sessions on the same project in different categories.
+- **Changed**: `selection.md` — a new bullet in the admission test on practitioner blogs being "an
+  aggregator wearing a byline, and also a newsletter for their own projects", with the 14-session
+  measurement; and a **Source concentration** section pointing at the new command.
+- **Changed**: `selection.md` structure — the admission test, subject test, source concentration and
+  the four source quality gates were all physically inside `## The Frontier track — sources only`,
+  so a daily-lab run had no reason to read them. Moved to a new top-level
+  **`## Judging a source — both tracks`**. This is the likeliest reason these rules get missed, and
+  it is a pre-existing bug, not something this session introduced.
+
+- **Third finding, site bug**: the prose renderer only linked `https?:` hrefs, so internal reader
+  routes written as `[text](#2026-09-14)` or `[text](#learn/...)` rendered as **literal brackets**.
+  **29 published sessions** shipped that way, and the article template in `SKILL.md` recommends the
+  hash form.
+- **Changed**: `index.html` — a second replace for `#` hrefs, without `target="_blank"` since these
+  are same-tab routes, plus a standing comment at that line recording the 29 sessions. Verified on
+  2026-08-24, where four links now resolve. `GLOSS_SKIP` already contains `A`, so the glossary
+  auto-linker cannot nest anchors inside them.
+- **Not changed**: the back catalog needed no edits — all 29 sessions were correct in source and
+  broken only in rendering, so the one-line renderer fix repaired them.

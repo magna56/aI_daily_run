@@ -65,7 +65,29 @@ Write down three candidates (title, URL, category, one-line claim). Score each 0
 | **Implementable** | You can already name the code that changes — the payload, the handler, the config key — for *every* role the change touches, not only the one the announcement is addressed to |
 | **Fits 30 min** | One claim, not a survey |
 | **Primary source** | A changelog, doc, eng blog, or paper you can fetch — not a recap of a recap |
-| **Not a repeat** | Journal does not already have this claim |
+| **Not a repeat** | Journal does not already have this claim — **and you ran the two checks below** |
+
+**The repeat gate is the one that gets skipped, so run it rather than recall it.** It is the only
+gate you cannot judge from the candidate alone, which is exactly why it goes unchecked on a day
+when the source is fresh and interesting. Two commands, before you write anything:
+
+```bash
+cd ~/ai_learning
+grep -ril "<the topic's key noun>" --include=topic.md 20*/ frontier/ | sort | tail -5
+grep -rl "<the primary source's URL>" --include=articles.md 20*/ frontier/
+```
+
+**A hit on a dated source disqualifies the candidate. A hit on an evergreen doc does not.** Several
+sessions legitimately cite the same reference pages — the Claude Code changelog and the hooks doc
+each appear in three — because a stable doc supports many different topics. A dated post or a
+specific release announcement supports one event, so a second session citing it is covering that
+event twice.
+
+- ✗ 2026-09-15 was built on the Datasette security releases and shipped four days after 2026-09-11,
+  *"How an AI Audit Found Three Names for One Protected Table"*, which was built on the same
+  releases. Two of five sources were identical, both of them the dated primaries. Same bug class,
+  same three mechanisms, same two-human protocol, same `STRICT` flip in `code_example.py`. The
+  audience mix was consulted and the journal was not, and the mix cannot see a repeat.
 
 Pick the highest score. On a tie, prefer the one whose reader does something different
 tomorrow morning. **#1 (operating tools) beats #2 (authoring harnesses)** when both fit.
@@ -242,6 +264,123 @@ for this", it loses to any Tier A candidate. Check the paper budget before openi
 
 ---
 
+## Judging a source — both tracks
+
+**Everything in this section applies to the daily lab and to Frontier equally.** It used to live
+inside the Frontier section, which is why a daily-lab run had no reason to read it: on 2026-09-15 a
+daily session shipped past the subject test and the repeat gate, and both of them were sitting one
+heading below a banner saying "Frontier track". Placement is a rule's first line of defense.
+
+### The admission test — is this source citable at all?
+
+The four gates below judge whether a source is *good enough to build on*. This one comes first and
+judges whether it belongs on the site at all. Both halves must hold:
+
+1. **You can name the institution or the person accountable for the page.**
+2. **A senior engineer would accept it as a citation in a design doc.**
+
+That admits a named practitioner on a personal domain — Simon Willison, Hamel Husain, Eugene Yan,
+Lilian Weng, Sebastian Raschka all publish on their own sites and all pass, because the author is
+publicly identifiable and has standing in the thing they are writing about. It rejects a personal
+site with no verifiable author standing no matter how useful the explainer is. The bar is
+accountability, not domain shape. Pedagogical usefulness does not buy admission.
+
+This matters because `articles.md` is published. A weak citation is a public statement about the
+site's judgement, not an internal shortcut.
+
+Three specific rejections that keep recurring:
+
+- **The published spec, never the working repo.** When a standard has a dated, versioned surface —
+  `modelcontextprotocol.io/specification/<revision>`, an API reference, a release note — that is
+  the citation. ✗ `github.com/modelcontextprotocol/ext-tasks/blob/main/specification/...` as the
+  article's authority. ✓ the published revision, with the repo cited separately *only* for a schema
+  or code file and labelled as such ("the TypeScript schema, to paste into your client").
+- **Aggregators are for noticing, never for citing.** Hacker News, Reddit, X, `huggingface.co/papers`
+  and Papers with Code tell you something happened. Fetch what they point at and cite that. A link
+  to the aggregator in `articles.md` means you never opened the original.
+- **A practitioner's blog is an aggregator wearing a byline, and it is also a newsletter for their
+  own projects.** This is the subtlest sourcing trap on the list, because the blog passes admission
+  honestly — the author is named, has standing, and writes original work — so nothing stops it
+  being used as the daily discovery feed. Measured on 2026-09-15, `simonwillison.net` was cited in
+  **14 sessions, the third most-cited domain on the whole site**, behind only `arxiv.org` (33) and
+  `github.com` (21), and it is one person's blog. He also maintains Datasette and LLM. So a feed
+  used for discovery quietly supplies the *subject* as well, and on 2026-09-11 and 2026-09-15 it
+  supplied the same project four days apart. Use the blog to notice, then go to the project's own
+  docs — and when the item is about the author's own software, treat the project as the thing to
+  run the repeat check against.
+- **Vendor launch and press posts** are not primary sources for what changed. Build on the
+  changelog, the docs page, the technical report or the model card.
+- **An unknown author needs evidence, and is a last resort.** Passing admission is not the same as
+  being a good choice. Prefer the first-party doc, the spec revision, the lab engineering post or a
+  named practitioner with a public track record; reach for a post by an engineer nobody can place
+  only when nothing better covers the point *and* the post carries its own strong evidence — a
+  reproducible benchmark, a public repo, production numbers, a method you could re-run. "It
+  explains it well" is not evidence.
+
+### The subject test — is the AI the subject, or just how you found it?
+
+**The AI must be the thing the article is about, not the provenance of the finding.** This is the
+one property of a session that nothing else checks, because the whole site is an AI log and the
+spec assumed it. It does not hold automatically, and the way it fails is specific: you find a
+source where somebody used AI to discover something, and then you write about the something.
+
+The shape to watch for is a source of the form *"we pointed a model at X and found Y."* That
+source contains two candidate articles. One is about Y, and it is usually the more interesting and
+more implementable of the two — which is exactly why it wins by default. It is also not an AI
+article. The other is about doing the pointing: how to task the model, what it is good and bad at,
+how you verify what it returns, what it costs to triage. That is the AI article, and it is the
+harder one to write, so it needs protecting.
+
+**Run the deletion test before you commit to the topic.** Strike every AI word from your planned
+article — model, agent, prompt, inference, the vendor names. If what remains is still a complete,
+coherent article that teaches the same lesson, the AI was scenery and the session is about
+something else.
+
+- ✗ 2026-09-15 shipped on a source where three coding agents found authorization bugs in Datasette,
+  and the article explained the bugs. `## The Fix` spent 474 words on name resolution and
+  permission checks with two passing mentions of a model. **`code_example.py` and `visualize.html`
+  contained zero AI words between them**, and so did the ELI5. Delete "coding agent" from it and a
+  complete application-security article remains.
+- ✓ The same source, with the audit as the subject: how to task an agent for enumeration rather
+  than for bugs, why several rounds beat one long session, why two models disagreeing is a signal,
+  the two-human rule that makes a finding real, and what the triage actually costs. The
+  authorization bugs become the worked example the agent is pointed at, not the payload.
+
+Note what did **not** catch this, because it is the reason the test has to be explicit. The
+category was `AI Engineering Practices`, the tags included `coding-agents`, and the title said
+"With a Coding Agent" — so the existing rule that a title must name the AI system was satisfied.
+Every mechanical signal read as AI while the body was about 1% AI by word count. A title naming
+the AI is not evidence that the article is about it.
+
+### Source concentration — one command, every day
+
+`node build.js --mix` now prints a **Sources** block listing any domain that appears in 3 or more
+of the last ten sessions. Read it before you pick, in the same glance as `DUE NEXT`.
+
+A high count is not automatically wrong. `arxiv.org` will always be near the top and should be.
+What the block is for is the case category balance cannot see: two sessions on the same project,
+in *different* categories, reached through the same feed. The mix called both of those fine,
+because it tracks tier and audience layer and has no idea what the article was about.
+
+**If a single project or practitioner is carrying three of the last ten, open `journal.md` before
+you commit to the candidate.** That is the whole rule. It costs one command and it is the check
+that was missing on 2026-09-15.
+
+### Source quality gates
+
+Before building a session on a source, all four must hold. Any failure sends you back to the
+category list, not forward into writing.
+
+1. **Dated and primary.** A changelog entry, a spec revision, a docs page, an engineering post
+   with numbers. Not a recap, not a roundup, not another blog's summary of it.
+2. **Something changed.** "Here is what X is" is a `learn/` chapter. "Here is what changed and
+   what it costs you" is a session.
+3. **Implementable from what it says.** If the source does not contain enough for you to write
+   `## Implementing It` with real code for every role the change touches, it is not enough
+   source — find the docs or the reference implementation that fills the gap, or pick again.
+4. **Verified, not remembered.** Fetch it. Quote its own numbers. Never write a session from
+   recollection of a release; the whole value of a dated log is that its facts are checkable.
+
 ## The Frontier track — sources only
 
 Frontier is a **sourcing lane, not a second product.** A Frontier piece is written to the exact
@@ -314,61 +453,11 @@ normal outcome, not an error, and say what you looked at and why none of it clea
 - Secondary — https://www.lesswrong.com/ and https://openreview.net/ for review threads when the
   argument about a paper is the story
 
-The admission test and the four source quality gates below apply unchanged — a preprint from a
+The admission test, the subject test and the four source quality gates in
+**Judging a source** above apply unchanged — a preprint from a
 named lab passes admission, an anonymous write-up of it does not — with gate 3 reading: the source
 must contain enough for you to implement the core mechanism from scratch. If it does not — no algorithm, no
 released code, no reproducible detail — that is a thin day, and thin days are skipped.
-
-### The admission test — is this source citable at all?
-
-The four gates below judge whether a source is *good enough to build on*. This one comes first and
-judges whether it belongs on the site at all. Both halves must hold:
-
-1. **You can name the institution or the person accountable for the page.**
-2. **A senior engineer would accept it as a citation in a design doc.**
-
-That admits a named practitioner on a personal domain — Simon Willison, Hamel Husain, Eugene Yan,
-Lilian Weng, Sebastian Raschka all publish on their own sites and all pass, because the author is
-publicly identifiable and has standing in the thing they are writing about. It rejects a personal
-site with no verifiable author standing no matter how useful the explainer is. The bar is
-accountability, not domain shape. Pedagogical usefulness does not buy admission.
-
-This matters because `articles.md` is published. A weak citation is a public statement about the
-site's judgement, not an internal shortcut.
-
-Three specific rejections that keep recurring:
-
-- **The published spec, never the working repo.** When a standard has a dated, versioned surface —
-  `modelcontextprotocol.io/specification/<revision>`, an API reference, a release note — that is
-  the citation. ✗ `github.com/modelcontextprotocol/ext-tasks/blob/main/specification/...` as the
-  article's authority. ✓ the published revision, with the repo cited separately *only* for a schema
-  or code file and labelled as such ("the TypeScript schema, to paste into your client").
-- **Aggregators are for noticing, never for citing.** Hacker News, Reddit, X, `huggingface.co/papers`
-  and Papers with Code tell you something happened. Fetch what they point at and cite that. A link
-  to the aggregator in `articles.md` means you never opened the original.
-- **Vendor launch and press posts** are not primary sources for what changed. Build on the
-  changelog, the docs page, the technical report or the model card.
-- **An unknown author needs evidence, and is a last resort.** Passing admission is not the same as
-  being a good choice. Prefer the first-party doc, the spec revision, the lab engineering post or a
-  named practitioner with a public track record; reach for a post by an engineer nobody can place
-  only when nothing better covers the point *and* the post carries its own strong evidence — a
-  reproducible benchmark, a public repo, production numbers, a method you could re-run. "It
-  explains it well" is not evidence.
-
-### Source quality gates
-
-Before building a session on a source, all four must hold. Any failure sends you back to the
-category list, not forward into writing.
-
-1. **Dated and primary.** A changelog entry, a spec revision, a docs page, an engineering post
-   with numbers. Not a recap, not a roundup, not another blog's summary of it.
-2. **Something changed.** "Here is what X is" is a `learn/` chapter. "Here is what changed and
-   what it costs you" is a session.
-3. **Implementable from what it says.** If the source does not contain enough for you to write
-   `## Implementing It` with real code for every role the change touches, it is not enough
-   source — find the docs or the reference implementation that fills the gap, or pick again.
-4. **Verified, not remembered.** Fetch it. Quote its own numbers. Never write a session from
-   recollection of a release; the whole value of a dated log is that its facts are checkable.
 
 ## Worked example (last five sessions)
 

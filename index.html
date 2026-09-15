@@ -1597,7 +1597,15 @@
     src = src.replace(/`([^`]+)`/g, "<code>$1</code>");
     src = src.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
     src = src.replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
+    // Two link forms, and both are used by the content spec. External links open
+    // in a new tab. Internal ones are reader routes -- `#2026-09-14`,
+    // `#learn/the-agent-loop` -- and must stay in this tab, so they get their own
+    // rule rather than being folded into the http one. The internal form shipped
+    // unrendered in 29 sessions until 2026-09-15, showing as literal
+    // `[text](#anchor)` brackets, because only `https?:` was matched here while
+    // the article template recommends the hash form. Keep both.
     src = src.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    src = src.replace(/\[([^\]]+)\]\((#[^)\s]+)\)/g, '<a href="$2">$1</a>');
     src = src.split(/\n{2,}/).map(function (ch) {
       var t = ch.trim();
       if (!t) return "";

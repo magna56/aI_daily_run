@@ -122,7 +122,9 @@ Inherited whole from both parents; only the seam is new.
   Step 1. Never write or publish an article nobody picked.
 - **The user picks, then rejects the draft** → fix it against the brief and re-gate. Do not publish
   a draft he has already said is wrong on the grounds that the topic was agreed.
-- **`publish.sh` warns `site deploy failed`** → the session is on `main` but is **not live**, and
+- **`publish.sh` warns `site deploy incomplete`** → read its per-host lines: `Cloudflare
+  (primary)` is theaicommit.com and is the one that matters, and `SKIPPED` there is as stale as
+  `FAILED`. The session is on `main` but is **not live**, and
   the newsletter may have announced a page nobody can reach. Report it as a failed publish, give
   `make deploy` as the retry, and do not print the read link.
 - **A lab day must never end empty.** If the conversation stalls and no article gets chosen, that

@@ -168,15 +168,34 @@ Pages, mirror). Re-running it with nothing new is a safe no-op that still refres
 which is how you recover from a deploy that failed the first time. `.venv/`, `.claude/`, `.logs/`,
 `site/`, `.wrangler/`, and `.DS_Store` are gitignored and never pushed to `main`.
 
-The site step is deliberately non-fatal: if it warns `site deploy failed`, the session is safely
-on `main` but it is **not published**. `feed.xml`, `sitemap.xml` and the session's Open Graph card
-are all build outputs of the same `make site` run, so a failed deploy leaves the article invisible
-to RSS readers, search crawlers and social previews as well as absent from the reader. Treat it as
-a failed publish rather than cosmetic staleness: run `cd ~/ai_learning && make deploy` to retry,
-and do not report the session as live until it succeeds.
-Within `deploy.sh` itself, a Cloudflare-specific hiccup (expired token, network blip) is separately
-non-fatal and never blocks the `gh-pages` push that runs before it — but a `publish.sh` caller
-only ever sees one coarse "site deploy failed" either way, not which host specifically failed.
+The site step is deliberately non-fatal: if it warns `site deploy incomplete`, the session is
+safely on `main` but it is **not published**. `feed.xml`, `sitemap.xml` and the session's Open
+Graph card are all build outputs of the same `make site` run, so a failed deploy leaves the article
+invisible to RSS readers, search crawlers and social previews as well as absent from the reader.
+Treat it as a failed publish rather than cosmetic staleness: run `cd ~/ai_learning && make deploy`
+to retry, and do not report the session as live until it succeeds.
+
+**`publish.sh` reports the two hosts separately, and you must read both lines.** They fail
+independently, and `deploy.sh` treats a Cloudflare-specific hiccup (expired token, network blip,
+`npx` cold-start failure) as non-fatal so it never blocks the `gh-pages` push that ran before it —
+which means `deploy.sh` exits 0 with the primary host stale. Its exit code reports only the build
+and the mirror, so the per-host lines are the only honest signal:
+
+```
+[publish]   gh-pages   (mirror):  ok
+[publish]   Cloudflare (primary): ok
+[publish]   newsletter:           {"ok":true,"skipped":true,"reason":"already_sent"}
+[publish] site updated -> https://theaicommit.com/#2026-09-14
+```
+
+`site updated` is printed **only** when the build, the mirror and Cloudflare all succeeded.
+Anything else prints `WARN: site deploy incomplete` and the path to the full deploy log under
+`.logs/`. Read `Cloudflare (primary)` as the one that matters: it is theaicommit.com, the host
+readers and the newsletter link actually reach. `SKIPPED` there — a missing Keychain token,
+no `npx`, `SKIP_CLOUDFLARE=1` — leaves the primary stale exactly as a failure does and is never
+success. The `newsletter:` line is echoed because that send reaches real subscribers and cannot
+be recalled; `already_sent` means D1's `issues` table refused a duplicate, which is the expected
+answer on any re-run.
 
 ### Manual fallback
 
@@ -242,7 +261,7 @@ sign-in/Publish-to-Repo feature (GitHub Pages has no serverless functions, so th
 the mirror), and the light/dark toggle. The GitHub Pages mirror exists as a free fallback if
 Cloudflare is ever down.
 
-Pages can take a minute to serve a fresh push. If `publish.sh` warned that the site deploy failed,
+Pages can take a minute to serve a fresh push. If `publish.sh` warned `site deploy incomplete`,
 say so and give the retry command rather than the link.
 
 ## Publish-Only Mode

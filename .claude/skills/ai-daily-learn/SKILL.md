@@ -168,6 +168,14 @@ Read `~/ai_learning/journal.md`. If it does not exist, create it:
 
 Note which categories and topics have been covered.
 
+**Reading the audience mix is not reading the journal, and it is the substitution that happens.**
+`node build.js --mix` answers which *category* is due; it cannot tell you the topic already
+shipped, because a repeat of last week's subject in the same category looks identical to it. On
+2026-09-15 the mix was consulted, the journal was not, and the session republished the source a
+session from four days earlier was built on. Once you have a candidate, run the two repeat
+commands in `selection.md` against it before writing — they are part of the **Not a repeat** gate,
+not an optional extra.
+
 ### Step 2: Select Today's Topic
 
 Read [selection.md](selection.md) before picking. Shortlist **three** candidates, score them
@@ -1088,6 +1096,16 @@ article because this file contains it all, the article has not done its.
   curves are a *result* the implementation prints, never the whole script. A script that only
   measures a change tells the reader what to expect; one that implements it tells them what to
   write.
+- **The mechanism it implements must be the AI one.** This is the cheapest place to catch a
+  session that has drifted off the subject, because it is mechanical: if the file contains no
+  model, no prompt, no agent loop, no protocol message, no training step, no token accounting and
+  no inference cost, then whatever it implements is not what this site is for. On 2026-09-15 the
+  Code tab was a SQL permission checker with **zero AI words in it**, and the article still passed
+  every gate, because the AI lived in the prose around it. Run the deletion test from
+  `selection.md` on this file specifically — strike the AI nouns, and if it still runs and still
+  teaches the same lesson, you have written the wrong file. This applies to `code_example.py` and
+  not to `visualize.html`: a visualizer legitimately models abstract structure, and five sessions
+  in the back catalog have no AI vocabulary in theirs while being squarely on subject.
 - **Structure it so one piece is liftable.** A reader should be able to copy one function or class
   out and have it work. Put the reusable core at the top as a named function or small class, and
   the demonstration — the scenario, the loop over inputs, the printing — below it in `main()`.
