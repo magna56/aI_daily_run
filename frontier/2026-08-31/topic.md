@@ -147,6 +147,39 @@ the numbers are not probabilities — use it to sort, never to threshold. Small 
 near-zero association means the scores happen to sit near the right average while telling you
 nothing about any individual case, which is the instruction-tuned failure and the dangerous one.
 
+*Whoever owns the gate and is on LangGraph* (`langgraph==1.2.11`). The routing is a conditional
+edge, and the edge is exactly where this bug lives — so it is worth seeing which field the router
+reads:
+
+```python
+from typing_extensions import TypedDict
+from langgraph.graph import StateGraph, START, END
+
+class S(TypedDict):
+    answer: str
+    verbal: float       # what the model said when asked how sure it was
+    internal: float     # logprob-derived, when you have it
+
+def route(s: S) -> str:
+    # gate on the channel you measured — not the one that is easiest to read
+    return "escalate" if s["internal"] < THRESHOLD else "accept"
+
+g = StateGraph(S)
+g.add_node("answer", answer_node)
+g.add_node("accept", accept_node)
+g.add_node("escalate", escalate_node)
+g.add_edge(START, "answer")
+g.add_conditional_edges("answer", route, ["accept", "escalate"])
+g.add_edge("accept", END)
+g.add_edge("escalate", END)
+app = g.compile()
+```
+
+Swap `s["internal"]` for `s["verbal"]` and the graph still compiles, still runs, and starts routing
+a random tenth of your traffic. Nothing in the framework can tell you which field carries signal —
+that is what the measurement above is for, and the conditional edge is simply where the answer
+gets spent.
+
 *Whoever writes the prompt.* Before any of that, check dispersion — it is the dominant driver and
 the cheapest thing to measure:
 

@@ -87,6 +87,17 @@ internals worth knowing before touching it:
   The reader creates its iframe only when Visualize opens and uses `sandbox="allow-scripts"`
   without same-origin/popups/forms. Keep each artifact self-contained (inline CSS/JS/data, no
   external requests) and preserve its `adl-visualize-height` postMessage contract.
+- **Root `index.html` is a template, not a static file.** `makeShellTemplate()` reads it once and
+  cuts it into pieces at four HTML-comment markers (`<!-- META:START/END -->`,
+  `<!-- OG:START/END -->`, `<!-- ARTICLE_NOSCRIPT -->`); every other byte — all CSS/JS — is shared
+  verbatim across every page the build writes. Per page it re-stamps title/description/canonical/
+  OG/JSON-LD and a `<noscript>` body, so `site/<slug>/index.html` (one per session, canonical URL
+  `<id>-<slug>/`, with the bare `<id>/` kept as a working alias whose canonical tag points at the
+  slug URL), `site/topics/<category-slug>/` (one per category), `site/frontier/` and
+  `site/index.html` (the homepage) are all real, independently-crawlable HTML — not just the SPA
+  shell — while staying byte-identical everywhere it matters. Editing the four markers or the
+  `HOME_H1` swap line in `index.html` will break this; `build.js` throws immediately if a marker
+  goes missing. `site/sitemap.xml` is generated here too, not hand-written.
 
 **`lib/runner.js`** executes each `code_example.py` in a throwaway temp cwd (never dirties the
 repo), with a 60s timeout, `MPLBACKEND=Agg`, and prefers `.venv/bin/python3` over system Python.
@@ -142,6 +153,15 @@ through Resend (`RESEND_API_KEY`, optional `NEWSLETTER_FROM` / `PUBLIC_URL`). Wi
 the Resend key, signups are still stored and marked active so an unset secret never
 drops an address. Same D1 is the place for later signup-adjacent features (comments,
 accounts) — add tables in `db/schema.sql`, don't stand up a second store.
+
+**GitHub sign-in (Publish-to-Gist).** `functions/api/github/token.js` is the one Function that
+must run server-side: it exchanges an OAuth `code` for an access token using
+`GITHUB_CLIENT_SECRET` (a Cloudflare Pages secret, never in the repo — the Client ID is public,
+inlined in `index.html`) and immediately forgets both; the frontend holds the resulting token in
+`localStorage`, same as everything else the site persists client-side. This, like the newsletter
+Functions, only runs on Cloudflare Pages — the GitHub Pages mirror has no Functions runtime, so
+that feature is a no-op there. Local secrets (`.env`, `.dev.vars`, `.mcp.json`, `.wrangler/`) are
+gitignored; set real values with `npx wrangler pages secret put <NAME> --project-name=theaicommit`.
 
 ## Session content conventions
 
