@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>What every subagent loads before its task</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  label.sl { display: block; font-size: 12px; color: #9aa5c4; margin-bottom: 5px; }
+  label.sl b { color: #dfe4f2; font-weight: 650; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  .seg { display: flex; gap: 6px; margin-top: 13px; align-items: center; flex-wrap: wrap;
+         border-top: 1px solid #1c2130; padding-top: 13px; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed="true"] { background: rgba(124,140,248,.16); border-color: rgba(124,140,248,.55); color: #e8ecfb; }
+  button:focus-visible, input:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .cols { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-top: 18px; }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 9px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  .agent { margin-bottom: 6px; }
+  .agent .nm { font-size: 11.5px; color: #8f9ab8; display: flex; justify-content: space-between; margin-bottom: 3px; }
+  .agent .nm span:last-child { font-variant-numeric: tabular-nums; color: #cdd5ee; }
+  .bar { display: flex; height: 17px; border-radius: 4px; overflow: hidden; background: #131725;
+         border: 1px solid #1c2130; }
+  .bar i { display: block; height: 100%; }
+  .bar i.pol { background: #6f7a99; }
+  .bar i.you { background: #e0885f; }
+  .bar i.task { background: #6ec896; }
+  .tr { transition: width .18s ease; }
+  @media (prefers-reduced-motion: reduce) { .tr { transition: none; } }
+  .key { display: flex; gap: 13px; flex-wrap: wrap; font-size: 11.5px; color: #8f9ab8; margin-top: 10px; }
+  .key i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 13px; margin-bottom: 9px; }
+  .big { font-size: 27px; font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .big.ok { color: #6ec896; } .big.bad { color: #e0885f; }
+  .stat p { margin: 3px 0 0; font-size: 12px; color: #8f9ab8; }
+  .note { margin-top: 14px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-16">
+  <h1>What every subagent loads before its task</h1>
+  <p class="sub">Each bar is one agent's context window at the moment its task arrives. The demo hierarchy is the one <code>code_example.py</code> builds: 1,553 tokens across eight files, 85 of them managed policy.</p>
+
+  <div class="panel">
+    <div class="grid">
+      <div>
+        <label class="sl" for="hier">Your instruction hierarchy: <b id="hv">1,553</b> tokens</label>
+        <input type="range" id="hier" min="200" max="6000" step="50" value="1553">
+      </div>
+      <div>
+        <label class="sl" for="fan">Helpers spawned by one request: <b id="fv">5</b></label>
+        <input type="range" id="fan" min="1" max="12" step="1" value="5">
+      </div>
+      <div>
+        <label class="sl" for="work">Real work per helper: <b id="wv">8,000</b> tokens</label>
+        <input type="range" id="work" min="1000" max="30000" step="500" value="8000">
+      </div>
+    </div>
+    <div class="seg">
+      <button id="omit" aria-pressed="false">omitClaudeMd on helpers</button>
+      <button id="excl" aria-pressed="false">claudeMdExcludes the ancestor</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h2>Per-agent context at task time</h2>
+      <div id="bars"></div>
+      <div class="key">
+        <span><i style="background:#6f7a99"></i>managed policy</span>
+        <span><i style="background:#e0885f"></i>your instructions</span>
+        <span><i style="background:#6ec896"></i>the actual work</span>
+      </div>
+    </div>
+    <div>
+      <h2>What the fan-out costs</h2>
+      <div class="stat"><div class="big bad" id="tot">9,318</div>
+        <p>instruction tokens across the whole fan-out, before any work</p></div>
+      <div class="stat"><div class="big" id="pct">16%</div>
+        <p>of a helper's window spent on instructions it may not need</p></div>
+      <div class="stat"><div class="big ok" id="sav">&mdash;</div>
+        <p>saved against the default setting</p></div>
+      <div class="note" id="msg"></div>
+    </div>
+  </div>
+</main>
+<script>
+(function () {
+  "use strict";
+  // The demo hierarchy from code_example.py. Managed policy is a fixed floor because
+  // neither lever can remove it, and the ancestor share is what claudeMdExcludes reaches.
+  var MANAGED = 85, ANCESTOR_SHARE = 0.39, PRICE = 3.0;
+  var D = { hier: 1553, fan: 5, work: 8000, omit: false, excl: false };
+  var s = Object.assign({}, D);
+
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = function (n) { return Math.round(n).toLocaleString("en-US"); };
+
+  // One agent's instruction load. omitClaudeMd drops everything but managed policy;
+  // claudeMdExcludes only removes the ancestor share, and applies to main and helpers alike.
+  function load(isHelper) {
+    if (isHelper && s.omit) return MANAGED;
+    var yours = s.hier - MANAGED;
+    if (s.excl) yours = yours * (1 - ANCESTOR_SHARE);
+    return MANAGED + yours;
+  }
+
+  function totals(omit, excl) {
+    var was = [s.omit, s.excl];
+    s.omit = omit; s.excl = excl;
+    var t = load(false) + load(true) * s.fan;
+    s.omit = was[0]; s.excl = was[1];
+    return t;
+  }
+
+  function row(name, instr, work) {
+    var max = Math.max(s.hier + s.work, 1);
+    var pol = Math.min(instr, MANAGED), you = instr - pol;
+    var w = function (v) { return (v / max * 100).toFixed(2) + "%"; };
+    return '<div class="agent"><div class="nm"><span>' + name + '</span><span>' +
+      fmt(instr) + ' tok of instructions</span></div><div class="bar">' +
+      '<i class="pol tr" style="width:' + w(pol) + '"></i>' +
+      '<i class="you tr" style="width:' + w(you) + '"></i>' +
+      '<i class="task tr" style="width:' + w(work) + '"></i></div></div>';
+  }
+
+  function render() {
+    $("hv").textContent = fmt(s.hier);
+    $("fv").textContent = s.fan;
+    $("wv").textContent = fmt(s.work);
+    $("omit").setAttribute("aria-pressed", String(s.omit));
+    $("excl").setAttribute("aria-pressed", String(s.excl));
+
+    var html = row("main session", load(false), s.work);
+    for (var i = 1; i <= s.fan; i++) html += row("helper " + i, load(true), s.work);
+    $("bars").innerHTML = html;
+
+    var now = load(false) + load(true) * s.fan;
+    var base = totals(false, false);
+    $("tot").textContent = fmt(now);
+    $("pct").textContent = Math.round(load(true) / (load(true) + s.work) * 100) + "%";
+    $("sav").textContent = now < base
+      ? Math.round((1 - now / base) * 100) + "%"
+      : "—";
+
+    var msg;
+    if (!s.omit && !s.excl) {
+      msg = "<b>Default.</b> Every helper re-reads the whole hierarchy. Raise the helper count and " +
+            "watch this grow in a straight line — the instructions are per spawn, not per request.";
+    } else if (s.omit && !s.excl) {
+      msg = "<b>omitClaudeMd.</b> Helpers keep managed policy and nothing else. Your main session is " +
+            "untouched, which is the point: you still get your conventions where code gets written.";
+    } else if (!s.omit && s.excl) {
+      msg = "<b>claudeMdExcludes.</b> The ancestor file is gone from the main session too, so this " +
+            "helps less per helper but also cuts the bar you pay on every turn of your own work.";
+    } else {
+      msg = "<b>Both.</b> They stack, and the floor they cannot cross is managed policy at " +
+            MANAGED + " tokens. That floor is deliberate — it is how an organization-wide rule survives.";
+    }
+    $("msg").innerHTML = msg + " Total here is $" + (now / 1e6 * PRICE).toFixed(4) +
+      " of input at $" + PRICE.toFixed(2) + "/Mtok, charged before a single useful token.";
+    report();
+  }
+
+  ["hier", "fan", "work"].forEach(function (id) {
+    $(id).addEventListener("input", function (e) { s[id] = +e.target.value; render(); });
+  });
+  ["omit", "excl"].forEach(function (id) {
+    $(id).addEventListener("click", function () { s[id] = !s[id]; render(); });
+  });
+  $("reset").addEventListener("click", function () {
+    s = Object.assign({}, D);
+    $("hier").value = D.hier; $("fan").value = D.fan; $("work").value = D.work;
+    render();
+  });
+
+  function report() {
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+  addEventListener("load", report);
+  new ResizeObserver(report).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>
