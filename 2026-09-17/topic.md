@@ -1,4 +1,4 @@
-# How an Agent Decides a Web Page Is Safe to Read
+# How VS Code Decides a Web Page Is Safe to Read
 
 **Category**: Coding Agents & Productivity
 **Tags**: security, agents, context-engineering
@@ -28,7 +28,7 @@ An agent that fetches a web page has exactly this shape, with one thing worse. T
 
 That is prompt injection, and the usual defense is to approve the domain. Approving the domain answers the wrong question. It says the address is fine. It says nothing about the envelope, and a domain you trust can serve a page you have never seen, because most of the web is user-generated.
 
-The fix in VS Code is to split the approval in two. One setting controls whether the agent may send the request. A separate one controls whether the response is allowed into the conversation. You can allow the first and still be asked about the second.
+The fix, which Microsoft ships in the open-source core of VS Code, is to split the approval in two. One setting controls whether the agent may send the request. A separate one controls whether the response is allowed into the conversation. You can allow the first and still be asked about the second.
 
 ```figure
 { "kind": "system",
@@ -106,6 +106,8 @@ grep -rn "chat.tools.urls.autoApprove" -A20 \
 Most people find entries they do not remember adding. Any value that is a bare `true` is both approvals at once, so split the ones that serve text other people wrote.
 
 Then deal with `*` if it is there. A bare wildcard is the one entry that can approve a host carrying credentials, so deleting it restores the lookalike-domain check you probably assumed you still had. That single key is worth more attention than the rest of the list combined.
+
+None of this is take-my-word. Microsoft ships both halves as MIT-licensed code in the `microsoft/vscode` repository, under `chat/common/tools/builtinTools/`. If one of your rules behaves oddly, the matcher is 170 lines and you can read it end to end.
 
 ## Implementing It
 
