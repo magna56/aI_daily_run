@@ -254,6 +254,12 @@ If the user provided a topic argument, use that. Otherwise:
      people who build it
    - `https://simonwillison.net/` — AI engineering blog (practical, tools-focused)
    - `https://www.latent.space/` — AI engineering podcast/blog
+   - `https://newsletter.pragmaticengineer.com/` — original reporting on what engineering orgs
+     actually do with these tools: named companies, real numbers, adoption and cost decisions.
+     Partly paywalled, and where the company published its own write-up, cite that instead
+   - `https://institute.deepmind.com/` — essays on AGI futures from Google DeepMind researchers.
+     **Wider-context reading only, never the source a session is built on** — they are position
+     pieces with nothing to implement
    - `https://huggingface.co/blog` — new models, tools, techniques
    - `https://www.deeplearning.ai/the-batch/` — Andrew Ng's weekly roundup; strong for
      research-to-practice framing and catching developments the harness-focused sources miss
