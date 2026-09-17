@@ -1719,7 +1719,12 @@ function sessionPageSpec(payload, card) {
   // links, but its canonical tag points here too, so search engines consolidate
   // on one URL instead of treating them as duplicate content.
   const url = `${SITE_ORIGIN}/${card.slug}/`;
-  const description = truncateWords(stripMd(payload.insight) || title, 155);
+  // insight -> hook -> title. The hook was missing from this chain, so the four
+  // sessions with no journal.md entry fell all the way through and shipped their
+  // own title as the meta description -- which tells a searcher nothing the title
+  // did not already say. Every session has a hook, written to be exactly this.
+  const description = truncateWords(
+    stripMd(payload.insight) || stripMd(payload.hook) || title, 155);
   const topicHref = payload.category ? `/topics/${slugify(payload.category)}/` : "";
   const ogImage = `${SITE_ORIGIN}/og/${card.id}.png`;
 
