@@ -46,6 +46,20 @@ merit, judged by the acceptance test in `SKILL.md` — could a competent enginee
 from this alone. If a campaign day can only be justified by who might read it, cut it and take
 the autonomous pick for that date instead.
 
+**Check the source is still alive before you write.** Day 1 was planned against
+`microsoft/vscode-copilot-chat`, and that repository turned out to be archived — last pushed
+2026-05-20, issues closed. The article would have described a dead system and pointed readers at
+a repository with no maintainers. One API call answers it and it costs nothing next to a wasted
+day: check `archived` and `pushed_at` before building on any repository named in a row below.
+The live surface moved, and the chat stack now sits in `microsoft/vscode` itself.
+
+**Name the owner in the write-up.** Rule four of the by-eye checks in `SKILL.md` Step 11 applies
+with particular force here, because most of these rows are built on Microsoft or OpenAI code. A
+session that explains somebody's implementation without naming them is not verifiable, and on
+this track it also fails at the only thing the fortnight is for. One factual mention beside the
+fix, plus the repository path where a reader would go looking. Not in the `Hook`, not in the
+`TLDR`.
+
 ## The slate
 
 | # | Date | Working title | Category | Tier | Level | For |
