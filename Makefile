@@ -47,6 +47,8 @@ site: prune build ## Assemble the publishable site/ folder
 	# <noscript> index baked in), same as sitemap.xml and feed.xml. Copying it
 	# here would clobber that, since this target runs after `build`.
 	cp 404.html about.html privacy.html terms.html manifest.json robots.txt $(OUTPUT_DIR)/
+	# Google Search Console HTML verification files (google*.html), if present.
+	@cp -f google*.html $(OUTPUT_DIR)/ 2>/dev/null || true
 	cp favicon.svg favicon-16.png favicon-32.png apple-touch-icon.png icon-192.png icon-512.png og-image.png $(OUTPUT_DIR)/
 	cp -R functions $(OUTPUT_DIR)/
 	@echo "note: functions/ (OAuth + newsletter) only run on Cloudflare Pages — GitHub Pages has no serverless functions; the signup form posts to theaicommit.com"
