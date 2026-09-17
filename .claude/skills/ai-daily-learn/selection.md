@@ -23,7 +23,33 @@ serves only the bottom layer is a session most of the audience has no reason to 
 
 ## How a winner is chosen (do this in order)
 
-### 0. Ask what is due — do not estimate it
+### 0a. Check for a campaign slate before you pick anything
+
+```bash
+cd ~/ai_learning && grep -n "| $(date +%F) |" .claude/skills/ai-daily-learn/campaign.md 2>/dev/null
+```
+
+A hit means today's topic is already decided and **Steps 0b through 3 below are skipped** — read
+[campaign.md](campaign.md) in full for the row's category, level, `For`, primary source, and the
+claim the day is testing, then go straight to Step 3 of `SKILL.md` (deep research) against that
+source. No hit, or no file, means there is no campaign running and selection proceeds normally.
+
+Three things a campaign does **not** do, and they are the whole reason it is safe to have one:
+
+- It does not waive a single content rule. `node build.js --check` and the word bands apply
+  unchanged, and a campaign day that cannot clear them gets rewritten rather than published past
+  the gate.
+- It does not waive the audience gate. Still run `node build.js --mix <id>` in Step A½. A slate is
+  written to sit inside the bands, so an exit 3 on a campaign day means the article drifted from
+  its row, not that the gate is wrong.
+- It does not outlive its dates. Past the last row, this check simply stops matching and
+  autonomous selection resumes with no edit required.
+
+**A campaign row is a topic, not an article.** It names what to write about and what claim to
+test; it does not excuse you from the acceptance test. If the only honest argument for a row is
+who might read it, drop that row and take the autonomous pick for the date instead.
+
+### 0b. Ask what is due — do not estimate it
 
 ```bash
 cd ~/ai_learning && node build.js --mix

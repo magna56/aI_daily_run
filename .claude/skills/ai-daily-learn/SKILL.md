@@ -190,7 +190,23 @@ where there is nobody to ask.
 
 If the user provided a topic argument, use that. Otherwise:
 
-0. **Ask what is due. Do not estimate it.**
+0. **Check for a campaign slate first.**
+
+   ```bash
+   cd ~/ai_learning && grep -n "| $(date +%F) |" .claude/skills/ai-daily-learn/campaign.md 2>/dev/null
+   ```
+
+   A campaign is a dated override of *topic choice only*, used when a fortnight of sessions has
+   been planned in advance. A hit means today is already decided: read
+   [campaign.md](campaign.md) for the row's category, level, `For`, primary source and the claim
+   it tests, skip the rest of Step 2, and go to Step 3 against that source. Say in the summary
+   that the day came from the campaign rather than the rotation.
+
+   It overrides nothing else. Every content rule, every word band, `--check` and the Step A½
+   audience gate apply unchanged, and the slate is written to sit inside the bands. No hit means
+   no campaign is running, and the numbered steps below decide the day as usual.
+
+1. **Ask what is due. Do not estimate it.**
 
    ```bash
    cd ~/ai_learning && node build.js --mix
@@ -204,7 +220,7 @@ If the user provided a topic argument, use that. Otherwise:
    tier drifted to **double its cap** — 32% against a 20% target — while every individual day's
    pick looked defensible. A rule nobody can evaluate on the day is not a rule.
 
-1. Determine which **category** is due — **by tier weight, not flat rotation** (see Category
+2. Determine which **category** is due — **by tier weight, not flat rotation** (see Category
    Tiers below), inside whatever `--mix` reported:
    - **Tier A ≈ 50%** of sessions (about 3-4 of every 7)
    - **Tier B ≈ 30%** (about 2 of every 7)
@@ -222,7 +238,7 @@ If the user provided a topic argument, use that. Otherwise:
    1/11 of the coverage. Over the first 20 sessions it appeared **once**, tied for last, while
    GPU quantization and diffusion sampling each got double. The tiers exist to stop that
    arithmetic, not to rank the topics by worth.
-2. Use **WebFetch** to scan live sources for the most interesting recent development in that
+3. Use **WebFetch** to scan live sources for the most interesting recent development in that
    category. **Default to non-paper sources.** Changelogs, engineering blogs, docs, release
    notes and real production write-ups should drive most sessions; arXiv is the exception, not
    the default feed:
@@ -265,8 +281,8 @@ If the user provided a topic argument, use that. Otherwise:
    personal domains pass; unvetted personal sites do not, however good the explainer is. Cite the
    published, versioned spec rather than the working repo behind it. This applies to `articles.md`
    just as hard as to the primary source — those links are published.
-3. Pick ONE focused topic that fits 30 minutes — specific, not broad
-4. Use **WebFetch** on the chosen article/paper URL to get full technical details
+4. Pick ONE focused topic that fits 30 minutes — specific, not broad
+5. Use **WebFetch** on the chosen article/paper URL to get full technical details
 
 **Category Tiers** (11 categories in 3 weighted tiers — always with practical SWE angle).
 The tier is about *how far the topic sits from the reader's Monday morning*, not how
