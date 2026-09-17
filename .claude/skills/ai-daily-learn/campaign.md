@@ -33,9 +33,9 @@ engineer can run:
 | "No societal permission for an AI future that hollows out entire industries" | 15 |
 
 Days 1-4 are not aimed at that audience at all. They are the technical credibility that earns a
-reshare from working engineers, which is the only route by which anything reaches a CEO. Lead
-with day 1: `microsoft/vscode-copilot-chat` is MIT-licensed, so its real system prompts and tool
-definitions are readable, and almost nobody has written about them carefully.
+reshare from working engineers, which is the only route by which anything reaches a CEO. The
+asset those days draw on is that `microsoft/vscode` is MIT-licensed and actively developed, so
+its agent machinery can be read line by line and almost nobody has written about it carefully.
 
 **Day 15 is load-bearing and must stay honest.** Fifteen flattering articles is a campaign and
 reads as one. One well-argued piece on where agents genuinely fail is what makes the other
@@ -53,6 +53,10 @@ a repository with no maintainers. One API call answers it and it costs nothing n
 day: check `archived` and `pushed_at` before building on any repository named in a row below.
 The live surface moved, and the chat stack now sits in `microsoft/vscode` itself.
 
+Swept on 2026-09-17, so the rest of the slate is clear: `vscode-prompt-tsx` (day 2),
+`microsoft/vscode`, `semantic-kernel`, `agent-framework`, `a2aproject/A2A` and
+`openai-agents-python` are all active, most pushed within the week. Only day 1 was affected.
+
 **Name the owner in the write-up.** Rule four of the by-eye checks in `SKILL.md` Step 11 applies
 with particular force here, because most of these rows are built on Microsoft or OpenAI code. A
 session that explains somebody's implementation without naming them is not verifiable, and on
@@ -64,7 +68,7 @@ fix, plus the repository path where a reader would go looking. Not in the `Hook`
 
 | # | Date | Working title | Category | Tier | Level | For |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 2026-09-17 | What VS Code's open-source Copilot Chat actually sends the model | Coding Agents & Productivity | A | Start here | Using tools |
+| 1 | 2026-09-17 | ~~What VS Code's open-source Copilot Chat sends the model~~ → **shipped as** How VS Code Decides a Web Page Is Safe to Read | Coding Agents & Productivity | A | Start here | Using tools |
 | 2 | 2026-09-18 | Building prompts as components with a token budget | Building Agents & MCP | A | Building | Building agents |
 | 3 | 2026-09-19 | How VS Code moved agent sessions into their own process | Building Agents & MCP | A | Building | Building agents |
 | 4 | 2026-09-20 | Running Codex inside VS Code's agent host | Coding Agents & Productivity | A | Start here | Using tools |
@@ -95,9 +99,11 @@ Each row below gives the primary source to build on and the claim the day is tes
 still have to clear the admission test in `selection.md`; a vendor blog post announcing a thing
 is not a primary source for how the thing works.
 
-1. **Copilot Chat prompts** — `github.com/microsoft/vscode-copilot-chat` (MIT). The `.tsx` prompt
-   files, the intent routing, the tool definitions. Read the code, not the announcement. If you
-   find something undocumented or wrong, file the issue alongside the article.
+1. **Shipped, on a replacement source.** The planned source, `microsoft/vscode-copilot-chat`,
+   is archived, and the prompts moved behind the closed extension when the chat stack landed in
+   core. What shipped instead came from `microsoft/vscode` itself, MIT and pushed daily:
+   `chat/common/tools/builtinTools/chatUrlFetchingPatterns.ts` and its confirmation half, which
+   carry a two-phase approval — one for the request, a separate one for the response.
 2. **prompt-tsx** — `github.com/microsoft/vscode-prompt-tsx`. Priority-based pruning under a
    token budget is the mechanism; component-shaped prompts are the framing.
 3. **Agent Host Protocol** — VS Code 1.138 release notes and the AHP docs. Sessions in a
@@ -116,7 +122,9 @@ is not a primary source for how the thing works.
 10. **Inference cost levers** — caching, batching, context discipline. The "token capital" day.
 11. **MCP and A2A** — what actually interoperates across vendors, tested rather than asserted.
 12. **Agent Framework migration** — Semantic Kernel and AutoGen are in maintenance mode, so this
-    is forced work with a real deadline. Microsoft Learn is the primary source.
+    is forced work with a real deadline. Microsoft Learn is the primary source, and the repo
+    dates corroborate the premise rather than resting on the announcement: `microsoft/autogen`
+    was last pushed 2026-04-15 while `microsoft/agent-framework` is pushed daily.
 13. **Long-running agent economics** — price a session over eight hours. Compaction, state, and
     where the cost curve bends.
 14. **Measuring AI's effect on a team** — the hard one. The honest answer is that most
