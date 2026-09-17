@@ -166,6 +166,14 @@ is exactly how 2026-09-11 and 2026-09-15 ended up on the same project four days 
   are actually arguing about. Follow the link out and cite what it points at.
 - https://simonwillison.net/ — the single best filter for "does this matter to an engineer"
 - https://www.latent.space/ — AI engineering practice, interviews, what shipped and why
+- https://blog.pragmaticengineer.com/ (archive) and https://newsletter.pragmaticengineer.com/
+  — `[spine]` Gergely Orosz, weekly. **Original reporting on what engineering organizations
+  actually do**, which almost nothing else on this list carries: named companies, real numbers,
+  and practices rather than releases. Recent examples are Uber and Stripe cutting inference cost
+  by routing to open models, AI-assisted migrations, and Cursor usage statistics. Two cautions.
+  It is partly paywalled, so check the free portion carries the detail before building on it.
+  And it reports on other people's systems, so when the company has published its own write-up,
+  that is the primary and this is the route to it.
 - https://www.deeplearning.ai/the-batch/ — `[noticing]` Andrew Ng's weekly, and a **curated
   roundup rather than original reporting**, so it is a route to a primary and never a
   citation. Its real value is the
@@ -290,6 +298,9 @@ it here and citing it was a rejection two sessions already shipped with.
   of the few places a production write-up says what actually broke.
 - Secondary — https://blog.cloudflare.com/tag/agents/, https://developer.nvidia.com/blog/,
   https://www.databricks.com/blog/category/engineering
+- Secondary — https://newsletter.pragmaticengineer.com/ — who is actually cutting inference
+  cost and how, named and with numbers. Strongest for the routing and open-model-substitution
+  decisions this category keeps circling; weakest on serving internals, which vLLM owns.
 
 ### Hands-on Techniques  ·  `For: Shipping AI` / `Building agents`  ·  target 1-2 per 10
 
@@ -512,6 +523,14 @@ normal outcome, not an error, and say what you looked at and why none of it clea
   connectomics) that this audience has no use for, and the engineer-relevant work — tool-use
   datasets, forecasting foundation models — sits in the same feed.
 - **Primary** — https://deepmind.google/discover/blog/ and https://ai.meta.com/research/
+- Secondary `[reference]` — https://institute.deepmind.com/ — essays on AGI futures by Google
+  and Google DeepMind researchers, published explicitly as discussion pieces rather than
+  Google's position. **Never a primary source.** These are position and policy pieces, not
+  methods, and a session built on one would have nothing in `Implementing It` — which is the
+  hard reject at the top of this file, not a style preference. Two real uses: the wider-context
+  slot in `articles.md`, and framing for a session whose mechanism comes from somewhere else.
+  *The case for reasoning transparency* is the shape that works, paired with an interpretability
+  result that can actually be implemented.
 - **Primary** — https://www.interconnects.ai/ — post-training and model reviews from someone who
   trains them. Excellent for *finding* the thing worth explaining; go to the primary source to
   build on it

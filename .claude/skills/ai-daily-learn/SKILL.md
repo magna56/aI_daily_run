@@ -254,6 +254,12 @@ If the user provided a topic argument, use that. Otherwise:
      people who build it
    - `https://simonwillison.net/` — AI engineering blog (practical, tools-focused)
    - `https://www.latent.space/` — AI engineering podcast/blog
+   - `https://newsletter.pragmaticengineer.com/` — original reporting on what engineering orgs
+     actually do with these tools: named companies, real numbers, adoption and cost decisions.
+     Partly paywalled, and where the company published its own write-up, cite that instead
+   - `https://institute.deepmind.com/` — essays on AGI futures from Google DeepMind researchers.
+     **Wider-context reading only, never the source a session is built on** — they are position
+     pieces with nothing to implement
    - `https://huggingface.co/blog` — new models, tools, techniques
    - `https://www.deeplearning.ai/the-batch/` — Andrew Ng's weekly roundup; strong for
      research-to-practice framing and catching developments the harness-focused sources miss
@@ -1415,7 +1421,7 @@ is what drained the two sections that tell a reader why the article applies to t
 `**Time to read**` to match what you actually shipped: it is a number you type, so it is only true
 if you keep it true.
 
-Three content rules no linter can check, so check them by eye before you stop:
+Four content rules no linter can check, so check them by eye before you stop:
 
 - `## Implementing It` gives code for **every role the change touches** — client *and* server,
   producer *and* consumer — not only the role the source announcement was written for. A section
@@ -1428,6 +1434,17 @@ Three content rules no linter can check, so check them by eye before you stop:
   only describes the source system — its full component taxonomy, its internal names, architecture
   the reader will never touch. If a term is defined once and never used again, cut it. This is the
   rule that keeps a session that opens well from going boring by the middle.
+- **Name whose code this is, and say where to read it.** When a session is built on a specific
+  codebase, the write-up names the owner, the product, and the repository or license at least
+  once. This is verifiability rather than credit: a session built on source has claims that are
+  all checkable, and a reader who cannot tell whose implementation they are reading cannot check
+  any of them. The 2026-09-17 session explained a mechanism read line by line out of
+  `microsoft/vscode` and said "Microsoft" zero times in the whole write-up, which left a
+  verifiable piece reading like received wisdom. One sentence fixes it, placed where the reader
+  would act on it — beside the fix, or in `What This Means for You` as *here is the file*. Do
+  **not** repeat the name into the `Hook` or `TLDR` to reinforce it. Those are the card blurb and
+  the first prose on the page, and keyword-padding them is how a technical piece starts reading
+  like marketing to the exact audience most alert to it.
 
 ### Step 12: Present the Summary
 

@@ -1904,8 +1904,11 @@ function writeSitemap(cards, categories) {
       changefreq: "daily",
       priority: "0.9",
     }] : []),
-    { loc: `${SITE_ORIGIN}/privacy.html`, changefreq: "monthly", priority: "0.3" },
-    { loc: `${SITE_ORIGIN}/terms.html`, changefreq: "monthly", priority: "0.3" },
+    // Extensionless on purpose: Cloudflare Pages strips .html and 308s to these
+    // paths, so listing the .html form puts a redirect in the sitemap and Search
+    // Console reports the page as "Page with redirect" instead of indexing it.
+    { loc: `${SITE_ORIGIN}/privacy`, changefreq: "monthly", priority: "0.3" },
+    { loc: `${SITE_ORIGIN}/terms`, changefreq: "monthly", priority: "0.3" },
     ...cards.map((c) => ({
       loc: `${SITE_ORIGIN}/${c.slug}/`,
       lastmod: c.date,
