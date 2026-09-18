@@ -1,4 +1,4 @@
-# Further Reading: How to Decide What Falls Out of Your Prompt First
+# Further Reading: How Copilot Chat Decides What to Cut From an Oversized Prompt
 
 ## Articles
 

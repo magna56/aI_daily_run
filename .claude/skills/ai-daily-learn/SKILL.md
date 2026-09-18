@@ -639,7 +639,18 @@ what makes it land:
   merely happens.
 - A title that is accurate but generic enough to fit five other articles — if you could paste it
   onto a completely different session's `topic.md` and it would still basically work, it is
-  describing the category, not this piece.
+  describing the category, not this piece. The mechanical version of this check: **strike the
+  domain nouns out of the draft and see what is left.** A title with none to strike has not named
+  its subject at all — it hands the reader a decision with nothing to make the decision about.
+  - ✗ `How to Decide What Falls Out of Your Prompt First` — every noun in it is ordinary English.
+    It fits context compaction, RAG chunk selection, memory eviction and conversation trimming
+    equally well, and the real subject — a priority number that only ranks its siblings — appears
+    nowhere. The owner's verdict was "vague, I can't make anything from it".
+    → ✓ `How Copilot Chat Decides What to Cut From an Oversized Prompt`
+  Added 2026-09-18, and the point is the part that is easy to miss: the ✗ obeys every other rule
+  in this list. One clause, one subject, explanatory `How to` form, no glyph, no academic colon,
+  no oversell, under 70 characters. **Passing the checklist is not the test — naming the subject
+  is**, and a title can clear every other rule here while skipping that one.
 
 **Default to the explanatory form.** The house style is ByteByteGo's: name the thing and say
 plainly what the reader is about to understand about it. It reads as a reference someone would
@@ -1429,7 +1440,10 @@ Four content rules no linter can check, so check them by eye before you stop:
 - The title reads to someone who has only used Cursor. No product-specific glyph doing the work
   of the surprise; if the `Hook` line is the better title for that reader, swap them. **And it is
   one clause with one subject** — if it has two halves joined by "so that", check they share a
-  subject and that the second half introduces no noun the reader has not met.
+  subject and that the second half introduces no noun the reader has not met. **And it names its
+  own subject**: strike the domain nouns out of it and check there was something there to strike.
+  A title assembled entirely from ordinary English words is describing a decision the reader has
+  no way to place.
 - **Every detail serves the reader, not the source.** Scan the mechanism section for anything that
   only describes the source system — its full component taxonomy, its internal names, architecture
   the reader will never touch. If a term is defined once and never used again, cut it. This is the

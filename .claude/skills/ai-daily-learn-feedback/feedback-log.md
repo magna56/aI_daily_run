@@ -1600,3 +1600,23 @@ now skipped.
   auto-linker cannot nest anchors inside them.
 - **Not changed**: the back catalog needed no edits — all 29 sessions were correct in source and
   broken only in rendering, so the one-line renderer fix repaired them.
+
+## 2026-09-18 — 2026-09-18
+- **Note**: "The title is vague I cant make anything from it and also the quality of articles is poor"
+- **Verdict**: title — compliance gap (the rule existed and was the only bullet in its list with no
+  example pair); articles — not yet actionable, awaiting the concrete version
+- **Changed**: `ai-daily-learn/SKILL.md` — the "generic enough to fit five other articles" bullet now
+  carries the strike-the-domain-nouns test and the real ✗/✓ pair from this session, and says
+  explicitly that a title can pass every other rule in the list while failing this one; the
+  pre-flight checklist's title bullet gained the same test.
+- **Not changed**: nothing for "quality of articles is poor". Asked which reading was meant; the
+  owner said the write-ups themselves, then "let it be for today" when offered the one concrete
+  defect I could name (`## Implementing It` in this session is entirely `@vscode/prompt-tsx` TSX,
+  so a reader assembling prompts in Python has nothing to type — the liftable Python exists only in
+  `code_example.py`). **Left deliberately unwritten**: if the same note recurs, that is the rule to
+  reach for — when the source is one framework, `Implementing It` must show the mechanism in a form
+  the reader can implement without adopting it.
+- **Document edited**: yes, at the owner's request. Retitled to
+  `How Copilot Chat Decides What to Cut From an Oversized Prompt` across `topic.md`, `articles.md`,
+  `journal.md` and the `code_example.py` docstring. The chosen title is also the ✓ in the new spec
+  rule, so the spec's worked example and the published record agree. Not published.
