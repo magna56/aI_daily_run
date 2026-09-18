@@ -125,6 +125,20 @@ const CATEGORY_BLURBS = {
 const LEVELS = ["Start here", "Building", "Deeper"];
 const JOBS = ["Using tools", "Building agents", "Shipping AI", "How models work"];
 
+// Retired canonical slugs, kept alive. A session's canonical URL is
+// <id>-<slug>/ derived from its title, so retitling a session that has already
+// shipped strands the URL that is sitting in the sitemap, the RSS feed and any
+// newsletter that went out. Each entry here keeps the old path serving that
+// session's current page, exactly like the bare <id>/ alias does; the page's
+// canonical tag points at the live slug, so only one URL is ever the real one
+// and the retired path is deliberately left out of the sitemap and the feed.
+// Add a row whenever you retitle a published session. Never remove one — the
+// whole point is that a link handed out once keeps resolving.
+const RETIRED_SLUGS = {
+  // retitled 2026-09-18, same day it shipped
+  "2026-09-18-how-to-decide-what-falls-out-of-your-prompt-first": "2026-09-18",
+};
+
 // Evergreen two-day track. Folders live under learn/<id>/; ids are the slugs
 // used in #learn/<id> and site/data/<id>.json. Order is the reading order.
 const LEARN_TRACK = [
@@ -2029,6 +2043,12 @@ function main() {
   const journal = parseJournal(readIfExists(JOURNAL));
   for (const id of ids) if (!journal.has(id)) warn(`${id}: no journal.md entry — the card will fall back to the topic body.`);
 
+  // A retired slug that names a session no longer on disk silently stops being
+  // written, which is the one way this table can rot without anyone noticing.
+  for (const [retired, id] of Object.entries(RETIRED_SLUGS)) {
+    if (!ids.includes(id)) warn(`RETIRED_SLUGS: "${retired}" points at ${id}, which is not a session folder — that old URL will 404.`);
+  }
+
   if (!check) {
     rmrf(DATA_DIR);
     rmrf(ASSET_DIR);
@@ -2053,10 +2073,13 @@ function main() {
         out.card.date || ""
       );
       const html = renderShell(sessionPageSpec(out.payload, out.card));
-      // The bare <id>/ page keeps already-shared/indexed links working; its
-      // canonical tag (baked into `html` above) points at the slug page, so
-      // both resolve but only the slug page is treated as the "real" one.
-      for (const dirName of [out.card.id, out.card.slug]) {
+      // The bare <id>/ page keeps already-shared/indexed links working, and so
+      // does any slug this session used to publish under; the canonical tag
+      // (baked into `html` above) points at the current slug page, so they all
+      // resolve but only that one is treated as the "real" one.
+      const retired = Object.keys(RETIRED_SLUGS)
+        .filter((old) => RETIRED_SLUGS[old] === out.card.id);
+      for (const dirName of [out.card.id, out.card.slug, ...retired]) {
         const dir = path.join(SITE, dirName);
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(path.join(dir, "index.html"), html);

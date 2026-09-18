@@ -1620,3 +1620,11 @@ now skipped.
   `How Copilot Chat Decides What to Cut From an Oversized Prompt` across `topic.md`, `articles.md`,
   `journal.md` and the `code_example.py` docstring. The chosen title is also the ✓ in the new spec
   rule, so the spec's worked example and the published record agree. Not published.
+- **Follow-on, same day**: the retitle would have 404'd the live URL, because the canonical path is
+  `<id>-<slug>` built from the title and 2026-09-18 was already on `main` and deployed — the old
+  path was in the sitemap, the RSS feed and the newsletter that went out. `build.js` now carries a
+  `RETIRED_SLUGS` map that serves the session's current page at its old path as well, on the same
+  mechanism as the bare `<id>/` alias, with the canonical tag pointing at the live slug and the
+  retired path left out of the sitemap and feed. Documented in `CLAUDE.md`; `make check` warns if a
+  row goes stale. **The standing rule: retitling a shipped session means adding a row, and no row
+  is ever deleted.**
