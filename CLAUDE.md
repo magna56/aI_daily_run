@@ -98,6 +98,12 @@ internals worth knowing before touching it:
   shell — while staying byte-identical everywhere it matters. Editing the four markers or the
   `HOME_H1` swap line in `index.html` will break this; `build.js` throws immediately if a marker
   goes missing. `site/sitemap.xml` is generated here too, not hand-written.
+- **A published session's URL is derived from its title, so retitling one strands that URL.**
+  `RETIRED_SLUGS` in `build.js` maps each old `<id>-<slug>` path to its session id and writes the
+  session's current page there too, the same way the bare `<id>/` alias works — the canonical tag
+  still points at the live slug, and the retired path is kept out of the sitemap and the feed.
+  Retitle a session that has already shipped and you add a row; never delete one. `make check`
+  warns if a row names a session folder that no longer exists.
 
 **`lib/runner.js`** executes each `code_example.py` in a throwaway temp cwd (never dirties the
 repo), with a 60s timeout, `MPLBACKEND=Agg`, and prefers `.venv/bin/python3` over system Python.

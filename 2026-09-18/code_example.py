@@ -1,5 +1,5 @@
 """
-How to decide what falls out of your prompt first.
+How Copilot Chat decides what to cut from an oversized prompt.
 
 Implements the priority-tree pruner a prompt assembler needs: rank siblings,
 prune lowest-first until the messages fit a token budget, and resolve ties by

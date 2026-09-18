@@ -1,4 +1,4 @@
-# How to Decide What Falls Out of Your Prompt First
+# How Copilot Chat Decides What to Cut From an Oversized Prompt
 
 **Category**: Building Agents & MCP
 **Tags**: context-engineering, prompt-engineering, cost
