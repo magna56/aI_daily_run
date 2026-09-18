@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>What falls out of the prompt first</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .lbl { font-size: 11.5px; color: #9aa5c4; font-weight: 650; letter-spacing: .05em;
+         text-transform: uppercase; margin: 0 0 9px; }
+  .branch { border: 1px solid #1c2130; border-radius: 8px; padding: 9px 11px; margin-bottom: 8px;
+            background: #131725; }
+  .bh { display: flex; align-items: center; gap: 9px; font-size: 12.5px; margin-bottom: 7px; }
+  .bh code { color: #cdd5ee; }
+  .leaf { display: flex; align-items: center; gap: 9px; font-size: 12px; padding: 4px 0 4px 16px;
+          color: #9aa5c4; }
+  .leaf b { color: #e8ecfb; font-weight: 600; }
+  input[type=range] { width: 92px; accent-color: #7c8cf8; vertical-align: middle; }
+  .num { display: inline-block; min-width: 34px; text-align: right; font-variant-numeric: tabular-nums;
+         color: #dfe4f2; font-weight: 650; font-size: 12px; }
+  .off { color: #6f7a99; font-style: italic; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed="true"] { background: rgba(124,140,248,.16); border-color: rgba(124,140,248,.55); color: #e8ecfb; }
+  button:focus-visible, input:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .seg { display: flex; gap: 6px; margin-top: 13px; align-items: center; flex-wrap: wrap;
+         border-top: 1px solid #1c2130; padding-top: 13px; }
+  .reset { margin-left: auto; }
+  .cols { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-top: 18px; }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 9px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  .ord { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 12px; }
+  .ord span { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 7px;
+              font-size: 12.5px; background: #131725; border: 1px solid #1c2130; }
+  .ord span i { font-style: normal; font-size: 10.5px; color: #6f7a99; }
+  .ord span.cut { background: rgba(224,136,95,.14); border-color: rgba(224,136,95,.5); color: #f0b393; }
+  .ord span.kept { background: rgba(110,200,150,.13); border-color: rgba(110,200,150,.45); color: #a9e3c4; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 13px; margin-bottom: 9px; }
+  .big { font-size: 24px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .stat p { margin: 3px 0 0; font-size: 12px; color: #8f9ab8; }
+  .note { margin-top: 14px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-18">
+  <h1>What falls out of the prompt first</h1>
+  <p class="sub">The README's own four elements. Move any slider, or take the numbers off the two parents, and watch the prune order change without a single number on a leaf changing.</p>
+
+  <div class="panel">
+    <p class="lbl">the prompt tree</p>
+    <div id="tree"></div>
+    <div class="seg">
+      <button id="parents" aria-pressed="true">parents carry a priority</button>
+      <button id="budget" aria-pressed="false">tighten budget (keep 2)</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h2>Prune order, first to go</h2>
+      <div class="ord" id="order"></div>
+      <div class="note" id="msg"></div>
+    </div>
+    <div>
+      <h2>Which number wins</h2>
+      <div class="stat"><div class="big" id="verdict">&mdash;</div>
+        <p>what decides the order between the two branches</p></div>
+      <div class="stat"><div class="big" id="survivor" style="font-size:16px">&mdash;</div>
+        <p>highest-numbered leaf that still gets pruned early</p></div>
+    </div>
+  </div>
+</main>
+<script>
+(function () {
+  "use strict";
+  var D = { up: 1, sp: 2, A: 100, B: 0, C: 200, D: 20, parents: true, tight: false };
+  var s = Object.assign({}, D);
+  var $ = function (id) { return document.getElementById(id); };
+
+  // priority ranks siblings only. The tie-break, when two parents match, is a
+  // look at each branch's DIRECT children - recomputed after every removal,
+  // which is what makes the branches take turns.
+  function order() {
+    var t = {
+      U: { p: s.parents ? s.up : 0, kids: [{ n: "A", p: s.A }, { n: "B", p: s.B }] },
+      S: { p: s.parents ? s.sp : 0, kids: [{ n: "C", p: s.C }, { n: "D", p: s.D }] }
+    };
+    var out = [];
+    while (t.U.kids.length || t.S.kids.length) {
+      var live = ["U", "S"].filter(function (k) { return t[k].kids.length; });
+      var pick = live.reduce(function (a, b) {
+        var ka = Math.min.apply(null, t[a].kids.map(function (x) { return x.p; }));
+        var kb = Math.min.apply(null, t[b].kids.map(function (x) { return x.p; }));
+        return (t[a].p !== t[b].p) ? (t[a].p < t[b].p ? a : b) : (ka <= kb ? a : b);
+      });
+      var kids = t[pick].kids;
+      var leaf = kids.reduce(function (a, b) { return a.p <= b.p ? a : b; });
+      kids.splice(kids.indexOf(leaf), 1);
+      out.push(leaf);
+    }
+    return out;
+  }
+
+  function row(id, name, label) {
+    return '<div class="bh"><code>' + name + '</code>' +
+      (s.parents
+        ? '<input type="range" id="' + id + '" min="0" max="10" step="1" value="' + s[id] + '" aria-label="' + label + '">' +
+          '<span class="num">' + s[id] + "</span>"
+        : '<span class="off">no priority set</span>') + "</div>";
+  }
+  function leaf(id) {
+    return '<div class="leaf"><b>' + id + "</b>" +
+      '<input type="range" id="' + id + '" min="0" max="250" step="10" value="' + s[id] +
+      '" aria-label="priority for ' + id + '"><span class="num">' + s[id] + "</span></div>";
+  }
+
+  function render() {
+    $("tree").innerHTML =
+      '<div class="branch">' + row("up", "&lt;UserMessage&gt;", "UserMessage priority") +
+        leaf("A") + leaf("B") + "</div>" +
+      '<div class="branch">' + row("sp", "&lt;SystemMessage&gt;", "SystemMessage priority") +
+        leaf("C") + leaf("D") + "</div>";
+    $("parents").setAttribute("aria-pressed", String(s.parents));
+    $("budget").setAttribute("aria-pressed", String(s.tight));
+
+    var o = order(), cut = s.tight ? 2 : 0;
+    $("order").innerHTML = o.map(function (x, i) {
+      return '<span class="' + (i < cut ? "cut" : (s.tight ? "kept" : "")) + '">' +
+        x.n + " <i>" + x.p + "</i></span>";
+    }).join("");
+
+    var byPriority = s.parents && s.up !== s.sp;
+    $("verdict").textContent = byPriority ? "the parents" : "the lookahead";
+    $("verdict").style.color = byPriority ? "#6ec896" : "#e0885f";
+
+    // the point of the whole page: a high number pruned before a lower one
+    var early = null;
+    for (var i = 0; i < o.length - 1; i++) {
+      for (var j = i + 1; j < o.length; j++) {
+        if (o[i].p > o[j].p) { early = o[i]; break; }
+      }
+      if (early) break;
+    }
+    $("survivor").textContent = early
+      ? early.n + " at " + early.p + " goes before a lower number"
+      : "none — order matches the numbers";
+    $("survivor").style.color = early ? "#e0885f" : "#6ec896";
+
+    var msg;
+    if (!s.parents) {
+      msg = "<b>Parents unranked.</b> The renderer compares each branch's lowest child and takes turns, " +
+            "so the branches interleave. One low-priority leaf now changes which branch is cut into next.";
+    } else if (s.up === s.sp) {
+      msg = "<b>The parents tie.</b> Equal numbers fall through to the same lookahead, so this behaves " +
+            "exactly like setting no priority at all.";
+    } else if (early) {
+      msg = "<b>" + early.n + " carries " + early.p + " and still goes early.</b> It sits in the branch " +
+            "the parents ranked lower, and a leaf never competes outside its own branch.";
+    } else {
+      msg = "<b>Order matches the numbers here.</b> That is a coincidence of these values, not a rule — " +
+            "move a parent slider and the numbers stop predicting the order.";
+    }
+    $("msg").innerHTML = msg;
+    report();
+  }
+
+  $("tree").addEventListener("input", function (e) {
+    if (e.target.id) { s[e.target.id] = +e.target.value; render(); }
+  });
+  $("parents").addEventListener("click", function () { s.parents = !s.parents; render(); });
+  $("budget").addEventListener("click", function () { s.tight = !s.tight; render(); });
+  $("reset").addEventListener("click", function () { s = Object.assign({}, D); render(); });
+
+  function report() {
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+  addEventListener("load", report);
+  new ResizeObserver(report).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>
