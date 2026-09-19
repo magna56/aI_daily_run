@@ -52,12 +52,25 @@ export async function onRequestPost(context) {
 
   let sent = 0;
   let failed = 0;
+  // sendEmail already returns why a send failed; this loop used to discard it,
+  // which left a "failed: 2" in the publish log with no way to act on it. The
+  // address is redacted because this response is echoed into deploy output that
+  // gets pasted into issues and chats.
+  const failures = [];
   if (mailConfigured(env)) {
     for (const row of list) {
       const mail = issueEmail({ site, title, hook, url, unsub: row.unsub_token, sessionId });
       const result = await sendEmail(env, { to: row.email, ...mail });
-      if (result.ok) sent += 1;
-      else failed += 1;
+      if (result.ok) {
+        sent += 1;
+      } else {
+        failed += 1;
+        failures.push({
+          email: redactEmail(row.email),
+          error: result.error || "send_failed",
+          status: result.status || null,
+        });
+      }
     }
   }
 
@@ -69,7 +82,16 @@ export async function onRequestPost(context) {
     ok: true,
     sent,
     failed,
+    // only present when something went wrong, so a clean send stays one line
+    ...(failures.length ? { failures } : {}),
     subscribers: list.length,
     mailed: mailConfigured(env),
   });
+}
+
+// b***@example.com — enough to identify the row, safe to paste in a log.
+function redactEmail(email) {
+  const at = String(email || "").indexOf("@");
+  if (at < 1) return "***";
+  return email[0] + "***" + email.slice(at);
 }

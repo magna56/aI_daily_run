@@ -197,6 +197,27 @@ success. The `newsletter:` line is echoed because that send reaches real subscri
 be recalled; `already_sent` means D1's `issues` table refused a duplicate, which is the expected
 answer on any re-run.
 
+**A non-zero `failed` on that line is a real signal, not noise.** The send already reaches
+everyone whose status is not `unsubscribed`, so `pending` rows left over from the old double
+opt-in flow are included and a failure there is a delivery problem rather than an exclusion. The
+response now carries a `failures` array with a redacted address, the provider's own error string
+and its HTTP status, because the count on its own was undiagnosable:
+
+```
+[publish]   newsletter:  {"ok":true,"sent":10,"failed":2,
+                          "failures":[{"email":"b***@example.com","error":"Invalid `to` field","status":422}],
+                          "subscribers":12}
+```
+
+Read the `error` string first — it is Resend's, not ours. A validation message means the address
+is malformed and the row should be corrected or removed; a 4xx on a valid-looking address usually
+means the recipient is on the provider's suppression list after an earlier bounce. Either way the
+person did not get that issue and will not get the next one until the row is fixed, so treat it
+the way you would treat a failed delivery to a customer rather than a warning to scroll past.
+
+`subscribers` counts rows that were attempted, so `sent + failed` should equal it. If it does not,
+`mailConfigured` was false and nothing was mailed at all.
+
 ### Manual fallback
 
 If the script is missing entirely:
