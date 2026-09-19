@@ -1,0 +1,160 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Tool Cache Reuse Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#141821;--line:#303747;--text:#f4f6fb;--muted:#929db1;--bad:#f97316;--ok:#34d399;--acc:#818cf8;--warn:#facc15}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111827,var(--bg) 48%);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:1060px;margin:auto;padding:24px}
+.kicker{font:800 .75rem ui-monospace;color:var(--warn);letter-spacing:.13em}
+h1{font-size:clamp(1.7rem,4.4vw,2.8rem);line-height:1.08;margin:.4rem 0}
+.lede{max-width:750px;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.ctl{display:grid;gap:16px;grid-template-columns:1fr 1fr}
+@media(max-width:680px){.ctl{grid-template-columns:1fr}}
+.ctl label{display:block;font:700 .78rem ui-monospace;color:var(--muted);margin-bottom:8px}
+.ctl input[type=range]{width:100%;accent-color:var(--acc)}
+.modes{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.modes button{background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:99px;padding:8px 13px;font:600 .8rem system-ui;cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#0a0d18}
+.strip{margin-top:6px}
+.strip .row{display:grid;grid-template-columns:132px 1fr;gap:10px;align-items:center;margin-bottom:7px}
+.strip .lab{font:700 .75rem ui-monospace;color:var(--muted);text-align:right}
+.seg{display:flex;height:26px;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.seg i{display:flex;align-items:center;justify-content:center;font:600 10.5px ui-monospace;color:#0a0d18;overflow:hidden;white-space:nowrap}
+.seg i.ok{background:var(--ok)}.seg i.bad{background:var(--bad)}.seg i.sys{background:var(--acc)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+@media(max-width:680px){.stats{grid-template-columns:1fr}}
+.stat{padding:14px;border:1px solid var(--line);border-radius:11px;background:#0c1018}
+.stat b{display:block;font:900 1.75rem ui-monospace}
+.stat small{color:var(--muted)}
+.note{margin-top:14px;padding:13px;border-radius:11px;border:1px solid var(--line);background:#0c1018;color:var(--muted)}
+.note strong{color:var(--text)}
+#reset{width:100%;margin-top:14px;background:#0c1018;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:9px;cursor:pointer;font-weight:700}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main class="wrap" data-visualizer="frontier-2026-08-27">
+<header>
+<div class="kicker">ARXIV:2608.19662 &middot; RECACHE</div>
+<h1>The schema didn't change. It moved.</h1>
+<p class="lede">Same four tool schemas, reordered between requests. Watch how much of the cache survives — and what happens when position stops being part of the cache key.</p>
+</header>
+
+<section class="panel">
+<div class="ctl">
+  <div>
+    <label for="tools">Tool catalogue size: <output id="toolsOut">8</output></label>
+    <input id="tools" type="range" min="4" max="24" value="8" step="1">
+    <p style="color:var(--muted);font-size:.8rem;margin:6px 0 0">More tools means more possible orderings — and a worse prefix cache.</p>
+  </div>
+  <div>
+    <label>Cache key</label>
+    <div class="modes" id="modes" role="group" aria-label="Cache key strategy">
+      <button data-m="prefix" aria-pressed="true">Prefix cache</button>
+      <button data-m="offset" aria-pressed="false">Key = (tool, offset)</button>
+      <button data-m="local" aria-pressed="false">Key = tool</button>
+    </div>
+  </div>
+</div>
+
+<div class="strip" id="strip"></div>
+
+<div class="stats" aria-live="polite">
+  <div class="stat"><b id="hit">—</b><small>tool tokens reused</small></div>
+  <div class="stat"><b id="blocks">—</b><small>KV blocks stored</small></div>
+  <div class="stat"><b id="mem">—</b><small>KV tokens held</small></div>
+</div>
+
+<div class="note" id="note"></div>
+<button id="reset" type="button" aria-label="Reset to the article's numbers">Reset</button>
+</section>
+</main>
+<script>
+(()=>{"use strict";
+const $=s=>document.querySelector(s);
+const NAMES=["read_file","run_sql","list_dir","send_email","search_web","write_file","get_weather","create_ticket","open_pr","fetch_url","grep_repo","run_tests","deploy","rollback","list_pods","tail_logs","query_kv","upload","resize_img","send_slack","make_chart","diff_files","lint","bench"];
+const SIZE={};NAMES.forEach((n,i)=>SIZE[n]=28+((i*13)%36));
+const SYS=40, PER=4, REQS=200, SEED=7;
+let mode="prefix";
+
+// deterministic PRNG so the lab matches code_example.py's shape every load
+function rng(seed){let s=seed>>>0;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
+function sample(pool,k,r){const a=pool.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a.slice(0,k);}
+
+function simulate(nTools){
+  const pool=NAMES.slice(0,nTools), r=rng(SEED);
+  const reqs=[];for(let i=0;i<REQS;i++)reqs.push(sample(pool,PER,r));
+  const totalTokens=reqs.reduce((n,q)=>n+q.reduce((m,t)=>m+SIZE[t],0),0);
+  let reused=0,prev=null;
+  for(const q of reqs){
+    if(prev){let k=0;for(let i=0;i<q.length;i++){if(q[i]!==prev[i])break;k+=SIZE[q[i]];}reused+=k;}
+    prev=q;
+  }
+  const store=new Set();let hits=0,calls=0,held=0;
+  for(const q of reqs){let off=SYS;for(const t of q){
+    const key=mode==="local"?t:t+"@"+off;calls++;
+    if(store.has(key))hits++;else{store.add(key);held+=SIZE[t];}
+    off+=SIZE[t];}}
+  return {
+    reusePct: mode==="prefix" ? 100*reused/totalTokens : 100*hits/calls,
+    blocks: mode==="prefix" ? "—" : store.size,
+    held: mode==="prefix" ? "—" : held,
+    reqs
+  };
+}
+
+function renderStrip(reqs){
+  const a=reqs[0], b=reqs[1];
+  function seg(list, cls){
+    const total=list.reduce((n,t)=>n+SIZE[t],SYS);
+    let h='<i class="sys" style="flex:'+(SYS/total)+'">system</i>';
+    list.forEach((t,i)=>{
+      const state = cls==="base" ? "ok" : (mode==="local" ? "ok" : (a[i]===t?"ok":"bad"));
+      h+='<i class="'+state+'" style="flex:'+(SIZE[t]/total)+'">'+t+'</i>';
+    });
+    return h;
+  }
+  $("strip").innerHTML=
+    '<div class="row"><span class="lab">Request 1</span><div class="seg">'+seg(a,"base")+'</div></div>'+
+    '<div class="row"><span class="lab">Request 2</span><div class="seg">'+seg(b,"cmp")+'</div></div>';
+}
+
+const NOTES={
+  prefix:"<strong>Prefix caching.</strong> Reuse stops at the first tool that differs, and everything after it shifted position — so it is recomputed even though the bytes are identical.",
+  offset:"<strong>Key = (tool, offset).</strong> Better, but the offset is still in the key, so the same tool is stored once per position it ever landed in. Blocks keep growing with traffic.",
+  local:"<strong>Key = tool.</strong> Positions restart at zero inside each block and tools cannot attend to each other, so a block is composition-invariant — one entry per tool, forever."
+};
+
+function render(){
+  const n=Number($("tools").value);
+  $("toolsOut").textContent=n;
+  const s=simulate(n);
+  $("hit").textContent=s.reusePct.toFixed(1)+"%";
+  $("hit").style.color = s.reusePct>90?"var(--ok)":s.reusePct>50?"var(--warn)":"var(--bad)";
+  $("blocks").textContent=s.blocks;
+  $("mem").textContent=s.held===("—")?"—":s.held.toLocaleString();
+  $("note").innerHTML=NOTES[mode];
+  renderStrip(s.reqs);
+}
+
+document.querySelectorAll("#modes button").forEach(b=>{
+  b.addEventListener("click",()=>{
+    mode=b.dataset.m;
+    document.querySelectorAll("#modes button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+    render();
+  });
+});
+$("tools").addEventListener("input",render);
+$("reset").addEventListener("click",()=>{
+  mode="prefix";$("tools").value=8;
+  document.querySelectorAll("#modes button").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.m==="prefix")));
+  render();
+});
+render();
+
+function reportHeight(){parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");}
+addEventListener("load",reportHeight);
+new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body></html>

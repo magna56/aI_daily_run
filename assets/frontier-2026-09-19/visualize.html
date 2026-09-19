@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Three harness knobs, three different effects</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  label.sl { display: block; font-size: 12px; color: #9aa5c4; margin-bottom: 5px; }
+  label.sl b { color: #dfe4f2; font-weight: 650; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  .seg { display: flex; gap: 6px; margin-top: 13px; align-items: center; flex-wrap: wrap;
+         border-top: 1px solid #1c2130; padding-top: 13px; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed="true"] { background: rgba(124,140,248,.16); border-color: rgba(124,140,248,.55); color: #e8ecfb; }
+  button.warn[aria-pressed="true"] { background: rgba(224,136,95,.18); border-color: rgba(224,136,95,.6); color: #f0b393; }
+  button:focus-visible, input:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .cols { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-top: 18px; }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 9px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  .stage { margin-bottom: 10px; }
+  .stage .nm { display: flex; justify-content: space-between; font-size: 11.5px; color: #8f9ab8; margin-bottom: 4px; }
+  .stage .nm b { color: #dfe4f2; font-variant-numeric: tabular-nums; }
+  .bar { height: 18px; border-radius: 5px; background: #131725; border: 1px solid #1c2130; overflow: hidden; }
+  .bar i { display: block; height: 100%; }
+  .tr { transition: width .18s ease; }
+  @media (prefers-reduced-motion: reduce) { .tr { transition: none; } }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 13px; margin-bottom: 9px; }
+  .big { font-size: 26px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .big.ok { color: #6ec896; } .big.bad { color: #e0885f; }
+  .stat p { margin: 3px 0 0; font-size: 12px; color: #8f9ab8; }
+  .note { margin-top: 14px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+</style>
+</head>
+<body>
+<main data-visualizer="frontier-2026-09-19">
+  <h1>Three harness knobs, three different effects</h1>
+  <p class="sub">Same execution loop, same task, 40 turns of read-and-act. Turn each component on and watch which number it moves — and which it leaves alone.</p>
+
+  <div class="panel">
+    <label class="sl" for="budget">Context-window budget: <b id="bv">900</b> tokens</label>
+    <input type="range" id="budget" min="300" max="4000" step="100" value="900">
+    <div class="seg">
+      <button id="ctx" aria-pressed="true">context management</button>
+      <button id="plan" aria-pressed="false">planning</button>
+      <button id="bash" aria-pressed="false">bash-only action space</button>
+      <button class="warn" id="recover" aria-pressed="false">make elided content recoverable</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h2>Where the tokens go</h2>
+      <div id="stages"></div>
+      <div class="note" id="msg"></div>
+    </div>
+    <div>
+      <h2>What you would report</h2>
+      <div class="stat"><div class="big" id="over">&mdash;</div>
+        <p>runs that die of context overflow — the only accuracy effect here</p></div>
+      <div class="stat"><div class="big" id="cost">0</div>
+        <p>tokens charged for the run</p></div>
+      <div class="stat"><div class="big" id="turns" style="font-size:19px">40 turns</div>
+        <p>how far the trajectory got before it stopped</p></div>
+    </div>
+  </div>
+</main>
+<script>
+(function () {
+  "use strict";
+  var TURNS = 40, SCHEMA = 140, RAW_PER_TURN = 268;
+  var D = { budget: 900, ctx: true, plan: false, bash: false, recover: false };
+  var s = Object.assign({}, D);
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = function (n) { return Math.round(n).toLocaleString("en-US"); };
+
+  function model() {
+    // planning changes WHERE the trajectory stops, not whether it succeeds
+    var turns = s.plan ? Math.round(TURNS * 0.75) : TURNS;
+    var raw = turns * RAW_PER_TURN;
+
+    // stage 1 is free and deterministic: superseded tool results carry nothing
+    var afterElision = s.ctx ? Math.round(raw * 0.07) : raw;
+    // stage 2 is paid, and it only ever reads what stage 1 left standing
+    var summarizerRead = s.ctx && afterElision > s.budget ? afterElision : 0;
+    var finalCtx = s.ctx ? Math.min(afterElision, s.budget) : raw;
+
+    // the recovery affordance: schema on every turn for a tool models rarely call
+    var recoverCost = s.ctx && s.recover ? 60 * turns : 0;
+    var schema = s.bash ? 0 : SCHEMA * turns;
+
+    return {
+      turns: turns, raw: raw, afterElision: afterElision,
+      summarizerRead: summarizerRead, finalCtx: finalCtx,
+      overflow: finalCtx > s.budget,
+      cost: finalCtx + summarizerRead + schema + recoverCost,
+      schema: schema, recoverCost: recoverCost
+    };
+  }
+
+  function bar(label, value, max, color) {
+    return '<div class="stage"><div class="nm"><span>' + label + "</span><b>" +
+      fmt(value) + '</b></div><div class="bar"><i class="tr" style="width:' +
+      Math.min(100, value / max * 100).toFixed(1) + "%;background:" + color + '"></i></div></div>';
+  }
+
+  function render() {
+    $("bv").textContent = fmt(s.budget);
+    ["ctx", "plan", "bash", "recover"].forEach(function (k) {
+      $(k).setAttribute("aria-pressed", String(s[k]));
+    });
+
+    var m = model(), max = Math.max(m.raw, 1);
+    $("stages").innerHTML =
+      bar("raw transcript, " + m.turns + " turns", m.raw, max, "#6f7a99") +
+      bar("after stage 1 — rule-based elision (free)", m.afterElision, max, "#6ec896") +
+      bar("read by stage 2 — LLM summarization (paid)", m.summarizerRead, max, "#e0885f") +
+      bar("tool schema, charged every turn", m.schema, max, "#e0885f") +
+      (m.recoverCost ? bar("recovery affordance models rarely call", m.recoverCost, max, "#e0885f") : "");
+
+    $("over").textContent = m.overflow ? "YES" : "none";
+    $("over").className = "big " + (m.overflow ? "bad" : "ok");
+    $("cost").textContent = fmt(m.cost);
+    $("turns").textContent = m.turns + " turns";
+
+    var msg;
+    if (!s.ctx) {
+      msg = "<b>No context management.</b> The transcript outgrows the budget and the run dies of its " +
+            "own length. This is the failure the paper says context management exists to prevent — the " +
+            "benefit is not better context, it is a run that finishes.";
+    } else if (s.recover) {
+      msg = "<b>The recovery affordance is the one to skip.</b> Letting the agent ask for elided content " +
+            "back costs schema on every turn, and the paper found models rarely used it and accuracy did " +
+            "not move. An afternoon of work for nothing.";
+    } else if (s.bash && s.plan) {
+      msg = "<b>Both cost knobs on.</b> Accuracy did not change — overflow is still prevented and the task " +
+            "is the same. Planning stopped the run sooner; bash-only stopped paying tool schema every turn. " +
+            "On a weaker model both of these would read as accuracy scaffolding instead.";
+    } else {
+      msg = "<b>Watch which number moves.</b> Context management changes the overflow row. Planning and " +
+            "the action space change only cost. Tuning the last two for accuracy is tuning the wrong thing.";
+    }
+    $("msg").innerHTML = msg;
+    report();
+  }
+
+  $("budget").addEventListener("input", function (e) { s.budget = +e.target.value; render(); });
+  ["ctx", "plan", "bash", "recover"].forEach(function (k) {
+    $(k).addEventListener("click", function () { s[k] = !s[k]; render(); });
+  });
+  $("reset").addEventListener("click", function () {
+    s = Object.assign({}, D);
+    $("budget").value = D.budget;
+    render();
+  });
+
+  function report() {
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+  addEventListener("load", report);
+  new ResizeObserver(report).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>

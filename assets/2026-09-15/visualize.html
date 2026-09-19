@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>What a coding-agent audit costs you to triage</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .lbl { font-size: 11.5px; color: #9aa5c4; font-weight: 650; letter-spacing: .05em;
+         text-transform: uppercase; margin: 0 0 8px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  label.sl { display: block; font-size: 12px; color: #9aa5c4; margin-bottom: 5px; }
+  label.sl b { color: #dfe4f2; font-weight: 650; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  .seg { display: flex; gap: 6px; margin-top: 13px; align-items: center; flex-wrap: wrap;
+         border-top: 1px solid #1c2130; padding-top: 13px; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed="true"] { background: rgba(124,140,248,.16); border-color: rgba(124,140,248,.55); color: #e8ecfb; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .cols { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-top: 18px; }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 9px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  .r { display: grid; grid-template-columns: 1fr 66px 74px; gap: 9px; align-items: baseline;
+       padding: 6px 10px; border-radius: 6px; background: #10131f; border: 1px solid #1c2130;
+       margin-bottom: 4px; font-size: 12.5px; }
+  .r.real { border-color: rgba(110,200,150,.45); background: rgba(110,200,150,.08); }
+  .r.noise { opacity: .55; }
+  .r.untestable { border-color: rgba(224,136,95,.45); background: rgba(224,136,95,.08); }
+  .r code { font-size: 12px; color: #e8ecfb; }
+  .agree { color: #8f9ab8; font-size: 11.5px; text-align: right; }
+  .v { text-align: right; font-size: 11px; font-weight: 650; text-transform: uppercase; }
+  .v.real { color: #6ec896; } .v.noise { color: #6f7a99; } .v.untestable { color: #e0885f; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 13px; margin-bottom: 9px; }
+  .big { font-size: 27px; font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .big.ok { color: #6ec896; } .big.bad { color: #e0885f; }
+  .stat p { margin: 3px 0 0; font-size: 12px; color: #8f9ab8; }
+  .note { margin-top: 14px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-15">
+  <h1>What a coding-agent audit costs you to triage</h1>
+  <p class="sub">The same three model transcripts as the Code tab. Change how many models and rounds you run, then decide whether you have a checker to settle what comes back.</p>
+
+  <div class="panel">
+    <div class="grid">
+      <div>
+        <label class="sl" for="models">Models in the audit: <b id="mv">3</b></label>
+        <input type="range" id="models" min="1" max="3" step="1" value="3">
+      </div>
+      <div>
+        <label class="sl" for="rounds">Rounds each: <b id="rv">3</b></label>
+        <input type="range" id="rounds" min="1" max="4" step="1" value="3">
+      </div>
+    </div>
+    <div class="seg">
+      <span style="font-size:12px;color:#9aa5c4">To settle a claim you have</span>
+      <button id="noOracle" aria-pressed="false">a human reading it</button>
+      <button id="oracle" aria-pressed="true">a checker</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h2>Distinct claims that came back</h2>
+      <div id="rows"></div>
+    </div>
+    <div>
+      <h2>What it costs, what it caught</h2>
+      <div class="stat"><div class="big" id="reads">0</div>
+        <p id="readsub">claims a human has to read</p></div>
+      <div class="stat"><div class="big ok" id="prec">0%</div>
+        <p id="precsub">of distinct claims survived checking</p></div>
+      <div class="stat"><div class="big" id="miss">0</div>
+        <p>real bugs no model reported, found by the checker</p></div>
+      <div class="note" id="note"></div>
+    </div>
+  </div>
+</main>
+<script>
+"use strict";
+
+var SCHEMA = {
+  public_notes: {},
+  documents: { priv: true },
+  members: { priv: true },
+  documents_fts: { derived: "documents" },
+  sqlite_stat1: { reflects: ["documents", "members"] },
+  orgs: { fks: ["members"] }
+};
+var PRIVATE = ["documents", "members"];
+
+// The same three transcripts as code_example.py: [name it names, what it claims].
+var FINDINGS = [
+  ["model-A", [["documents_fts", "search index exposes source rows"],
+               ["sqlite_stat1", "statistics tables leak sampled values"],
+               ["public_notes", "notes table looks over-permissive"],
+               [null, "the permission logic may be inconsistent in places"]]],
+  ["model-B", [["documents_fts", "fts shadow table is not permission-checked"],
+               ["DOCUMENTS", "name comparison is case-sensitive, SQLite is not"],
+               ["documents_backup", "backup table is world-readable"]]],
+  ["model-C", [["sqlite_stat1", "internal tables were never enumerated"],
+               ["orgs", "foreign key reaches members"],
+               ["DOCUMENTS", "case folding mismatch"]]]
+];
+
+function canonical(name) {
+  var k = Object.keys(SCHEMA), i;
+  for (i = 0; i < k.length; i++) if (k[i].toLowerCase() === String(name).toLowerCase()) return k[i];
+  return null;
+}
+function reachable(name, seen) {
+  var t = canonical(name);
+  if (t === null) return seen || [];
+  seen = seen || [];
+  if (seen.indexOf(t) >= 0) return seen;
+  seen.push(t);
+  var s = SCHEMA[t], nxt = (s.derived ? [s.derived] : []).concat(s.reflects || [], s.fks || []);
+  nxt.forEach(function (n) { reachable(n, seen); });
+  return seen;
+}
+function hitsPrivate(name) {
+  return reachable(name).filter(function (t) { return PRIVATE.indexOf(t) >= 0; });
+}
+// The oracle: does the naive check allow this name while it reaches private rows?
+function leaks(name) {
+  return PRIVATE.indexOf(name) < 0 && hitsPrivate(name).length > 0;
+}
+function verify(name) {
+  if (!name) return "untestable";
+  if (canonical(name) === null) return "noise";
+  return leaks(name) ? "real" : "noise";
+}
+function oracleTruth() {
+  var out = [];
+  Object.keys(SCHEMA).forEach(function (t) {
+    [t, t.toUpperCase()].forEach(function (c) {
+      var k = leaks(c) ? canonical(c) : null;
+      if (k && out.indexOf(k) < 0) out.push(k);
+    });
+  });
+  return out;
+}
+
+var hasOracle = true;
+
+function render() {
+  var nModels = +document.getElementById("models").value;
+  var nRounds = +document.getElementById("rounds").value;
+  document.getElementById("mv").textContent = nModels;
+  document.getElementById("rv").textContent = nRounds;
+
+  var raw = 0, groups = {};
+  for (var r = 0; r < nRounds; r++) {
+    FINDINGS.slice(0, nModels).forEach(function (m) {
+      var items = m[1].slice(0, Math.min(m[1].length, r + 2));
+      items.forEach(function (f) {
+        raw++;
+        var key = f[0] || f[1];
+        if (!groups[key]) groups[key] = { name: f[0], claim: f[1], verdict: verify(f[0]), models: [] };
+        if (groups[key].models.indexOf(m[0]) < 0) groups[key].models.push(m[0]);
+      });
+    });
+  }
+
+  var keys = Object.keys(groups).sort(function (a, b) {
+    return groups[b].models.length - groups[a].models.length || a.localeCompare(b);
+  });
+  document.getElementById("rows").innerHTML = keys.map(function (k) {
+    var g = groups[k];
+    return '<div class="r ' + g.verdict + '"><span><code>'
+      + (g.name || g.claim.slice(0, 40) + "…") + '</code></span>'
+      + '<span class="agree">' + g.models.length + ' model' + (g.models.length > 1 ? 's' : '') + '</span>'
+      + '<span class="v ' + g.verdict + '">' + (hasOracle ? g.verdict : "unknown") + '</span></div>';
+  }).join("");
+
+  var nReal = keys.filter(function (k) { return groups[k].verdict === "real"; }).length;
+  var nUnt = keys.filter(function (k) { return groups[k].verdict === "untestable"; }).length;
+  // Without a checker every distinct claim costs a human read. With one, only the
+  // claims naming nothing specific do -- the rest are settled mechanically.
+  var reads = hasOracle ? nUnt : keys.length;
+
+  var el = document.getElementById("reads");
+  el.textContent = reads;
+  el.className = "big " + (hasOracle ? "ok" : "bad");
+  document.getElementById("readsub").textContent = reads === 1
+    ? "claim a human has to read" : "claims a human has to read";
+
+  var pr = document.getElementById("prec");
+  pr.textContent = hasOracle ? Math.round(100 * nReal / keys.length) + "%" : "—";
+  pr.className = "big " + (hasOracle ? "ok" : "");
+  document.getElementById("precsub").textContent = hasOracle
+    ? nReal + " of " + keys.length + " distinct claims survived checking"
+    : "unknowable without a checker";
+
+  var realNames = keys.filter(function (k) { return groups[k].verdict === "real"; })
+                      .map(function (k) { return canonical(groups[k].name); });
+  var missed = oracleTruth().filter(function (t) { return realNames.indexOf(t) < 0; });
+  var mi = document.getElementById("miss");
+  mi.textContent = hasOracle ? missed.length : "?";
+  mi.className = "big " + (hasOracle && missed.length ? "ok" : "");
+
+  var note = document.getElementById("note");
+  if (!hasOracle) {
+    note.innerHTML = "<b>Every claim costs a person an hour, and none of them is settled.</b> "
+      + keys.length + " claims, no verdicts, no way to know what you missed. This is the pile that "
+      + "gets skimmed once and filed, the same way the linter did. Switch the checker on.";
+  } else {
+    note.innerHTML = "<b>The checker settles " + (keys.length - nUnt) + " of " + keys.length
+      + " claims and leaves " + nUnt + " for a human.</b> It also found "
+      + (missed.length ? missed.join(", ") + ", which no model reported"
+                       : "nothing the models missed — at this setting they covered it")
+      + ". Raising rounds adds raw findings faster than it adds true ones.";
+  }
+  reportHeight();
+}
+
+function setOracle(v) {
+  hasOracle = v;
+  document.getElementById("oracle").setAttribute("aria-pressed", v ? "true" : "false");
+  document.getElementById("noOracle").setAttribute("aria-pressed", v ? "false" : "true");
+  render();
+}
+document.getElementById("oracle").addEventListener("click", function () { setOracle(true); });
+document.getElementById("noOracle").addEventListener("click", function () { setOracle(false); });
+["models", "rounds"].forEach(function (id) {
+  document.getElementById(id).addEventListener("input", render);
+});
+document.getElementById("reset").addEventListener("click", function () {
+  document.getElementById("models").value = 3;
+  document.getElementById("rounds").value = 3;
+  setOracle(true);
+});
+
+function reportHeight() {
+  parent.postMessage({ type: "adl-visualize-height",
+                       height: document.documentElement.scrollHeight }, "*");
+}
+addEventListener("load", reportHeight);
+new ResizeObserver(reportHeight).observe(document.documentElement);
+render();
+</script>
+</body>
+</html>

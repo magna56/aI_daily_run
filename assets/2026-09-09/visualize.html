@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Routing an agent fleet: locality against balance</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .row { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  label { display: block; font-size: 12px; color: #9aa5c4; margin-bottom: 5px; }
+  label b { color: #dfe4f2; font-weight: 650; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 13px; align-items: center; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed=true] { background: #2a3566; border-color: #4b5ba8; color: #fff; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .fleet { margin-top: 16px; display: grid; gap: 5px; }
+  .rep { display: grid; grid-template-columns: 74px 1fr 78px; align-items: center; gap: 9px; }
+  .rep span { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; color: #7d88a6; }
+  .stack { display: flex; height: 17px; border-radius: 4px; overflow: hidden; background: #171b2b; }
+  .stack i { display: block; height: 100%; }
+  .rep em { font: 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal;
+            text-align: right; color: #9aa5c4; font-variant-numeric: tabular-nums; }
+  .legend { display: flex; gap: 15px; font-size: 11.5px; color: #8f9ab8; margin: 10px 0 2px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .out { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); margin-top: 16px; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 12px; }
+  .stat u { display: block; font-size: 11px; color: #8f9ab8; text-decoration: none; margin-bottom: 4px; }
+  .stat b { font: 600 20px ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  .good { color: #5fd4a4; } .bad { color: #f08a4b; } .mid { color: #dfe4f2; }
+  .say { margin-top: 14px; font-size: 12.5px; color: #a7b1cd; border-left: 2px solid #2b3247; padding-left: 11px; }
+  .say b { color: #dfe4f2; }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-09">
+  <h1>Locality against balance</h1>
+  <p class="sub">The same agent traffic, routed three ways. Watch the fleet get less even and
+     the bill get smaller — then find the point where stickiness stops paying.</p>
+
+  <div class="panel">
+    <div class="row">
+      <div>
+        <label for="prefix">Shared prefix <b id="prefixv">2,400</b> tokens</label>
+        <input type="range" id="prefix" min="0" max="8000" step="100" value="2400">
+      </div>
+      <div>
+        <label for="turns">Turns per session <b id="turnsv">12</b></label>
+        <input type="range" id="turns" min="1" max="30" step="1" value="12">
+      </div>
+      <div>
+        <label for="reps">Replicas <b id="repsv">8</b></label>
+        <input type="range" id="reps" min="2" max="16" step="1" value="8">
+      </div>
+    </div>
+    <div class="seg">
+      <button id="m0" aria-pressed="false">least-connections</button>
+      <button id="m1" aria-pressed="true">sticky</button>
+      <button id="m2" aria-pressed="false">sticky + spill</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="fleet" id="fleet"></div>
+  <div class="legend">
+    <span><i style="background:rgba(95,212,164,.6)"></i>served from cache</span>
+    <span><i style="background:rgba(240,138,75,.6)"></i>re-prefilled</span>
+  </div>
+
+  <div class="out">
+    <div class="stat"><u>prefix reuse</u><b id="hit" class="mid">—</b></div>
+    <div class="stat"><u>total cost</u><b id="cost" class="mid">—</b></div>
+    <div class="stat"><u>versus least-connections</u><b id="vs" class="mid">—</b></div>
+    <div class="stat"><u>load spread</u><b id="spread" class="mid">—</b></div>
+  </div>
+
+  <p class="say" id="say"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var SESSIONS = 40, TURN_TOKENS = 180, DECODE = 220, DECODE_COST = 4, WINDOW = 24, SPILL = 2.0;
+  var DEFAULTS = { prefix: 2400, turns: 12, reps: 8, mode: 1 };
+  var st = Object.assign({}, DEFAULTS);
+  var $ = function (id) { return document.getElementById(id); };
+
+  function hash(n, mod) {                 // small deterministic hash, no crypto needed
+    var h = 2166136261 >>> 0, s = "s" + n, i;
+    for (i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    return h % mod;
+  }
+
+  function order(n) {                     // deterministic shuffle of the turn list
+    var a = [], i, j, t;
+    for (i = 0; i < n; i++) a.push(i);
+    var seed = 11;
+    for (i = a.length - 1; i > 0; i--) {
+      seed = (seed * 1103515245 + 12345) >>> 0;
+      j = seed % (i + 1); t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function run(mode) {
+    var R = st.reps, caches = [], inflight = [], served = [], warm = [], cold = [], i;
+    for (i = 0; i < R; i++) { caches.push({}); inflight.push(0); served.push(0); warm.push(0); cold.push(0); }
+    var recent = [], total = 0, prefilled = 0, prefixTotal = 0;
+    var turns = order(SESSIONS * st.turns);
+
+    for (var k = 0; k < turns.length; k++) {
+      var idx = turns[k], session = idx % SESSIONS, t = Math.floor(idx / SESSIONS);
+      var prefix = st.prefix + t * TURN_TOKENS;
+      var r;
+      if (mode === 0) {
+        r = 0; for (i = 1; i < R; i++) if (inflight[i] < inflight[r]) r = i;
+      } else {
+        var h = hash(session, R);
+        if (mode === 2 && inflight[h] >= (WINDOW / R) * SPILL) {
+          r = 0; for (i = 1; i < R; i++) if (inflight[i] < inflight[r]) r = i;
+        } else { r = h; }
+      }
+      var cached = caches[r][session] || 0;
+      var reuse = Math.min(cached, prefix);
+      var toPrefill = prefix - reuse;
+
+      total += toPrefill + DECODE * DECODE_COST;
+      prefilled += toPrefill;
+      prefixTotal += prefix;
+      if (reuse > 0) warm[r]++; else cold[r]++;
+
+      caches[r][session] = prefix + DECODE;
+      served[r]++;
+      inflight[r]++;
+      recent.push(r);
+      if (recent.length > WINDOW) inflight[recent.shift()]--;
+    }
+    var mean = turns.length / R, mx = Math.max.apply(null, served), mn = Math.min.apply(null, served);
+    return { total: total, hit: prefixTotal ? 1 - prefilled / prefixTotal : 0,
+             spread: (mx - mn) / mean, warm: warm, cold: cold, served: served };
+  }
+
+  function render() {
+    $("prefixv").textContent = st.prefix.toLocaleString();
+    $("turnsv").textContent = st.turns;
+    $("repsv").textContent = st.reps;
+    [0, 1, 2].forEach(function (m) { $("m" + m).setAttribute("aria-pressed", String(st.mode === m)); });
+
+    var res = run(st.mode), base = run(0);
+    var fleet = $("fleet"); fleet.textContent = "";
+    var peak = Math.max.apply(null, res.served) || 1;
+    for (var i = 0; i < st.reps; i++) {
+      var row = document.createElement("div"); row.className = "rep";
+      var lab = document.createElement("span"); lab.textContent = "gpu " + i;
+      var stack = document.createElement("div"); stack.className = "stack";
+      stack.style.width = (res.served[i] / peak * 100).toFixed(1) + "%";
+      var w = document.createElement("i");
+      w.style.flex = String(res.warm[i] || 0.0001);
+      w.style.background = "rgba(95,212,164,.6)";
+      var c = document.createElement("i");
+      c.style.flex = String(res.cold[i] || 0.0001);
+      c.style.background = "rgba(240,138,75,.6)";
+      stack.appendChild(w); stack.appendChild(c);
+      var v = document.createElement("em"); v.textContent = res.served[i] + " turns";
+      row.appendChild(lab); row.appendChild(stack); row.appendChild(v);
+      fleet.appendChild(row);
+    }
+
+    $("hit").textContent = (res.hit * 100).toFixed(0) + "%";
+    $("hit").className = res.hit > 0.7 ? "good" : res.hit < 0.5 ? "bad" : "mid";
+    $("cost").textContent = Math.round(res.total).toLocaleString();
+    var delta = (res.total / base.total - 1) * 100;
+    $("vs").textContent = (delta > 0 ? "+" : "") + delta.toFixed(0) + "%";
+    $("vs").className = delta < -5 ? "good" : delta > 5 ? "bad" : "mid";
+    $("spread").textContent = res.spread.toFixed(2);
+    $("spread").className = "mid";
+
+    var say;
+    if (st.mode === 0) {
+      say = "<b>Least-connections.</b> Perfectly even, and paying to re-prefill conversations "
+          + "another replica already holds. An even fleet is not a cheap one.";
+    } else if (st.mode === 1) {
+      say = "<b>Sticky by session.</b> Reuse is up and the fleet is deliberately less even — "
+          + "spread " + res.spread.toFixed(2) + " is the price of the locality, not a bug. "
+          + "The risk is that one heavy session pins a replica with nothing to stop it.";
+    } else {
+      say = "<b>Sticky with a spill valve.</b> Reuse drops a little and the spread barely "
+          + "moves, because these sessions hash evenly and the valve rarely fires. That is "
+          + "the point: it is insurance you pay for continuously and collect on rarely, and "
+          + "the thing it insures against — one heavy session pinning a replica — is the "
+          + "failure that turns this design into an incident.";
+    }
+    if (st.prefix === 0 && st.turns <= 2) {
+      say += " With no shared prefix and almost no history there is nothing to be local to, "
+           + "and least-connections is the right rule again.";
+    }
+    $("say").innerHTML = say;
+    reportHeight();
+  }
+
+  function reportHeight() {
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+
+  ["prefix", "turns", "reps"].forEach(function (k) {
+    $(k).addEventListener("input", function (e) { st[k] = +e.target.value; render(); });
+  });
+  [0, 1, 2].forEach(function (m) {
+    $("m" + m).addEventListener("click", function () { st.mode = m; render(); });
+  });
+  $("reset").addEventListener("click", function () {
+    st = Object.assign({}, DEFAULTS);
+    $("prefix").value = st.prefix; $("turns").value = st.turns; $("reps").value = st.reps;
+    render();
+  });
+
+  render();
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

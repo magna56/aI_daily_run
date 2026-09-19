@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>PreToolUse: what the hook keeps out of the context</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .row { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  label { display: block; font-size: 12px; color: #9aa5c4; margin-bottom: 5px; }
+  label b { color: #dfe4f2; font-weight: 650; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 13px; align-items: center; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed=true] { background: #2a3566; border-color: #4b5ba8; color: #fff; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .verdict { margin-top: 16px; padding: 12px 14px; border-radius: 9px; border: 1px solid;
+             font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+  .deny { background: rgba(240,138,75,.10); border-color: rgba(240,138,75,.4); color: #f4b083; }
+  .allow { background: rgba(95,212,164,.09); border-color: rgba(95,212,164,.35); color: #8fe3c0; }
+  .bars { margin-top: 16px; display: grid; gap: 9px; }
+  .bar { display: grid; grid-template-columns: 150px 1fr 104px; align-items: center; gap: 10px; }
+  .bar span { font-size: 12px; color: #9aa5c4; }
+  .track { height: 22px; background: #171b2b; border-radius: 5px; overflow: hidden; }
+  .track i { display: block; height: 100%; border-radius: 5px; transition: width .18s; }
+  .bar em { font: 600 13px ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal;
+            text-align: right; font-variant-numeric: tabular-nums; }
+  .out { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 16px; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 12px; }
+  .stat u { display: block; font-size: 11px; color: #8f9ab8; text-decoration: none; margin-bottom: 4px; }
+  .stat b { font: 600 20px ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  .good { color: #5fd4a4; } .bad { color: #f08a4b; } .mid { color: #dfe4f2; }
+  .say { margin-top: 14px; font-size: 12.5px; color: #a7b1cd; border-left: 2px solid #2b3247; padding-left: 11px; }
+  .say b { color: #dfe4f2; }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-08">
+  <h1>What the hook keeps out of the context</h1>
+  <p class="sub">One <code>Read</code> call. Move the file size past the threshold and the hook
+     denies it, so the file is never in the transcript — on this turn or any turn after it.</p>
+
+  <div class="panel">
+    <div class="row">
+      <div>
+        <label for="lines">File length <b id="linesv">4,012</b> lines</label>
+        <input type="range" id="lines" min="20" max="8000" step="20" value="4012">
+      </div>
+      <div>
+        <label for="thresh">Hook threshold <b id="threshv">350</b> lines</label>
+        <input type="range" id="thresh" min="50" max="4000" step="50" value="350">
+      </div>
+      <div>
+        <label for="turns">Turns after this one <b id="turnsv">8</b></label>
+        <input type="range" id="turns" min="0" max="30" step="1" value="8">
+      </div>
+    </div>
+    <div class="seg">
+      <button id="hook" aria-pressed="true">Hook installed</button>
+      <button id="bounded" aria-pressed="false">Read uses offset + limit</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="verdict" id="verdict"></div>
+
+  <div class="bars" id="bars"></div>
+
+  <div class="out">
+    <div class="stat"><u>lands in context now</u><b id="now" class="mid">—</b></div>
+    <div class="stat"><u>cumulative over the session</u><b id="cum" class="mid">—</b></div>
+    <div class="stat"><u>saved versus no hook</u><b id="sav" class="good">—</b></div>
+  </div>
+
+  <p class="say" id="say"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var BYTES_PER_LINE = 42, BYTES_PER_TOKEN = 4, WINDOW = 200000;
+  var DEFAULTS = { lines: 4012, thresh: 350, turns: 8, hook: true, bounded: false };
+  var st = Object.assign({}, DEFAULTS);
+  var $ = function (id) { return document.getElementById(id); };
+  var PATH = "src/main/java/PaymentRouter.java";
+
+  function reason(n) {
+    return PATH + " is " + n + " lines. Summarize it with /bulk-reader, or re-read "
+         + "with offset and limit if you need one region.";
+  }
+
+  // The hook contract: return nothing unless we are denying.
+  function decide() {
+    if (st.bounded) return null;                 // bounded reads are the good behavior
+    if (!st.hook) return null;
+    if (st.lines <= st.thresh) return null;
+    return { permissionDecision: "deny", permissionDecisionReason: reason(st.lines) };
+  }
+
+  function fileTokens() {
+    var lines = st.bounded ? Math.min(60, st.lines) : st.lines;
+    return Math.round(lines * BYTES_PER_LINE / BYTES_PER_TOKEN);
+  }
+
+  function fmt(n) { return n.toLocaleString(); }
+
+  function bar(host, label, frac, value, cls) {
+    var row = document.createElement("div"); row.className = "bar";
+    var l = document.createElement("span"); l.textContent = label;
+    var tr = document.createElement("div"); tr.className = "track";
+    var f = document.createElement("i");
+    f.style.width = Math.max(0.6, Math.min(1, frac) * 100).toFixed(1) + "%";
+    f.style.background = cls === "good" ? "rgba(95,212,164,.55)" : "rgba(240,138,75,.55)";
+    tr.appendChild(f);
+    var v = document.createElement("em"); v.textContent = value; v.className = cls;
+    row.appendChild(l); row.appendChild(tr); row.appendChild(v);
+    host.appendChild(row);
+  }
+
+  function render() {
+    $("linesv").textContent = fmt(st.lines);
+    $("threshv").textContent = fmt(st.thresh);
+    $("turnsv").textContent = st.turns;
+    $("hook").setAttribute("aria-pressed", String(st.hook));
+    $("hook").textContent = st.hook ? "Hook installed" : "No hook";
+    $("bounded").setAttribute("aria-pressed", String(st.bounded));
+
+    var d = decide();
+    var v = $("verdict");
+    if (d) {
+      v.className = "verdict deny";
+      v.textContent = '{ "permissionDecision": "deny",\n  "permissionDecisionReason":\n    "'
+                    + d.permissionDecisionReason + '" }';
+    } else {
+      v.className = "verdict allow";
+      v.textContent = st.bounded
+        ? "(no output — a bounded read falls through to the normal permission flow)"
+        : st.hook
+          ? "(no output — " + fmt(st.lines) + " lines is under the threshold, so the call proceeds)"
+          : "(no hook — the tool runs and the file enters the context)";
+    }
+
+    var now = d ? Math.round(d.permissionDecisionReason.length / BYTES_PER_TOKEN) : fileTokens();
+    var cum = now * (st.turns + 1);
+    var noHook = Math.round(st.lines * BYTES_PER_LINE / BYTES_PER_TOKEN) * (st.turns + 1);
+
+    var host = $("bars"); host.textContent = "";
+    bar(host, "no hook at all", noHook / Math.max(noHook, cum), fmt(noHook), "bad");
+    bar(host, "what you have now", cum / Math.max(noHook, cum), fmt(cum), d ? "good" : "bad");
+
+    $("now").textContent = fmt(now);
+    $("now").className = d ? "good" : "mid";
+    $("cum").textContent = fmt(cum);
+    $("cum").className = cum > WINDOW ? "bad" : "mid";
+    var saved = noHook > 0 ? (1 - cum / noHook) * 100 : 0;
+    $("sav").textContent = saved.toFixed(saved > 99 ? 1 : 0) + "%";
+    $("sav").className = saved > 50 ? "good" : "mid";
+
+    var say;
+    if (st.bounded) {
+      say = "<b>The escape hatch.</b> A read with offset and limit is already bounded, so the "
+          + "hook returns nothing and the call goes through. This has to keep working, or the "
+          + "model has no legal way to look at a large file at all.";
+    } else if (!st.hook) {
+      say = "<b>No hook.</b> The file enters the transcript and is re-sent on every one of the "
+          + st.turns + " turns after this. One careless read is not one bill; it is a bill with "
+          + "a subscription.";
+    } else if (!d) {
+      say = "<b>Under the threshold.</b> The hook prints nothing, so normal permissions decide. "
+          + "A hook that answers every call has to be right about every call — staying quiet is "
+          + "the safer default.";
+    } else {
+      say = "<b>Denied.</b> The file is never read, so it is never in the transcript. What the "
+          + "model gets instead is one sentence, and that sentence names somewhere to go — a "
+          + "deny with no alternative just makes the agent argue with its own tooling.";
+    }
+    if (cum > WINDOW) {
+      say += " Note the cumulative figure has passed a 200k window on its own.";
+    }
+    $("say").innerHTML = say;
+    reportHeight();
+  }
+
+  function reportHeight() {
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+
+  ["lines", "thresh", "turns"].forEach(function (k) {
+    $(k).addEventListener("input", function (e) { st[k] = +e.target.value; render(); });
+  });
+  $("hook").addEventListener("click", function () { st.hook = !st.hook; render(); });
+  $("bounded").addEventListener("click", function () { st.bounded = !st.bounded; render(); });
+  $("reset").addEventListener("click", function () {
+    st = Object.assign({}, DEFAULTS);
+    $("lines").value = st.lines; $("thresh").value = st.thresh; $("turns").value = st.turns;
+    render();
+  });
+
+  render();
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

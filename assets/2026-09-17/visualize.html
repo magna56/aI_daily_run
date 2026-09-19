@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Two approvals, one fetch</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .lbl { font-size: 11.5px; color: #9aa5c4; font-weight: 650; letter-spacing: .05em;
+         text-transform: uppercase; margin: 0 0 9px; }
+  .rule { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center;
+          padding: 7px 10px; border-radius: 7px; background: #131725; border: 1px solid #1c2130;
+          margin-bottom: 6px; }
+  .rule code { font-size: 12px; color: #e8ecfb; overflow-wrap: anywhere; }
+  button { font: inherit; font-size: 11.5px; padding: 5px 9px; border-radius: 6px; cursor: pointer;
+           background: #171b2b; color: #8f9ab8; border: 1px solid #2b3247; white-space: nowrap; }
+  button[aria-pressed="true"].req { background: rgba(110,200,150,.16); border-color: rgba(110,200,150,.55); color: #a9e3c4; }
+  button[aria-pressed="true"].res { background: rgba(124,140,248,.18); border-color: rgba(124,140,248,.6); color: #cdd5ee; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .seg { display: flex; gap: 6px; margin-top: 13px; align-items: center; flex-wrap: wrap;
+         border-top: 1px solid #1c2130; padding-top: 13px; }
+  .danger[aria-pressed="true"] { background: rgba(224,136,95,.18); border-color: rgba(224,136,95,.6); color: #f0b393; }
+  .reset { margin-left: auto; }
+  .cols { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); margin-top: 18px; }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 9px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  .u { display: grid; grid-template-columns: 1fr 62px 62px; gap: 8px; align-items: center;
+       padding: 7px 10px; border-radius: 7px; background: #10131f; border: 1px solid #1c2130;
+       margin-bottom: 5px; }
+  .u code { font-size: 11.5px; color: #cdd5ee; overflow-wrap: anywhere; }
+  .u .why { display: block; font-size: 11px; color: #6f7a99; margin-top: 2px; }
+  .v { text-align: center; font-size: 10.5px; font-weight: 700; letter-spacing: .04em;
+       padding: 3px 0; border-radius: 4px; text-transform: uppercase; }
+  .v.auto { background: rgba(110,200,150,.15); color: #6ec896; }
+  .v.ask { background: rgba(224,136,95,.15); color: #e0885f; }
+  .hd { display: grid; grid-template-columns: 1fr 62px 62px; gap: 8px; padding: 0 10px 5px;
+        font-size: 10.5px; color: #6f7a99; text-transform: uppercase; letter-spacing: .04em; }
+  .hd span:not(:first-child) { text-align: center; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 13px; margin-bottom: 9px; }
+  .big { font-size: 27px; font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .big.ok { color: #6ec896; } .big.bad { color: #e0885f; }
+  .stat p { margin: 3px 0 0; font-size: 12px; color: #8f9ab8; }
+  .note { margin-top: 14px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-17">
+  <h1>Two approvals, one fetch</h1>
+  <p class="sub">Toggle each rule's two sides and watch which pages the agent fetches silently, and which ones stop before their text reaches the model. Same five URLs as the Code tab.</p>
+
+  <div class="panel">
+    <p class="lbl">chat.tools.urls.autoApprove</p>
+    <div id="rules"></div>
+    <div class="seg">
+      <button id="star" class="danger" aria-pressed="false">add a bare "*" rule</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h2>What happens to each URL</h2>
+      <div class="hd"><span>url</span><span>fetch</span><span>context</span></div>
+      <div id="urls"></div>
+    </div>
+    <div>
+      <h2>What it costs you</h2>
+      <div class="stat"><div class="big" id="prompts">0</div>
+        <p>confirmations you would see across these five pages</p></div>
+      <div class="stat"><div class="big bad" id="exposed">0</div>
+        <p>pages whose text reaches the model with no checkpoint</p></div>
+      <div class="note" id="msg"></div>
+    </div>
+  </div>
+</main>
+<script>
+(function () {
+  "use strict";
+  var D = [
+    { p: "https://docs.python.org", req: true, res: true },
+    { p: "*.mycompany.com", req: true, res: false },
+    { p: "https://github.com", req: true, res: false }
+  ];
+  var URLS = [
+    { u: "https://docs.python.org/3/library/asyncio.html", why: "your own docs bookmark", host: "docs.python.org" },
+    { u: "https://wiki.mycompany.com/onboarding", why: "internal wiki", host: "wiki.mycompany.com" },
+    { u: "https://github.com/microsoft/vscode/issues/1", why: "issue text strangers wrote", host: "github.com" },
+    { u: "https://github.com@evil.com/pwn", why: "looks like github, goes to evil.com", host: "github.com@evil.com" },
+    { u: "https://blog.unknown.dev/post", why: "never approved anything here", host: "blog.unknown.dev" }
+  ];
+  var rules = D.map(function (r) { return { p: r.p, req: r.req, res: r.res }; });
+  var star = false;
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // A host carrying credentials is excluded from pattern matching entirely.
+  // Only a bare "*" can ever reach it — which is the argument against writing one.
+  function safeForTrust(host) { return host.length > 0 && host.indexOf("@") === -1; }
+
+  function matches(host, pattern) {
+    var h = pattern.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    if (h.slice(0, 2) === "*.") { return host.slice(-(h.length - 1)) === h.slice(1); }
+    return host === h;
+  }
+
+  function approved(entry, wantReq) {
+    if (!safeForTrust(entry.host)) return star;   // only the wildcard reaches it
+    for (var i = 0; i < rules.length; i++) {      // first match wins, in file order
+      if (matches(entry.host, rules[i].p)) return wantReq ? rules[i].req : rules[i].res;
+    }
+    return star;
+  }
+
+  function render() {
+    $("rules").innerHTML = rules.map(function (r, i) {
+      return '<div class="rule"><code>' + r.p + '</code>' +
+        '<button class="req" data-i="' + i + '" data-k="req" aria-pressed="' + r.req + '">request</button>' +
+        '<button class="res" data-i="' + i + '" data-k="res" aria-pressed="' + r.res + '">response</button></div>';
+    }).join("");
+    $("star").setAttribute("aria-pressed", String(star));
+
+    var prompts = 0, exposed = 0;
+    $("urls").innerHTML = URLS.map(function (e) {
+      var q = approved(e, true), s = approved(e, false);
+      if (!q) prompts++;
+      if (!s) prompts++; else exposed++;
+      var cell = function (ok) { return '<span class="v ' + (ok ? "auto" : "ask") + '">' + (ok ? "auto" : "ask") + "</span>"; };
+      return '<div class="u"><span><code>' + e.u + '</code><span class="why">' + e.why + "</span></span>" +
+             cell(q) + cell(s) + "</div>";
+    }).join("");
+
+    $("prompts").textContent = prompts;
+    $("prompts").className = "big " + (prompts === 0 ? "bad" : "ok");
+    $("exposed").textContent = exposed;
+
+    var msg;
+    if (star) {
+      msg = "<b>The bare wildcard is not just broad.</b> It is the only thing that can approve a URL whose host carries credentials, so <code>github.com@evil.com</code> now passes both checks. That one key turns off the lookalike-domain gate.";
+    } else if (exposed === 0) {
+      msg = "<b>Nothing reaches the model unchecked.</b> Safe, and also five prompts across five pages. A rule you dismiss without reading is worse than no rule, so spend the checkpoints where strangers write the text.";
+    } else if (rules.every(function (r) { return r.req && r.res; })) {
+      msg = "<b>Every rule is a blanket yes.</b> This is the old one-switch shape: approving the address also approved every envelope, including pages edited after you agreed.";
+    } else {
+      msg = "<b>This is the split doing its job.</b> Requests go out silently, and the pages that carry other people's writing still stop before their text sits next to your instructions.";
+    }
+    $("msg").innerHTML = msg;
+    report();
+  }
+
+  $("rules").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-i]");
+    if (!b) return;
+    var r = rules[+b.dataset.i];
+    r[b.dataset.k] = !r[b.dataset.k];
+    render();
+  });
+  $("star").addEventListener("click", function () { star = !star; render(); });
+  $("reset").addEventListener("click", function () {
+    rules = D.map(function (r) { return { p: r.p, req: r.req, res: r.res }; });
+    star = false;
+    render();
+  });
+
+  function report() {
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+  addEventListener("load", report);
+  new ResizeObserver(report).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>
