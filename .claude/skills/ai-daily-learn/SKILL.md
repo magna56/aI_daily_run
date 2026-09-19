@@ -611,6 +611,25 @@ helps: *what does this title actually tell me I would be able to do? Is that spe
 I would click it over the four other tabs open right now?* If the honest answer is "not really,"
 the title is not done, no matter how many of the rules below it technically follows.
 
+**Name the concrete things, not the category they belong to.** Added 2026-09-19, after four
+rounds on one title. A category noun is accurate and still tells a scroller nothing: *instruction
+file*, *project rules*, *a coding agent*, *a model*, *a protocol* are all correct and all
+invisible. Name the instances the reader already recognizes and the title explains itself, which
+is the whole of what makes the reference publications readable — they write *Kafka*, *ChatGPT*,
+*a message queue*, never *a streaming platform*.
+
+- ✗ `How Coding Agents Decide Which Instruction File to Read` — every word is true and a reader
+  scrolling past learns nothing about which file, which agents, or why they would care.
+- ✓ `AGENTS.md: One Rules File for Claude, Codex, Cursor and Copilot`
+  The filename says what it is. The four names let a reader find their own tool in the title and
+  decide in one second. And the count is *shown* by listing four rather than asserted, so the body
+  owes nothing to a number in the headline.
+
+Two cautions that keep this from becoming a list of brands. Name products only where they are
+load-bearing — a title naming four tools because the article genuinely spans four is specific; one
+naming a vendor the article merely mentions is advertising. And check the list is accurate against
+the source before you ship it, because a wrong name in a title is the most visible error available.
+
 The tell that a title needs this pass is a **placeholder word standing in for the real one** —
 usually because the real noun or verb felt too plain to be a "title word," when plain is exactly
 what makes it land:

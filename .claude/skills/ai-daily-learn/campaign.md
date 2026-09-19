@@ -57,6 +57,13 @@ Swept on 2026-09-17, so the rest of the slate is clear: `vscode-prompt-tsx` (day
 `microsoft/vscode`, `semantic-kernel`, `agent-framework`, `a2aproject/A2A` and
 `openai-agents-python` are all active, most pushed within the week. Only day 1 was affected.
 
+**Do not let the slate narrow to one vendor.** Days 1, 2 and 3 were all planned against Microsoft
+repositories, and by day 3 the user stopped it: "dont just focus on v code looks for other things
+as well." Run the normal Step 2 scan of changelogs and lab blogs before accepting a campaign row,
+and when a row points at a vendor's own product, prefer the angle that reaches past it — a
+cross-vendor comparison, a measurement that includes competitors, an independent test of the
+claim. Those serve the campaign and stay honest about the wider field.
+
 **Name the owner in the write-up.** Rule four of the by-eye checks in `SKILL.md` Step 11 applies
 with particular force here, because most of these rows are built on Microsoft or OpenAI code. A
 session that explains somebody's implementation without naming them is not verifiable, and on
@@ -70,7 +77,7 @@ fix, plus the repository path where a reader would go looking. Not in the `Hook`
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | 2026-09-17 | ~~What VS Code's open-source Copilot Chat sends the model~~ → **shipped as** How VS Code Decides a Web Page Is Safe to Read | Coding Agents & Productivity | A | Start here | Using tools |
 | 2 | 2026-09-18 | Building prompts as components with a token budget | Building Agents & MCP | A | Building | Building agents |
-| 3 | 2026-09-19 | How VS Code moved agent sessions into their own process | Building Agents & MCP | A | Building | Building agents |
+| 3 | 2026-09-19 | ~~How VS Code moved agent sessions into their own process~~ → **shipped as** AGENTS.md: One Rules File for Claude, Codex, Cursor and Copilot | Coding Agents & Productivity | A | Start here | Using tools |
 | 4 | 2026-09-20 | Running Codex inside VS Code's agent host | Coding Agents & Productivity | A | Start here | Using tools |
 | 5 | 2026-09-21 | Measuring tokens per dollar per watt for real | AI in Production | B | Building | Shipping AI |
 | 6 | 2026-09-22 | What a reasoning model costs per task, not per token | New Models & APIs | B | Start here | Using tools |
@@ -106,8 +113,12 @@ is not a primary source for how the thing works.
    carry a two-phase approval — one for the request, a separate one for the response.
 2. **prompt-tsx** — `github.com/microsoft/vscode-prompt-tsx`. Priority-based pruning under a
    token budget is the mechanism; component-shaped prompts are the framing.
-3. **Agent Host Protocol** — VS Code 1.138 release notes and the AHP docs. Sessions in a
-   dedicated process, attachable from multiple windows. Compare with MCP's transport model.
+3. **Swapped, on the user's instruction.** Days 1 and 2 both came out of Microsoft repositories
+   and this row was a third, so the slate was collapsing into one vendor's product surface. What
+   shipped instead is the cross-vendor instruction file: `AGENTS.md`, which Claude Code began
+   reading in 2.1.277 and which Copilot reads alongside `CLAUDE.md` and `GEMINI.md`. The Agent
+   Host Protocol is still worth a session — `microsoft.github.io/agent-host-protocol/` is public
+   — but it lands better as a three-way comparison with MCP and ACP than as a VS Code piece.
 4. **Codex in the agent host** — `chat.agentHost.codexAgent.enabled`,
    `chat.editor.codex.preferAgentHost`, moving one session between the ChatGPT app and VS Code.
 5. **Tokens per dollar per watt** — build the harness. Cost *and* energy per completed task, not
