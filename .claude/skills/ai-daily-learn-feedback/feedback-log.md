@@ -1628,3 +1628,27 @@ now skipped.
   retired path left out of the sitemap and feed. Documented in `CLAUDE.md`; `make check` warns if a
   row goes stale. **The standing rule: retitling a shipped session means adding a row, and no row
   is ever deleted.**
+
+## 2026-09-20 — spec-wide (the plain title is the default, not the fallback)
+
+- **Note**: "I like this How to Measure What One AI Task Costs in Dollars and Watts — the plain
+  How to default. Safest, least interesting. it simple and explanatory and conveys about the
+  article updat skills to generate title s like this update it"
+- **Verdict**: standing rule. The spec already carried "When in doubt, ship the plain explanatory
+  statement" (added 2026-09-13), but it read as a tiebreak for uncertain cases. This exchange was
+  not an uncertain case: three titles were on offer, none of them vague, and the generator
+  recommended the `Name: gloss` shape on strategic grounds. The owner overrode that and asked for
+  the default to be tightened, which means the earlier rule was too weak rather than wrong.
+- **Changed**: `SKILL.md` title rules — the 2026-09-13 bullet is rewritten as **"Ship the plain
+  explanatory statement. 'Least interesting' is not a defect."** Draft the plain `How to …` /
+  `Why …` sentence first and ship it unless a departure is *measurably clearer*; the other three
+  shapes are now explicitly exceptions that need a reason, while the plain form needs none.
+- **Changed**: `SKILL.md` — new stop condition in the same bullet: *when you catch yourself
+  arguing that a title is more interesting, more quotable, or better for an audience beyond the
+  reader, that is the signal to ship the plain one.* Named because that is exactly the argument
+  the generator made here — the rejected recommendation was justified by the outreach campaign in
+  `campaign.md`, not by what the title told a reader on the card grid.
+- **Not changed**: the four title shapes. `A vs B`, `Name: gloss` and `A Guide to X` are still
+  available; they are now ranked below the explanatory form rather than beside it.
+- **Not changed**: the demoted surprise-led rule, which already routes numbers and twists into
+  `**Hook**` and `Key insight`. This note reinforces it from the other direction.

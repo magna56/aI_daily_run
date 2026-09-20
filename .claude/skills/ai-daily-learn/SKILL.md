@@ -695,13 +695,28 @@ Tokenizer-Agnostic LLM-Based Lossless Image Compression` announces.
   paragraph, and in `Key insight`, where they have room to be true. If a surprise fits the
   explanatory form without straining, keep it there too: `How a Coding-Agent Hook Decides to Fire
   (And Why It Still Isn't a Gate)` is both.
-- **When in doubt, ship the plain explanatory statement.** Added 2026-09-13, after the owner
-  rejected a Frontier title with "very vague, I couldn't understand what the article is about"
-  and then chose the plainest of four alternatives on offer. The rule is a default, not a
-  tiebreak: draft the plain `How to …` / `Why …` sentence first, and only depart from it when
-  the departure is clearer, never when it is merely more interesting. This applies identically
-  to the daily lab and to Frontier — a deeper subject is a reason for a plainer title, not a
-  licence for a cleverer one.
+- **Ship the plain explanatory statement. "Least interesting" is not a defect.** Added
+  2026-09-13, hardened 2026-09-20. Draft the plain `How to …` / `Why …` sentence first and
+  **ship that one unless a departure is measurably clearer** — never because it is sharper,
+  cleverer, or a better fit for whoever might reshare it. The other three shapes in the table
+  above are exceptions that need a reason; this one is the default that needs none.
+  - The 2026-09-13 evidence: the owner rejected a Frontier title with "very vague, I couldn't
+    understand what the article is about" and chose the plainest of four alternatives.
+  - The 2026-09-20 evidence is stronger, because the plain form won on a day when nothing was
+    wrong with the alternatives. Three titles were offered for the tokens-per-dollar-per-watt
+    session and the generator recommended the `Name: gloss` shape, `Tokens per Dollar per Watt:
+    How to Measure It Yourself`, on the grounds that it taught the metric and served the
+    outreach campaign running that fortnight. The owner took the option the generator had itself
+    labelled *"safest, least interesting"* — `How to Measure What One AI Task Costs in Dollars
+    and Watts` — with "it simple and explanatory and conveys about the article", and asked for
+    this rule to be tightened so future titles come out that way by default.
+  - **So when you catch yourself arguing that a title is more interesting, more quotable, or
+    better for an audience beyond the reader, that is the signal to ship the plain one.** A title
+    is orientation on a card grid, not a headline competing for a click. Interest belongs in
+    `**Hook**`, in the first paragraph, and in `Key insight`, which is where the demoted
+    surprise-led rule above already sends it.
+  This applies identically to the daily lab and to Frontier — a deeper subject is a reason for a
+  plainer title, not a licence for a cleverer one.
 - **Never let an inversion carry the title alone.** An inversion — *the best X are the wrong X*,
   *the fastest path is the slow one* — is the specific shape that defeats every other rule on
   this list. It can be one clause with one subject, avoid overloaded words, pay off its count in
