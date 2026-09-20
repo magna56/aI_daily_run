@@ -5,7 +5,7 @@
 // calls this after a Cloudflare publish. The issues table is the idempotency
 // key — republishing the same session does not mail again.
 
-import { json, options, siteUrl } from "../_lib/http.js";
+import { json, options, siteUrl, isEmail } from "../_lib/http.js";
 import { mailConfigured, sendEmail, issueEmail, sleep } from "../_lib/mail.js";
 
 // 125ms between sends is 8 per second, under Resend's limit of 10 with room
@@ -39,6 +39,33 @@ export async function onRequestPost(context) {
   const url = body && typeof body.url === "string" ? body.url.trim() : "";
   if (!sessionId || !title || !url) {
     return json(request, { error: "missing_fields" }, 400);
+  }
+
+  // Deliver one issue to one address. The issues table makes a normal send
+  // idempotent, which is right for the broadcast and wrong for recovery: when
+  // the 2026-09-20 send dropped an address to a Resend 429 there was no way to
+  // reach that person at all, because a re-run answers "already_sent". This
+  // branch deliberately neither reads nor writes that table.
+  //
+  // It will only mail an address that is already a subscriber. That is what
+  // keeps a secret-protected send hook from being a general-purpose relay, and
+  // it is also the only way to get a valid unsubscribe token into the email.
+  const only = body && typeof body.to === "string" ? body.to.trim().toLowerCase() : "";
+  if (only) {
+    if (!isEmail(only)) return json(request, { error: "invalid_email" }, 400);
+    const row = await env.DB.prepare(
+      "SELECT email, status, unsub_token FROM subscribers WHERE email = ?"
+    ).bind(only).first();
+    if (!row) return json(request, { error: "not_a_subscriber", email: only }, 404);
+    if (row.status === "unsubscribed") {
+      return json(request, { error: "unsubscribed", email: only }, 409);
+    }
+    if (!mailConfigured(env)) return json(request, { error: "mail_not_configured" }, 503);
+    const one = issueEmail({ site: siteUrl(env), title, hook, url, unsub: row.unsub_token, sessionId });
+    const out = await sendEmail(env, { to: row.email, ...one });
+    return json(request, out.ok
+      ? { ok: true, resent: 1, session_id: sessionId, attempts: out.attempts || 1 }
+      : { ok: false, error: out.error || "send_failed", status: out.status || null }, out.ok ? 200 : 502);
   }
 
   const already = await env.DB.prepare(
