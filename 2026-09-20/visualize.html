@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>What one task costs, and where you drew the line</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .lbl { font-size: 11.5px; color: #9aa5c4; font-weight: 650; letter-spacing: .05em;
+         text-transform: uppercase; margin: 0 0 9px; }
+  .row { display: grid; gap: 4px; margin-bottom: 14px; }
+  .row label { font-size: 12.5px; color: #cdd5ee; display: flex; justify-content: space-between; gap: 10px; }
+  .row label b { color: #e8ecfb; font-variant-numeric: tabular-nums; font-weight: 650; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  input[type=range]:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 3px; }
+  .seg { display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+         border-top: 1px solid #1c2130; padding-top: 13px; }
+  button { font: inherit; font-size: 12px; padding: 7px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed="true"] { background: rgba(124,140,248,.16); border-color: rgba(124,140,248,.55); color: #e8ecfb; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .cols { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 16px; }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 9px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 13px; margin-bottom: 9px; }
+  .big { font-size: 26px; font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .big.ok { color: #6ec896; } .big.bad { color: #e0885f; } .big.neu { color: #cdd5ee; }
+  .stat p { margin: 3px 0 0; font-size: 12px; color: #8f9ab8; }
+  .bar { height: 10px; border-radius: 5px; background: #1c2130; overflow: hidden; margin-top: 7px; }
+  .bar i { display: block; height: 100%; background: #6ec896; }
+  .bar.b i { background: #e0885f; }
+  .note { margin-top: 14px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+  @media (prefers-reduced-motion: no-preference) { .bar i { transition: width .18s ease; } }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-20">
+  <h1>What one task costs, and where you drew the line</h1>
+  <p class="sub">Move the retry rate and the fan-out, then switch the measurement boundary. Rates are the ones in the Code tab: $0.0000642 and 1,460 tokens per call, energy from Google's two published figures for the same prompt.</p>
+
+  <div class="panel">
+    <div class="row">
+      <label for="retry">Share of model calls that fail and get retried <b id="retryV">22%</b></label>
+      <input type="range" id="retry" min="0" max="45" step="1" value="22">
+    </div>
+    <div class="row">
+      <label for="calls">Model calls the task makes when nothing fails <b id="callsV">3</b></label>
+      <input type="range" id="calls" min="1" max="6" step="1" value="3">
+    </div>
+    <div class="seg">
+      <span class="lbl" style="margin:0 4px 0 0">boundary</span>
+      <button data-b="narrow">accelerator only</button>
+      <button data-b="whole">whole serving system</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h2>Dollars</h2>
+      <div class="stat">
+        <div class="big bad" id="naive">$0.000193</div>
+        <p>per task, the per-call estimate: calls x price, retries ignored</p>
+      </div>
+      <div class="stat">
+        <div class="big ok" id="real">$0.000247</div>
+        <p>per <b>finished task</b>, counting every attempt</p>
+      </div>
+      <div class="stat">
+        <div class="big neu" id="ratio">1.28x</div>
+        <p id="ratioNote">understated by this much</p>
+      </div>
+    </div>
+    <div>
+      <h2>Watt-hours</h2>
+      <div class="stat">
+        <div class="big neu" id="wh">1.93 Wh</div>
+        <p id="whNote">per finished task, whole serving system</p>
+        <div class="bar"><i id="barA"></i></div>
+      </div>
+      <div class="stat">
+        <div class="big neu" id="whOther">0.80 Wh</div>
+        <p id="whOtherNote">the same workload, accelerator only</p>
+        <div class="bar b"><i id="barB"></i></div>
+      </div>
+      <div class="stat">
+        <div class="big bad">2.40x</div>
+        <p>the gap between those two, on identical work</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="note" id="explain"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  // Per-call constants come straight from code_example.py so the two agree.
+  var USD_CALL = 0.0000642, TOK_CALL = 1460;
+  var WH = { narrow: 1.43e-4, whole: 3.43e-4 };   // Google's two published boundaries
+  var LABEL = { narrow: "accelerator only", whole: "whole serving system" };
+  var D = { retry: 22, calls: 3, boundary: "whole" };
+  var s = { retry: D.retry, calls: D.calls, boundary: D.boundary };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function render() {
+    var p = s.retry / 100;
+    // Expected attempts for a call retried until it succeeds: 1 / (1 - p).
+    var attempts = s.calls / (1 - p);
+    var naive = s.calls * USD_CALL, real = attempts * USD_CALL;
+    var other = s.boundary === "whole" ? "narrow" : "whole";
+    var whA = attempts * TOK_CALL * WH[s.boundary];
+    var whB = attempts * TOK_CALL * WH[other];
+
+    $("retryV").textContent = s.retry + "%";
+    $("callsV").textContent = s.calls;
+    $("naive").textContent = "$" + naive.toFixed(6);
+    $("real").textContent = "$" + real.toFixed(6);
+    $("ratio").textContent = (real / naive).toFixed(2) + "x";
+    $("wh").textContent = whA.toFixed(2) + " Wh";
+    $("whOther").textContent = whB.toFixed(2) + " Wh";
+    $("whNote").innerHTML = "per finished task, <b>" + LABEL[s.boundary] + "</b>";
+    $("whOtherNote").textContent = "the same workload, " + LABEL[other];
+    var max = Math.max(whA, whB) || 1;
+    $("barA").style.width = (whA / max * 100) + "%";
+    $("barB").style.width = (whB / max * 100) + "%";
+
+    Array.prototype.forEach.call(document.querySelectorAll("[data-b]"), function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.b === s.boundary));
+    });
+
+    var msg;
+    if (s.retry === 0 && s.calls === 1) {
+      msg = "<b>One call, no retries.</b> Per-call and per-task are the same number, so the "
+          + "meter buys you nothing. This is the case the article says not to build for.";
+    } else if (s.retry === 0) {
+      msg = "<b>No retries, but " + s.calls + " calls per task.</b> Fan-out alone already makes "
+          + "the per-call figure the wrong unit, before a single failure.";
+    } else {
+      msg = "<b>" + attempts.toFixed(2) + " attempts per finished task.</b> The dollar gap is "
+          + "your retry and fan-out multiplier. The watt-hour gap beside it is not: that one is "
+          + "the same work measured at two boundaries, and it never closes.";
+    }
+    $("explain").innerHTML = msg;
+    report();
+  }
+
+  $("retry").addEventListener("input", function (e) { s.retry = +e.target.value; render(); });
+  $("calls").addEventListener("input", function (e) { s.calls = +e.target.value; render(); });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-b]"), function (b) {
+    b.addEventListener("click", function () { s.boundary = b.dataset.b; render(); });
+  });
+  $("reset").addEventListener("click", function () {
+    s = { retry: D.retry, calls: D.calls, boundary: D.boundary };
+    $("retry").value = D.retry; $("calls").value = D.calls;
+    render();
+  });
+
+  function report() {
+    parent.postMessage({
+      type: "adl-visualize-height",
+      height: document.documentElement.scrollHeight
+    }, "*");
+  }
+  addEventListener("load", report);
+  new ResizeObserver(report).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>
