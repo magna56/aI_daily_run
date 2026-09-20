@@ -150,7 +150,9 @@ is Cloudflare Pages' native SPA-fallback. GitHub Pages ignores this file; it use
 (`subscribers`, `issues`). Pages Functions: `POST /api/subscribe`, `GET /api/confirm`,
 `GET /api/unsubscribe`, `POST /api/newsletter` and `GET /api/stats` (Bearer
 `NEWSLETTER_SECRET`). Signup is **single opt-in**: `/api/subscribe` marks the row
-`active` straight away and sends a welcome email — there is no confirmation step, and
+`active` straight away (one idempotent upsert, so two submissions in flight cannot race on the
+email primary key) and hands the welcome email to `waitUntil` rather than awaiting it — the row
+is the signup, and mail must never decide what the person sees — there is no confirmation step, and
 `/api/newsletter` mails everyone whose status is not `unsubscribed`, so `pending` rows
 left over from the old double opt-in flow are included. `/api/confirm` is kept only so
 old confirm links still resolve. A signup also emails `NEWSLETTER_NOTIFY` (default
