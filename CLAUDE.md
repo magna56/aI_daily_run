@@ -155,7 +155,11 @@ is Cloudflare Pages' native SPA-fallback. GitHub Pages ignores this file; it use
 left over from the old double opt-in flow are included. `/api/confirm` is kept only so
 old confirm links still resolve. A signup also emails `NEWSLETTER_NOTIFY` (default
 `theaicommit@gmail.com`) with the address and running counts. Mail goes
-through Resend (`RESEND_API_KEY`, optional `NEWSLETTER_FROM` / `PUBLIC_URL`). Without
+through Resend (`RESEND_API_KEY`, optional `NEWSLETTER_FROM` / `PUBLIC_URL`), which allows
+10 requests per second per account: the `/api/newsletter` loop paces itself at 125ms between
+sends and `sendEmail` retries a 429 or 5xx with backoff, honoring `retry-after`. Past a few
+hundred subscribers that serial walk gets slow enough to matter and the answer is Resend's
+batch endpoint, not a longer delay. Without
 the Resend key, signups are still stored and marked active so an unset secret never
 drops an address. Same D1 is the place for later signup-adjacent features (comments,
 accounts) — add tables in `db/schema.sql`, don't stand up a second store.

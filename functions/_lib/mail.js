@@ -13,29 +13,61 @@ export function ownerInbox(env) {
   return (env && env.NEWSLETTER_NOTIFY) || "theaicommit@gmail.com";
 }
 
-export async function sendEmail(env, { to, subject, html, text }) {
+export function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Resend allows 10 requests per second per account, and the newsletter loop is
+// the only caller that can outrun it. A 429 there is transient, so it must be
+// retried rather than counted as a failure: a subscriber who silently misses an
+// issue looks exactly like one who never signed up. 2026-09-20 sent 11 of 12
+// and dropped the twelfth to a 429.
+const RETRYABLE = (status) => status === 429 || status >= 500;
+
+// Prefer the server's own answer about when to come back. Resend sends
+// `retry-after` in seconds; fall back to exponential backoff with jitter so a
+// whole batch does not retry in lockstep.
+function retryDelayMs(res, attempt) {
+  const header = res.headers.get("retry-after") || res.headers.get("ratelimit-reset");
+  const secs = Number(header);
+  if (Number.isFinite(secs) && secs > 0 && secs <= 30) return Math.ceil(secs * 1000);
+  return Math.min(4000, 250 * Math.pow(2, attempt - 1)) + Math.floor(Math.random() * 120);
+}
+
+export async function sendEmail(env, { to, subject, html, text }, opts = {}) {
   if (!mailConfigured(env)) {
     return { ok: false, skipped: true, error: "mail_not_configured" };
   }
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer " + env.RESEND_API_KEY,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: fromAddress(env),
-      to: [to],
-      subject,
-      html,
-      text: text || "",
-    }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    return { ok: false, error: data.message || data.name || "send_failed", status: res.status };
+  const maxAttempts = (opts.retries == null ? 3 : opts.retries) + 1;
+  for (let attempt = 1; ; attempt += 1) {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + env.RESEND_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: fromAddress(env),
+        to: [to],
+        subject,
+        html,
+        text: text || "",
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      return { ok: true, id: data.id, attempts: attempt };
+    }
+    if (!RETRYABLE(res.status) || attempt >= maxAttempts) {
+      return {
+        ok: false,
+        error: data.message || data.name || "send_failed",
+        status: res.status,
+        attempts: attempt,
+      };
+    }
+    await sleep(retryDelayMs(res, attempt));
   }
-  return { ok: true, id: data.id };
 }
 
 export function confirmEmail({ site, token }) {
