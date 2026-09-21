@@ -5,7 +5,7 @@
 **Date**: 2026-09-21
 **Level**: Building
 **For**: Shipping AI
-**Hook**: A model that cannot produce a malformed answer can still be confidently wrong, and the number it hands you is the only thing standing between those two cases.
+**Hook**: TypeSafe's Jev model cannot return a malformed answer, but it can still be wrong — and the confidence number beside it is the only thing that tells you which one you got.
 **Engineer's view**: This is a gauge wired to the wrong variable. You have shipped one: a health metric that read 100% all week, so the alert never fired. Not because the system was healthy, but because the number never moved. A confidence score you have not checked is that gauge.
 **TLDR**: A schema guarantees the shape of an answer, never its truth. If your code branches on a confidence score, measure whether that score means what it says before you trust it.
 **Time to read**: ~11 minutes
