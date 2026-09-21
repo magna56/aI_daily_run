@@ -282,3 +282,9 @@
 - **Key insight**: Google publishes two energy figures for the same prompt, and both are true. The difference is only where they drew the line around the system, which is why numbers published by different companies cannot be ranked against each other. Report the boundary with the number, and count the finished task rather than the call.
 - **Code**: `2026-09-20/code_example.py` — a task-scoped meter that counts every retried attempt and refuses to add watt-hours measured at two different boundaries; prints the 2.40x boundary gap and the retry multiplier
 - **Articles**: 5 sources (Google Cloud's two-boundary measurement as primary + Microsoft's efficiency claim and the Joule paper behind it + TokenPowerBench as the harness you can run + Where Do the Joules Go? for diagnosis)
+
+## 2026-09-21 — How to Check Whether a Model's Confidence Score Means Anything
+- **Category**: Evals & Reliability
+- **Key insight**: A model can be built so that it never returns a malformed answer, and still be wrong just as often. The guarantee covers the shape of the reply, not its truth, so the confidence score beside it is the only thing left that can warn you. That number is worth nothing until you have checked it against outcomes you already logged.
+- **Code**: `2026-09-21/code_example.py` — reliability buckets, weighted calibration error and a held-out temperature fit, from scratch; shows a model claiming over 90% confidence on 1,561 cases and being wrong on 38.1% of them, then the same model calibrated
+- **Articles**: 5 sources (TypeSafe's docs as primary + LangChain's hands-on harness post + the vendor evals read with their own caveats + the launch post for the training method + Guo et al. on calibration and temperature scaling)

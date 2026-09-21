@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>What the confidence number actually promises</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .lbl { font-size: 11.5px; color: #9aa5c4; font-weight: 650; letter-spacing: .05em;
+         text-transform: uppercase; margin: 0 0 9px; }
+  .row { display: grid; gap: 4px; margin-bottom: 13px; }
+  .row label { font-size: 12.5px; color: #cdd5ee; display: flex; justify-content: space-between; gap: 10px; }
+  .row label b { color: #e8ecfb; font-variant-numeric: tabular-nums; font-weight: 650; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  input[type=range]:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 3px; }
+  .seg { display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+         border-top: 1px solid #1c2130; padding-top: 13px; }
+  button { font: inherit; font-size: 12px; padding: 7px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed="true"] { background: rgba(124,140,248,.16); border-color: rgba(124,140,248,.55); color: #e8ecfb; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .cols { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); margin-top: 16px; }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 9px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 13px; margin-bottom: 9px; }
+  .big { font-size: 25px; font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .big.ok { color: #6ec896; } .big.bad { color: #e0885f; } .big.neu { color: #cdd5ee; }
+  .stat p { margin: 3px 0 0; font-size: 12px; color: #8f9ab8; }
+  svg { width: 100%; height: auto; display: block; }
+  .note { margin-top: 14px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+  @media (prefers-reduced-motion: no-preference) { circle, line.thr { transition: all .18s ease; } }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-21">
+  <h1>What the confidence number actually promises</h1>
+  <p class="sub">Each dot is a bucket of predictions. Its position across is what the model <em>claimed</em>; its position up is how often it was <em>right</em>. On the dashed line the number is honest. Below it, the model is claiming more than it delivers. Same simulation as the Code tab.</p>
+
+  <div class="panel">
+    <div class="row">
+      <label for="oc">How sharply the model is pushed to sound decisive <b id="ocV">2.5x</b></label>
+      <input type="range" id="oc" min="10" max="40" step="1" value="25">
+    </div>
+    <div class="row">
+      <label for="th">Your "only act when it is sure" threshold <b id="thV">90%</b></label>
+      <input type="range" id="th" min="50" max="99" step="1" value="90">
+    </div>
+    <div class="seg">
+      <span class="lbl" style="margin:0 4px 0 0">score</span>
+      <button data-m="shipped">as shipped</button>
+      <button data-m="cal">after calibration</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h2>Claimed vs actual</h2>
+      <svg id="plot" viewBox="0 0 300 240" role="img" aria-label="Reliability diagram: claimed confidence against actual accuracy"></svg>
+    </div>
+    <div>
+      <h2>What it costs you</h2>
+      <div class="stat">
+        <div class="big" id="ece">0.342</div>
+        <p>calibration error — average gap between claimed and actual, weighted by bucket size</p>
+      </div>
+      <div class="stat">
+        <div class="big" id="wrong">38.1%</div>
+        <p id="wrongNote">of the cases above your threshold are wrong</p>
+      </div>
+      <div class="stat">
+        <div class="big neu" id="above">1561</div>
+        <p id="aboveNote">cases clear the threshold at all</p>
+      </div>
+      <div class="stat">
+        <div class="big neu" id="acc">44.3%</div>
+        <p>accuracy — identical in both modes, which is the point</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="note" id="explain"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var N = 2500, K = 4, BUCKETS = 10;
+  var D = { oc: 25, th: 90, mode: "shipped" };
+  var s = { oc: D.oc, th: D.th, mode: D.mode };
+  var $ = function (id) { return document.getElementById(id); };
+
+  // Seeded so the picture is reproducible and matches the Code tab's shape.
+  function rng(seed) { return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }; }
+  function gauss(r, mu, sd) {
+    var u = 1 - r(), v = r();
+    return mu + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function simulate(seed) {
+    var r = rng(seed), out = [];
+    for (var i = 0; i < N; i++) {
+      var truth = Math.floor(r() * K), lg = [];
+      for (var j = 0; j < K; j++) lg.push(gauss(r, 0, 1));
+      lg[truth] += gauss(r, 0.6, 1.3);          // real but noisy signal
+      out.push({ truth: truth, lg: lg });
+    }
+    return out;
+  }
+  function evaluate(cases, t) {
+    var confs = [], correct = [];
+    for (var i = 0; i < cases.length; i++) {
+      var lg = cases[i].lg, m = -Infinity, e = [], sum = 0, k;
+      for (k = 0; k < K; k++) if (lg[k] / t > m) m = lg[k] / t;
+      for (k = 0; k < K; k++) { var x = Math.exp(lg[k] / t - m); e.push(x); sum += x; }
+      var best = 0;
+      for (k = 1; k < K; k++) if (e[k] > e[best]) best = k;
+      confs.push(e[best] / sum); correct.push(best === cases[i].truth);
+    }
+    return { c: confs, k: correct };
+  }
+  function buckets(o) {
+    var rows = [];
+    for (var i = 0; i < BUCKETS; i++) {
+      var lo = i / BUCKETS, hi = (i + 1) / BUCKETS, n = 0, sc = 0, sa = 0;
+      for (var j = 0; j < o.c.length; j++) {
+        if (o.c[j] > lo && o.c[j] <= hi) { n++; sc += o.c[j]; if (o.k[j]) sa++; }
+      }
+      if (n) rows.push({ n: n, claimed: sc / n, actual: sa / n });
+    }
+    return rows;
+  }
+  function ece(o) {
+    var rows = buckets(o), tot = o.c.length, e = 0;
+    for (var i = 0; i < rows.length; i++) e += rows[i].n / tot * Math.abs(rows[i].claimed - rows[i].actual);
+    return e;
+  }
+
+  var live = simulate(11), holdout = simulate(77);
+  var fitted = (function () {
+    var best = 1, bestE = Infinity;
+    for (var st = 1; st <= 80; st++) {
+      var e = ece(evaluate(holdout, st / 10));
+      if (e < bestE) { bestE = e; best = st / 10; }
+    }
+    return best;
+  })();
+
+  function render() {
+    var oc = s.oc / 10, th = s.th / 100;
+    var t = s.mode === "cal" ? fitted : 1 / oc;
+    var o = evaluate(live, t), rows = buckets(o), E = ece(o);
+    var acc = o.k.reduce(function (a, b) { return a + (b ? 1 : 0); }, 0) / o.k.length;
+
+    var above = 0, wrongAbove = 0;
+    for (var i = 0; i < o.c.length; i++) if (o.c[i] > th) { above++; if (!o.k[i]) wrongAbove++; }
+    var wrongRate = above ? wrongAbove / above : null;
+
+    $("ocV").textContent = oc.toFixed(1) + "x";
+    $("thV").textContent = s.th + "%";
+    $("ece").textContent = E.toFixed(3);
+    $("ece").className = "big " + (E > 0.1 ? "bad" : "ok");
+    $("above").textContent = above;
+    $("acc").textContent = (acc * 100).toFixed(1) + "%";
+    if (wrongRate === null) {
+      $("wrong").textContent = "—"; $("wrong").className = "big neu";
+      $("wrongNote").textContent = "nothing clears the threshold at all";
+    } else {
+      $("wrong").textContent = (wrongRate * 100).toFixed(1) + "%";
+      $("wrong").className = "big " + (wrongRate > 1 - th ? "bad" : "ok");
+      $("wrongNote").innerHTML = "of the cases above your threshold are wrong — you were promised under <b>"
+        + ((1 - th) * 100).toFixed(0) + "%</b>";
+    }
+
+    // reliability diagram
+    var W = 300, H = 240, P = 34, sp = [];
+    function X(v) { return P + v * (W - P - 10); }
+    function Y(v) { return H - P - v * (H - P - 12); }
+    sp.push('<line x1="' + X(0) + '" y1="' + Y(0) + '" x2="' + X(1) + '" y2="' + Y(1) +
+            '" stroke="#4a5470" stroke-width="1" stroke-dasharray="4 4"/>');
+    sp.push('<line x1="' + X(0) + '" y1="' + Y(0) + '" x2="' + X(1) + '" y2="' + Y(0) + '" stroke="#2b3247"/>');
+    sp.push('<line x1="' + X(0) + '" y1="' + Y(0) + '" x2="' + X(0) + '" y2="' + Y(1) + '" stroke="#2b3247"/>');
+    sp.push('<line class="thr" x1="' + X(th) + '" y1="' + Y(0) + '" x2="' + X(th) + '" y2="' + Y(1) +
+            '" stroke="#7c8cf8" stroke-width="1" opacity=".55"/>');
+    sp.push('<text x="' + X(th) + '" y="' + (Y(1) - 3) + '" fill="#7c8cf8" font-size="8" text-anchor="middle">your threshold</text>');
+    for (var b = 0; b < rows.length; b++) {
+      var r = rows[b], rad = 3 + 9 * Math.sqrt(r.n / live.length);
+      var honest = Math.abs(r.claimed - r.actual) < 0.05;
+      sp.push('<circle cx="' + X(r.claimed).toFixed(1) + '" cy="' + Y(r.actual).toFixed(1) +
+              '" r="' + rad.toFixed(1) + '" fill="' + (honest ? "rgba(110,200,150,.75)" : "rgba(224,136,95,.75)") +
+              '"><title>' + (r.claimed * 100).toFixed(0) + '% claimed, ' +
+              (r.actual * 100).toFixed(0) + '% actual, ' + r.n + ' cases</title></circle>');
+    }
+    sp.push('<text x="' + X(0.5) + '" y="' + (H - 8) + '" fill="#8f9ab8" font-size="9" text-anchor="middle">claimed confidence</text>');
+    sp.push('<text x="11" y="' + Y(0.5) + '" fill="#8f9ab8" font-size="9" text-anchor="middle" transform="rotate(-90 11 ' + Y(0.5) + ')">actual accuracy</text>');
+    $("plot").innerHTML = sp.join("");
+
+    var msg;
+    if (s.mode === "cal") {
+      msg = "<b>Calibrated.</b> The dots sit on the line, so the number means what it says — and only "
+          + above + " of " + N + " cases still clear " + s.th + "%. The model was never that sure. "
+          + "Accuracy did not move, because temperature never changes which option wins.";
+    } else if (oc <= 1.05) {
+      msg = "<b>Untouched.</b> Nothing is sharpening the distribution, so the claims are already close to honest. "
+          + "This is the model you wish you had shipped.";
+    } else {
+      msg = "<b>As shipped.</b> The dots have fallen below the line: every bucket claims more than it delivers. "
+          + "Accuracy is unchanged at " + (acc * 100).toFixed(1) + "% — only the reported number moved, "
+          + "which is why no accuracy metric would ever have caught this.";
+    }
+    $("explain").innerHTML = msg;
+
+    var btns = document.querySelectorAll("[data-m]");
+    for (var q = 0; q < btns.length; q++) btns[q].setAttribute("aria-pressed", String(btns[q].dataset.m === s.mode));
+    report();
+  }
+
+  $("oc").addEventListener("input", function (e) { s.oc = +e.target.value; render(); });
+  $("th").addEventListener("input", function (e) { s.th = +e.target.value; render(); });
+  var ms = document.querySelectorAll("[data-m]");
+  for (var i = 0; i < ms.length; i++) {
+    ms[i].addEventListener("click", function (ev) { s.mode = ev.currentTarget.dataset.m; render(); });
+  }
+  $("reset").addEventListener("click", function () {
+    s = { oc: D.oc, th: D.th, mode: D.mode };
+    $("oc").value = D.oc; $("th").value = D.th; render();
+  });
+
+  function report() {
+    parent.postMessage({ type: "adl-visualize-height",
+      height: document.documentElement.scrollHeight }, "*");
+  }
+  addEventListener("load", report);
+  new ResizeObserver(report).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>
