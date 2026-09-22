@@ -1,4 +1,4 @@
-# Campaign slate — Microsoft AI / OpenAI fortnight (2026-09-17 → 2026-10-01)
+# Campaign slate — Microsoft AI / OpenAI fortnight (2026-09-17 → 2026-10-02)
 
 **A campaign is a dated override of Step 2's topic choice, and nothing else.** Every content
 rule, every word band, `node build.js --check` and the `--mix` audience gate apply exactly as
@@ -73,23 +73,29 @@ fix, plus the repository path where a reader would go looking. Not in the `Hook`
 
 ## The slate
 
+**Re-dated 2026-09-22.** Row 4 was dropped, row 5 shipped a day early, and two off-slate days ran
+on 2026-09-21 and 2026-09-22 (a calibration piece, then Jev, both requested). Rows 6-15 therefore
+slide to 2026-09-23 through 2026-10-02. Nothing was added: the slate is the same fifteen rows
+minus one, re-dated, which is the edit the expiry rule permits. It still expires at the last
+dated row.
+
 | # | Date | Working title | Category | Tier | Level | For |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | 2026-09-17 | ~~What VS Code's open-source Copilot Chat sends the model~~ → **shipped as** How VS Code Decides a Web Page Is Safe to Read | Coding Agents & Productivity | A | Start here | Using tools |
 | 2 | 2026-09-18 | Building prompts as components with a token budget | Building Agents & MCP | A | Building | Building agents |
 | 3 | 2026-09-19 | ~~How VS Code moved agent sessions into their own process~~ → **shipped as** AGENTS.md: One Rules File for Claude, Codex, Cursor and Copilot | Coding Agents & Productivity | A | Start here | Using tools |
-| 4 | 2026-09-20 | Running Codex inside VS Code's agent host | Coding Agents & Productivity | A | Start here | Using tools |
-| 5 | 2026-09-21 | Measuring tokens per dollar per watt for real | AI in Production | B | Building | Shipping AI |
-| 6 | 2026-09-22 | What a reasoning model costs per task, not per token | New Models & APIs | B | Start here | Using tools |
-| 7 | 2026-09-23 | How much of your real work a 15B model can actually close | Applied Research | C | Deeper | How models work |
-| 8 | 2026-09-24 | Routing between a small model and a frontier one | AI in Production | B | Building | Building agents |
-| 9 | 2026-09-25 | What custom inference silicon changes for you, and what it doesn't | AI Hardware for Engineers | C | Deeper | Shipping AI |
-| 10 | 2026-09-26 | The three levers you actually own on inference cost | AI in Production | B | Building | Shipping AI |
-| 11 | 2026-09-27 | MCP and A2A across vendors: what actually interoperates | Building Agents & MCP | A | Building | Building agents |
-| 12 | 2026-09-28 | Migrating off Semantic Kernel and AutoGen before they stop moving | Building Agents & MCP | A | Building | Building agents |
-| 13 | 2026-09-29 | What a continuously-running agent costs over eight hours | AI in Production | B | Building | Shipping AI |
-| 14 | 2026-09-30 | How to tell whether AI actually made your team faster | AI Engineering Practices | A | Start here | Using tools |
-| 15 | 2026-10-01 | Where agents still fail, and what that means for the work | Evals & Reliability | A | Building | Shipping AI |
+| 4 | ~~2026-09-20~~ | ~~Running Codex inside VS Code's agent host~~ — **dropped.** It would have been the fourth consecutive Microsoft-surface day, and the slate's own test cuts a row that can only be justified by who might read it. A settings walkthrough was the weakest row here. | — | — | — | — |
+| 5 | ~~2026-09-21~~ → **2026-09-20** | ~~Measuring tokens per dollar per watt for real~~ → **shipped as** How to Measure What One AI Task Costs in Dollars and Watts | AI in Production | B | Building | Shipping AI |
+| 6 | 2026-09-23 | What a reasoning model costs per task, not per token | New Models & APIs | B | Start here | Using tools |
+| 7 | 2026-09-24 | How much of your real work a 15B model can actually close | Applied Research | C | Deeper | How models work |
+| 8 | 2026-09-25 | Routing between a small model and a frontier one | AI in Production | B | Building | Building agents |
+| 9 | 2026-09-26 | What custom inference silicon changes for you, and what it doesn't | AI Hardware for Engineers | C | Deeper | Shipping AI |
+| 10 | 2026-09-27 | The three levers you actually own on inference cost | AI in Production | B | Building | Shipping AI |
+| 11 | 2026-09-28 | MCP and A2A across vendors: what actually interoperates | Building Agents & MCP | A | Building | Building agents |
+| 12 | 2026-09-29 | Migrating off Semantic Kernel and AutoGen before they stop moving | Building Agents & MCP | A | Building | Building agents |
+| 13 | 2026-09-30 | What a continuously-running agent costs over eight hours | AI in Production | B | Building | Shipping AI |
+| 14 | 2026-10-01 | How to tell whether AI actually made your team faster | AI Engineering Practices | A | Start here | Using tools |
+| 15 | 2026-10-02 | Where agents still fail, and what that means for the work | Evals & Reliability | A | Building | Shipping AI |
 
 Planned mix over the fortnight: **Tier A 8 / B 5 / C 2**, `For` at Using tools 4 / Building
 agents 5 / Shipping AI 5 / How models work 1, `Level` at Start here 4 / Building 9 / Deeper 2.
