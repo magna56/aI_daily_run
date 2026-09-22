@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>What the tuner learns when you only show it one split</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .row { display: grid; gap: 4px; margin-bottom: 13px; }
+  .row label { font-size: 12.5px; color: #cdd5ee; display: flex; justify-content: space-between; gap: 10px; }
+  .row label b { color: #e8ecfb; font-variant-numeric: tabular-nums; font-weight: 650; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  input[type=range]:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 3px; }
+  .seg { display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+         border-top: 1px solid #1c2130; padding-top: 13px; }
+  .lbl { font-size: 11.5px; color: #9aa5c4; font-weight: 650; letter-spacing: .05em;
+         text-transform: uppercase; margin: 0 4px 0 0; }
+  button { font: inherit; font-size: 12px; padding: 7px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed="true"] { background: rgba(124,140,248,.16); border-color: rgba(124,140,248,.55); color: #e8ecfb; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+  th { font-size: 11px; color: #9aa5c4; text-transform: uppercase; letter-spacing: .05em;
+       text-align: right; padding: 0 0 7px; font-weight: 650; }
+  th:first-child { text-align: left; }
+  td { padding: 7px 0; border-top: 1px solid #1c2130; text-align: right;
+       font-variant-numeric: tabular-nums; }
+  td:first-child { text-align: left; color: #cdd5ee; }
+  .tuned { color: #e0885f; } .unseen { color: #6ec896; } .dim { color: #6f7a99; }
+  .barwrap { margin-top: 16px; }
+  .brow { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; font-size: 12px; }
+  .brow span { width: 96px; color: #8f9ab8; flex: none; }
+  .bar { flex: 1; height: 13px; border-radius: 4px; background: #1c2130; overflow: hidden; }
+  .bar i { display: block; height: 100%; }
+  .bar i.t { background: rgba(224,136,95,.8); } .bar i.u { background: rgba(110,200,150,.8); }
+  .brow b { width: 44px; text-align: right; font-variant-numeric: tabular-nums; color: #e8ecfb; }
+  .note { margin-top: 16px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+  @media (prefers-reduced-motion: no-preference) { .bar i { transition: width .18s ease; } }
+</style>
+</head>
+<body>
+<main data-visualizer="frontier-2026-09-22">
+  <h1>What the tuner learns when you only show it one split</h1>
+  <p class="sub">A search edits an agent harness for ten rounds. Orange is the split it was allowed to read; green is tasks it never saw. Turn the regularizers off and watch the two columns come apart. Same model as the Code tab.</p>
+
+  <div class="panel">
+    <div class="row">
+      <label for="leak">How much a single edit can memorize <b id="leakV">0.90</b></label>
+      <input type="range" id="leak" min="0" max="100" step="5" value="90">
+    </div>
+    <div class="row">
+      <label for="rounds">Rounds of evolution <b id="roundsV">10</b></label>
+      <input type="range" id="rounds" min="2" max="20" step="1" value="10">
+    </div>
+    <div class="seg">
+      <span class="lbl">critic</span>
+      <button data-t="critic">leakage screen</button>
+      <span class="lbl" style="margin-left:6px">pruner</span>
+      <button data-t="pruner">drop dead weight</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>harness</th><th>tuned on</th><th>held-in</th><th>unseen mix</th><th>size</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <div class="barwrap" id="bars"></div>
+  <p class="note" id="explain"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var D = { leak: 90, rounds: 10, critic: true, pruner: true };
+  var s = { leak: D.leak, rounds: D.rounds, critic: D.critic, pruner: D.pruner };
+  var CAND = 8, BMAX = 4, BMIN = 1, BASE = 0.35, N = 40;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function rng(seed) { return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }; }
+
+  function tasks(r, family, hi) {
+    var out = [];
+    for (var i = 0; i < N; i++) out.push({ id: family + "-" + i, f: r() * hi });
+    return out;
+  }
+  function score(h, ts, leak) {
+    var tot = 0;
+    for (var i = 0; i < ts.length; i++) {
+      var p = BASE;
+      for (var j = 0; j < h.length; j++) {
+        var c = h[j];
+        if (c.kind === "general") { if (ts[i].f > c.thr) p += c.lift; }
+        else if (c.mem[ts[i].id]) p += leak;
+      }
+      tot += Math.min(p, 1);
+    }
+    return tot / ts.length * 100;
+  }
+  function budget(t, rounds) {
+    return Math.ceil(BMIN + (BMAX - BMIN) * 0.5 * (1 + Math.cos(Math.PI * t / rounds)));
+  }
+
+  function evolve(evolveSet, opts, leak) {
+    var r = rng(7), h = [], hist = {}, id = 0;
+    for (var t = 0; t < s.rounds; t++) {
+      var b = opts.anneal ? budget(t, s.rounds) : BMAX;
+      var best = null, bestScore = score(h, evolveSet, leak);
+      for (var c = 0; c < CAND; c++) {
+        var edits = [];
+        for (var e = 0; e < b; e++) {
+          id++;
+          if (r() < 0.5) {
+            edits.push({ id: id, kind: "general", thr: 0.2 + r() * 0.6, lift: 0.02 + r() * 0.08 });
+          } else {
+            var mem = {};
+            for (var m = 0; m < 4; m++) mem[evolveSet[Math.floor(r() * N)].id] = 1;
+            edits.push({ id: id, kind: "leaky", mem: mem, inert: r() < 0.2 });
+          }
+        }
+        if (opts.critic) edits = edits.filter(function (x) { return x.kind !== "leaky"; });
+        if (!edits.length) continue;
+        var sc = score(h.concat(edits), evolveSet, leak);
+        if (sc > bestScore) { best = edits; bestScore = sc; }
+      }
+      if (best) {
+        for (var k = 0; k < best.length; k++) {
+          var before = score(h, evolveSet, leak);
+          h.push(best[k]);
+          (hist[best[k].id] = hist[best[k].id] || []).push(score(h, evolveSet, leak) - before);
+        }
+      }
+      if (opts.pruner) {
+        h = h.filter(function (c2) {
+          var g = (hist[c2.id] || []).slice(-3);
+          return !(g.length >= 3 && Math.max.apply(null, g) <= 0);
+        });
+      }
+    }
+    return h;
+  }
+
+  function render() {
+    var leak = s.leak / 100, r = rng(7);
+    var ev = tasks(r, "evolve", 1), hi = tasks(r, "heldin", 1), ood = tasks(r, "ood", 0.6);
+    $("leakV").textContent = leak.toFixed(2);
+    $("roundsV").textContent = s.rounds;
+    document.querySelector('[data-t="critic"]').setAttribute("aria-pressed", String(s.critic));
+    document.querySelector('[data-t="pruner"]').setAttribute("aria-pressed", String(s.pruner));
+
+    var runs = [
+      { name: "frozen model only", h: [] },
+      { name: "unregularized", h: evolve(ev, { critic: false, pruner: false, anneal: false }, leak) },
+      { name: "your settings", h: evolve(ev, { critic: s.critic, pruner: s.pruner, anneal: true }, leak) }
+    ];
+    var html = "", bars = "", maxAll = 100;
+    for (var i = 0; i < runs.length; i++) {
+      var a = score(runs[i].h, ev, leak), b = score(runs[i].h, hi, leak), c = score(runs[i].h, ood, leak);
+      runs[i].a = a; runs[i].c = c;
+      var cls = i === 0 ? "dim" : "";
+      html += "<tr><td>" + runs[i].name + "</td><td class='tuned " + cls + "'>" + a.toFixed(1)
+            + "</td><td class='" + cls + "'>" + b.toFixed(1) + "</td><td class='unseen " + cls + "'>"
+            + c.toFixed(1) + "</td><td class='dim'>" + runs[i].h.length + "</td></tr>";
+      if (i > 0) {
+        bars += '<div class="brow"><span>' + runs[i].name + ' · tuned</span><div class="bar"><i class="t" style="width:'
+             + (a / maxAll * 100) + '%"></i></div><b>' + a.toFixed(0) + '</b></div>'
+             + '<div class="brow"><span>' + runs[i].name + ' · unseen</span><div class="bar"><i class="u" style="width:'
+             + (c / maxAll * 100) + '%"></i></div><b>' + c.toFixed(0) + '</b></div>';
+      }
+    }
+    $("rows").innerHTML = html;
+    $("bars").innerHTML = bars;
+
+    var un = runs[1], yours = runs[2];
+    var msg;
+    if (leak < 0.05) {
+      msg = "<b>Nothing to memorize.</b> With leaky edits worthless, both searches find the same "
+          + "general improvements and the columns agree. This is the world people assume they are "
+          + "in when they report a tuned score.";
+    } else if (!s.critic && !s.pruner) {
+      msg = "<b>Both regularizers off.</b> The search scores " + un.a.toFixed(1)
+          + " on the split it read and " + un.c.toFixed(1) + " on the mix it did not. "
+          + "The gap between those two numbers is the part of the gain that does not exist.";
+    } else {
+      msg = "<b>Your settings give up " + (un.a - yours.a).toFixed(1)
+          + " points on the tuned split and gain " + (yours.c - un.c).toFixed(1)
+          + " on the unseen mix.</b> That trade is the whole method: the score you were watching "
+          + "gets worse, and the one you actually care about gets better.";
+    }
+    $("explain").innerHTML = msg;
+    report();
+  }
+
+  $("leak").addEventListener("input", function (e) { s.leak = +e.target.value; render(); });
+  $("rounds").addEventListener("input", function (e) { s.rounds = +e.target.value; render(); });
+  var ts = document.querySelectorAll("[data-t]");
+  for (var i = 0; i < ts.length; i++) {
+    ts[i].addEventListener("click", function (ev) {
+      var k = ev.currentTarget.dataset.t; s[k] = !s[k]; render();
+    });
+  }
+  $("reset").addEventListener("click", function () {
+    s = { leak: D.leak, rounds: D.rounds, critic: D.critic, pruner: D.pruner };
+    $("leak").value = D.leak; $("rounds").value = D.rounds; render();
+  });
+
+  function report() {
+    parent.postMessage({ type: "adl-visualize-height",
+      height: document.documentElement.scrollHeight }, "*");
+  }
+  addEventListener("load", report);
+  new ResizeObserver(report).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>
