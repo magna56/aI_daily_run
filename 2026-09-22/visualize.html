@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Chaining versus asking everything at once</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .lbl { font-size: 11.5px; color: #9aa5c4; font-weight: 650; letter-spacing: .05em;
+         text-transform: uppercase; margin: 0 0 9px; }
+  .row { display: grid; gap: 4px; margin-bottom: 13px; }
+  .row label { font-size: 12.5px; color: #cdd5ee; display: flex; justify-content: space-between; gap: 10px; }
+  .row label b { color: #e8ecfb; font-variant-numeric: tabular-nums; font-weight: 650; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  input[type=range]:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 3px; }
+  .seg { display: flex; gap: 6px; align-items: center; border-top: 1px solid #1c2130; padding-top: 13px; }
+  button { font: inherit; font-size: 12px; padding: 7px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .cols { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); margin-top: 16px; }
+  .card { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 13px; }
+  .card.win { border-color: rgba(110,200,150,.45); }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 11px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  .m { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 4px; }
+  .m span { color: #8f9ab8; } .m b { font-variant-numeric: tabular-nums; color: #e8ecfb; font-weight: 650; }
+  .bar { height: 8px; border-radius: 4px; background: #1c2130; overflow: hidden; margin: 5px 0 11px; }
+  .bar i { display: block; height: 100%; background: #e0885f; }
+  .card.win .bar i { background: #6ec896; }
+  .trips { display: flex; gap: 4px; margin-top: 9px; flex-wrap: wrap; }
+  .trip { height: 20px; flex: 1 1 26px; border-radius: 4px; background: rgba(224,136,95,.30);
+          border: 1px solid rgba(224,136,95,.55); font-size: 10px; color: #f0c5ac;
+          display: flex; align-items: center; justify-content: center; }
+  .card.win .trip { background: rgba(110,200,150,.22); border-color: rgba(110,200,150,.5); color: #a9e3c4; }
+  .note { margin-top: 14px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+  @media (prefers-reduced-motion: no-preference) { .bar i { transition: width .18s ease; } }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-22">
+  <h1>Chaining versus asking everything at once</h1>
+  <p class="sub">Both panels answer the same decision. The left one chains calls and branches; the right one asks every question up front and discards what it does not use. Rates are the Code tab's: 114&nbsp;ms per call, 12 tokens per typed answer.</p>
+
+  <div class="panel">
+    <div class="row">
+      <label for="st">Shared state per decision — ticket, thread, context <b id="stV">600 tokens</b></label>
+      <input type="range" id="st" min="100" max="4000" step="50" value="600">
+    </div>
+    <div class="row">
+      <label for="dp">How deep the decision branches <b id="dpV">2 levels</b></label>
+      <input type="range" id="dp" min="1" max="4" step="1" value="2">
+    </div>
+    <div class="row">
+      <label for="br">How often the speculative branch is actually taken <b id="brV">25%</b></label>
+      <input type="range" id="br" min="0" max="100" step="5" value="25">
+    </div>
+    <div class="seg"><button id="reset">Reset</button></div>
+  </div>
+
+  <div class="cols">
+    <div class="card" id="cA">
+      <h2>Chained</h2>
+      <div class="m"><span>round trips</span><b id="aTrips">1.25</b></div>
+      <div class="m"><span>latency</span><b id="aLat">143 ms</b></div>
+      <div class="bar"><i id="aLatBar"></i></div>
+      <div class="m"><span>input tokens</span><b id="aTok">750</b></div>
+      <div class="bar"><i id="aTokBar"></i></div>
+      <div class="m"><span>questions asked</span><b id="aAsk">3.5</b></div>
+      <div class="trips" id="aTripBoxes"></div>
+    </div>
+    <div class="card win" id="cB">
+      <h2>Fanned out</h2>
+      <div class="m"><span>round trips</span><b id="bTrips">1.00</b></div>
+      <div class="m"><span>latency</span><b id="bLat">114 ms</b></div>
+      <div class="bar"><i id="bLatBar"></i></div>
+      <div class="m"><span>input tokens</span><b id="bTok">600</b></div>
+      <div class="bar"><i id="bTokBar"></i></div>
+      <div class="m"><span>questions asked</span><b id="bAsk">5.0</b></div>
+      <div class="trips" id="bTripBoxes"></div>
+    </div>
+  </div>
+
+  <p class="note" id="explain"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var MS = 114, ANS = 12, BASE = 3, PER_LEVEL = 2;
+  var D = { st: 600, dp: 2, br: 25 };
+  var s = { st: D.st, dp: D.dp, br: D.br };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function model() {
+    var p = s.br / 100, levels = s.dp - 1;
+    var total = BASE + PER_LEVEL * levels;          // every question the tree could need
+    // Chained: the first trip always happens; each deeper level only when the
+    // branch above it was taken, so its expected cost compounds.
+    var trips = 1, used = BASE, reach = 1;
+    for (var i = 0; i < levels; i++) {
+      reach *= p;
+      trips += reach;
+      used += PER_LEVEL * reach;
+    }
+    return {
+      a: { trips: trips, tok: trips * s.st, ask: used, out: used * ANS },
+      b: { trips: 1, tok: s.st, ask: total, out: total * ANS },
+      used: used, total: total
+    };
+  }
+
+  function render() {
+    var m = model(), a = m.a, b = m.b;
+    var aLat = a.trips * MS, bLat = b.trips * MS;
+    var maxLat = Math.max(aLat, bLat), maxTok = Math.max(a.tok, b.tok);
+
+    $("stV").textContent = s.st + " tokens";
+    $("dpV").textContent = s.dp + (s.dp === 1 ? " level" : " levels");
+    $("brV").textContent = s.br + "%";
+
+    $("aTrips").textContent = a.trips.toFixed(2);
+    $("bTrips").textContent = b.trips.toFixed(2);
+    $("aLat").textContent = Math.round(aLat) + " ms";
+    $("bLat").textContent = Math.round(bLat) + " ms";
+    $("aTok").textContent = Math.round(a.tok);
+    $("bTok").textContent = Math.round(b.tok);
+    $("aAsk").textContent = a.ask.toFixed(1);
+    $("bAsk").textContent = b.ask.toFixed(1);
+    $("aLatBar").style.width = (aLat / maxLat * 100) + "%";
+    $("bLatBar").style.width = (bLat / maxLat * 100) + "%";
+    $("aTokBar").style.width = (a.tok / maxTok * 100) + "%";
+    $("bTokBar").style.width = (b.tok / maxTok * 100) + "%";
+
+    function boxes(el, n) {
+      var html = "", full = Math.round(n * 100) / 100;
+      for (var i = 0; i < Math.ceil(full); i++) {
+        var label = (i + 1 <= full) ? "state" : "part";
+        html += '<div class="trip">' + label + '</div>';
+      }
+      el.innerHTML = html || '<div class="trip">none</div>';
+    }
+    boxes($("aTripBoxes"), a.trips);
+    boxes($("bTripBoxes"), b.trips);
+
+    var discard = m.total ? (m.total - m.used) / m.total : 0;
+    var tokRatio = a.tok / b.tok, latRatio = aLat / bLat;
+    var msg;
+    if (s.dp === 1) {
+      msg = "<b>One level, no branching.</b> There is nothing to fan out, so both shapes are the "
+          + "same single call. This is the case where the pattern buys you nothing — and the "
+          + "article says to stop here rather than adopt anything.";
+    } else if (tokRatio < 1.02) {
+      msg = "<b>The branch is taken almost every time.</b> Chaining barely re-sends the state, so "
+          + "the two shapes converge. Fan-out still wins the round trip, but the token argument "
+          + "has gone: at this rate the speculative questions were not speculative.";
+    } else {
+      msg = "<b>Fan-out asks " + (b.ask - a.ask).toFixed(1) + " more questions and discards "
+          + (discard * 100).toFixed(0) + "% of what it asks</b> — and still costs "
+          + tokRatio.toFixed(2) + "x fewer input tokens and " + latRatio.toFixed(2)
+          + "x less latency. Push the state slider up and the gap widens, because the state is "
+          + "what chaining pays for again on every trip.";
+    }
+    $("explain").innerHTML = msg;
+    report();
+  }
+
+  $("st").addEventListener("input", function (e) { s.st = +e.target.value; render(); });
+  $("dp").addEventListener("input", function (e) { s.dp = +e.target.value; render(); });
+  $("br").addEventListener("input", function (e) { s.br = +e.target.value; render(); });
+  $("reset").addEventListener("click", function () {
+    s = { st: D.st, dp: D.dp, br: D.br };
+    $("st").value = D.st; $("dp").value = D.dp; $("br").value = D.br; render();
+  });
+
+  function report() {
+    parent.postMessage({ type: "adl-visualize-height",
+      height: document.documentElement.scrollHeight }, "*");
+  }
+  addEventListener("load", report);
+  new ResizeObserver(report).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>

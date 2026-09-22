@@ -288,3 +288,9 @@
 - **Key insight**: A model can be built so that it never returns a malformed answer, and still be wrong just as often. The guarantee covers the shape of the reply, not its truth, so the confidence score beside it is the only thing left that can warn you. That number is worth nothing until you have checked it against outcomes you already logged.
 - **Code**: `2026-09-21/code_example.py` — reliability buckets, weighted calibration error and a held-out temperature fit, from scratch; shows a model claiming over 90% confidence on 1,561 cases and being wrong on 38.1% of them, then the same model calibrated
 - **Articles**: 5 sources (TypeSafe's docs as primary + LangChain's hands-on harness post + the vendor evals read with their own caveats + the launch post for the training method + Guo et al. on calibration and temperature scaling)
+
+## 2026-09-22 — How Jev Answers Five Questions in One Round Trip
+- **Category**: New Models & APIs
+- **Key insight**: A model that scores every question separately against one shared piece of context changes what a decision should cost. Asking more things at once stops being wasteful, because the expensive part was never the questions — it was re-sending the context on every round trip. So the cheap design is the one that asks everything up front and throws most of the answers away.
+- **Code**: `2026-09-22/code_example.py` — a decision tree as data, run both ways over 400 tickets; fanning out asks one more question each and discards a fifth of them, yet uses 1.45x fewer tokens and 1.51x less latency than chaining
+- **Articles**: 5 sources (TypeSafe's fan-out pattern as primary + the state concept page + LangChain's hands-on harness post + the vendor evals read skeptically + the API reference)
