@@ -168,7 +168,8 @@ function wrap({ site, inner, eyebrow, preheader, unsub }) {
       escapeHtml(preheader) +
       "</div>"
     : "";
-  const brand = site || "https://theaicommit.com";
+  // siteUrl() strips any trailing slash, so this concatenates cleanly.
+  const brand = (site || "https://theaicommit.com").replace(/\/+$/, "");
   const foot =
     '<p style="margin:20px 0 0;font-family:Georgia,\'Times New Roman\',serif;font-size:12px;line-height:1.65;color:#857f70">' +
     'The AI Commit &nbsp;·&nbsp; one email when a new daily session ships<br />' +
@@ -192,7 +193,19 @@ function wrap({ site, inner, eyebrow, preheader, unsub }) {
     '<table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background:#fffcf7;border:1px solid #e6e0d4;border-radius:14px">' +
     '<tr><td style="height:5px;background:#7c5cd9;border-radius:14px 14px 0 0;font-size:0;line-height:0">&nbsp;</td></tr>' +
     '<tr><td style="padding:28px 36px 8px">' +
+    // Logo and wordmark on one row. The image carries an empty alt on purpose:
+    // the wordmark beside it is the text equivalent, so a non-empty alt would
+    // announce the name twice to a screen reader and print it twice in the
+    // clients that block images by default. Width and height are attributes as
+    // well as CSS because Outlook ignores the CSS.
+    '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>' +
+    '<td valign="middle" style="padding-right:10px">' +
+    '<img src="' + escapeHtml(brand) + '/icon-512.png" width="34" height="34" alt="" ' +
+    'style="display:block;width:34px;height:34px;border:0;border-radius:8px" />' +
+    '</td>' +
+    '<td valign="middle">' +
     '<p style="margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#7c5cd9">The AI Commit</p>' +
+    '</td></tr></table>' +
     (eyebrow
       ? '<p style="margin:8px 0 0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#857f70">' +
         escapeHtml(eyebrow) +

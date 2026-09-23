@@ -11,7 +11,12 @@ const ALLOWED = [
 ];
 
 export function siteUrl(env) {
-  return (env && env.PUBLIC_URL) || "https://theaicommit.com";
+  // Normalize here rather than at each call site. Every caller concatenates
+  // "/api/..." or "/icon-512.png" onto this, and Pages does not route a double
+  // slash: //api/unsubscribe returns 404, which would silently break the
+  // unsubscribe link in every email the moment PUBLIC_URL was set with a
+  // trailing slash.
+  return ((env && env.PUBLIC_URL) || "https://theaicommit.com").replace(/\/+$/, "");
 }
 
 export function corsHeaders(request) {
