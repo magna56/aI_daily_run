@@ -294,3 +294,9 @@
 - **Key insight**: A model that scores every question separately against one shared piece of context changes what a decision should cost. Asking more things at once stops being wasteful, because the expensive part was never the questions — it was re-sending the context on every round trip. So the cheap design is the one that asks everything up front and throws most of the answers away.
 - **Code**: `2026-09-22/code_example.py` — a decision tree as data, run both ways over 400 tickets; fanning out asks one more question each and discards a fifth of them, yet uses 1.45x fewer tokens and 1.51x less latency than chaining
 - **Articles**: 5 sources (TypeSafe's fan-out pattern as primary + the state concept page + LangChain's hands-on harness post + the vendor evals read skeptically + the API reference)
+
+## 2026-09-23 — How to Cap What a Reasoning Model Spends on One Request
+- **Category**: New Models & APIs
+- **Key insight**: The setting that used to bound how much a model thinks has been replaced everywhere by a dial that only shifts it. A dial moves the middle of the range and leaves the expensive end alone, so the only limit still enforced is the one that stops a request part-way and charges you for the work it threw away. Pick that limit from traffic you have already logged.
+- **Code**: `2026-09-23/code_example.py` — fits a ceiling to a logged distribution of reasoning tokens; shows a round 4,096 truncating 17.5% of requests and burning $3.41 on responses that returned nothing, against 2.0% and $0.85 for a fitted cap
+- **Articles**: 4 sources (OpenAI's reasoning guide as primary + Anthropic's extended-thinking migration page + Gemini's thinking docs + the prompt-cache diagnostics changelog entry)

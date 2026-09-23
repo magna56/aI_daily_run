@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Where to put the ceiling on a reasoning request</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .row { display: grid; gap: 4px; margin-bottom: 13px; }
+  .row label { font-size: 12.5px; color: #cdd5ee; display: flex; justify-content: space-between; gap: 10px; }
+  .row label b { color: #e8ecfb; font-variant-numeric: tabular-nums; font-weight: 650; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  input[type=range]:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 3px; }
+  .seg { display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+         border-top: 1px solid #1c2130; padding-top: 13px; }
+  .lbl { font-size: 11.5px; color: #9aa5c4; font-weight: 650; letter-spacing: .05em;
+         text-transform: uppercase; margin: 0 4px 0 0; }
+  button { font: inherit; font-size: 12px; padding: 7px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed="true"] { background: rgba(124,140,248,.16); border-color: rgba(124,140,248,.55); color: #e8ecfb; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  svg { width: 100%; height: auto; display: block; margin-top: 16px; }
+  .cols { display: grid; gap: 11px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 14px; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 13px; }
+  .big { font-size: 23px; font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .big.ok { color: #6ec896; } .big.bad { color: #e0885f; } .big.neu { color: #cdd5ee; }
+  .stat p { margin: 3px 0 0; font-size: 11.5px; color: #8f9ab8; }
+  .note { margin-top: 14px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+  @media (prefers-reduced-motion: no-preference) { rect, line.cap { transition: all .15s ease; } }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-23">
+  <h1>Where to put the ceiling on a reasoning request</h1>
+  <p class="sub">Each bar is a bucket of requests by how many reasoning tokens they burned. Move the ceiling and watch what falls to the right of it — those are billed and return nothing. Same distributions as the Code tab.</p>
+
+  <div class="panel">
+    <div class="row">
+      <label for="cap">max_output_tokens <b id="capV">8,895</b></label>
+      <input type="range" id="cap" min="500" max="40000" step="100" value="8895">
+    </div>
+    <div class="seg">
+      <span class="lbl">effort</span>
+      <button data-e="minimal">minimal</button>
+      <button data-e="low">low</button>
+      <button data-e="medium">medium</button>
+      <button data-e="high">high</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <svg id="plot" viewBox="0 0 360 170" role="img" aria-label="Distribution of reasoning tokens with the ceiling marked"></svg>
+
+  <div class="cols">
+    <div class="stat"><div class="big" id="trunc">2.0%</div><p>of requests truncated — billed, no answer</p></div>
+    <div class="stat"><div class="big neu" id="med">1,775</div><p>median reasoning tokens</p></div>
+    <div class="stat"><div class="big neu" id="p99">10,342</div><p>99th percentile</p></div>
+    <div class="stat"><div class="big bad" id="waste">$0.85</div><p>spent on truncated requests</p></div>
+  </div>
+
+  <p class="note" id="explain"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var N = 4000, ANSWER = 400, USD = 1.20 / 1000000;
+  var EFFORT = { minimal: [5.6, 0.45], low: [6.6, 0.60], medium: [7.5, 0.75], high: [8.3, 0.90] };
+  var D = { cap: 8895, effort: "medium" };
+  var s = { cap: D.cap, effort: D.effort };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function rng(seed) { return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }; }
+  function lognorm(r, mu, sigma) {
+    var u = 1 - r(), v = r();
+    var z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    return Math.min(120000, Math.max(1, Math.exp(mu + sigma * z)));
+  }
+  var cache = {};
+  function samples(effort) {
+    if (cache[effort]) return cache[effort];
+    var r = rng(3), p = EFFORT[effort], out = [];
+    for (var i = 0; i < N; i++) out.push(Math.round(lognorm(r, p[0], p[1])));
+    out.sort(function (a, b) { return a - b; });
+    return (cache[effort] = out);
+  }
+  function q(arr, p) { return arr[Math.min(arr.length - 1, Math.max(0, Math.round(p * arr.length + 0.5) - 1))]; }
+
+  function render() {
+    var data = samples(s.effort), cap = s.cap;
+    var med = q(data, 0.5), p99 = q(data, 0.99), top = q(data, 0.995);
+    var trunc = 0, burned = 0;
+    for (var i = 0; i < data.length; i++) {
+      if (data[i] + ANSWER > cap) { trunc++; burned += Math.min(data[i], cap); }
+    }
+    var rate = trunc / data.length;
+
+    $("capV").textContent = cap.toLocaleString();
+    $("trunc").textContent = (rate * 100).toFixed(1) + "%";
+    $("trunc").className = "big " + (rate > 0.05 ? "bad" : "ok");
+    $("med").textContent = med.toLocaleString();
+    $("p99").textContent = p99.toLocaleString();
+    $("waste").textContent = "$" + (burned * USD).toFixed(2);
+
+    var BUCKETS = 36, W = 360, H = 170, PAD = 26, hi = Math.max(top, cap * 1.1);
+    var counts = new Array(BUCKETS).fill(0), maxC = 1;
+    for (i = 0; i < data.length; i++) {
+      var b = Math.min(BUCKETS - 1, Math.floor(data[i] / hi * BUCKETS));
+      counts[b]++;
+    }
+    for (i = 0; i < BUCKETS; i++) maxC = Math.max(maxC, counts[i]);
+    var bw = (W - PAD - 8) / BUCKETS, sp = [];
+    for (i = 0; i < BUCKETS; i++) {
+      var h = counts[i] / maxC * (H - PAD - 22);
+      var x = PAD + i * bw, mid = (i + 0.5) / BUCKETS * hi;
+      var over = mid + ANSWER > cap;
+      sp.push('<rect x="' + x.toFixed(1) + '" y="' + (H - PAD - h).toFixed(1) +
+              '" width="' + (bw - 1).toFixed(1) + '" height="' + h.toFixed(1) +
+              '" fill="' + (over ? "rgba(224,136,95,.85)" : "rgba(110,200,150,.7)") + '"/>');
+    }
+    var cx = PAD + Math.min(1, cap / hi) * (W - PAD - 8);
+    sp.push('<line class="cap" x1="' + cx.toFixed(1) + '" y1="8" x2="' + cx.toFixed(1) +
+            '" y2="' + (H - PAD) + '" stroke="#7c8cf8" stroke-width="1.5"/>');
+    sp.push('<text x="' + cx.toFixed(1) + '" y="6" fill="#7c8cf8" font-size="8" text-anchor="middle">ceiling</text>');
+    sp.push('<line x1="' + PAD + '" y1="' + (H - PAD) + '" x2="' + (W - 8) + '" y2="' + (H - PAD) + '" stroke="#2b3247"/>');
+    sp.push('<text x="' + PAD + '" y="' + (H - PAD + 12) + '" fill="#8f9ab8" font-size="8">0</text>');
+    sp.push('<text x="' + (W - 8) + '" y="' + (H - PAD + 12) + '" fill="#8f9ab8" font-size="8" text-anchor="end">' +
+            Math.round(hi).toLocaleString() + ' reasoning tokens</text>');
+    $("plot").innerHTML = sp.join("");
+
+    var btns = document.querySelectorAll("[data-e]");
+    for (var k = 0; k < btns.length; k++) btns[k].setAttribute("aria-pressed", String(btns[k].dataset.e === s.effort));
+
+    var msg;
+    if (rate > 0.25) {
+      msg = "<b>" + (rate * 100).toFixed(0) + "% of requests return nothing.</b> Every orange bar is "
+          + "billed reasoning that produced no answer. A ceiling this low is not a cost control, it "
+          + "is a failure rate you have not written down.";
+    } else if (rate < 0.005) {
+      msg = "<b>Almost nothing truncates.</b> You have bounded the worst case, and you are paying full "
+          + "price on every request that does not hit it. A ceiling only ever shapes the tail.";
+    } else {
+      msg = "<b>" + (rate * 100).toFixed(1) + "% truncated, $" + (burned * USD).toFixed(2)
+          + " spent on nothing.</b> The 99th percentile here is " + (p99 / med).toFixed(1)
+          + "x the median — that spread is why a round number fails. Switch effort levels and watch "
+          + "the same ceiling mean something completely different.";
+    }
+    $("explain").innerHTML = msg;
+    report();
+  }
+
+  $("cap").addEventListener("input", function (e) { s.cap = +e.target.value; render(); });
+  var es = document.querySelectorAll("[data-e]");
+  for (var i = 0; i < es.length; i++) {
+    es[i].addEventListener("click", function (ev) { s.effort = ev.currentTarget.dataset.e; render(); });
+  }
+  $("reset").addEventListener("click", function () {
+    s = { cap: D.cap, effort: D.effort }; $("cap").value = D.cap; render();
+  });
+
+  function report() {
+    parent.postMessage({ type: "adl-visualize-height",
+      height: document.documentElement.scrollHeight }, "*");
+  }
+  addEventListener("load", report);
+  new ResizeObserver(report).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>
