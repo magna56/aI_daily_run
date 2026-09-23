@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>What a thousand workers actually buy you</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .row { display: grid; gap: 4px; margin-bottom: 13px; }
+  .row label { font-size: 12.5px; color: #cdd5ee; display: flex; justify-content: space-between; gap: 10px; }
+  .row label b { color: #e8ecfb; font-variant-numeric: tabular-nums; font-weight: 650; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  input[type=range]:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 3px; }
+  .seg { display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+         border-top: 1px solid #1c2130; padding-top: 13px; }
+  .lbl { font-size: 11.5px; color: #9aa5c4; font-weight: 650; letter-spacing: .05em;
+         text-transform: uppercase; margin: 0 4px 0 0; }
+  button { font: inherit; font-size: 12px; padding: 7px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed="true"] { background: rgba(124,140,248,.16); border-color: rgba(124,140,248,.55); color: #e8ecfb; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+  th { font-size: 11px; color: #9aa5c4; text-transform: uppercase; letter-spacing: .05em;
+       text-align: right; padding: 0 0 7px; font-weight: 650; }
+  th:first-child { text-align: left; }
+  td { padding: 6px 0; border-top: 1px solid #1c2130; text-align: right;
+       font-variant-numeric: tabular-nums; }
+  td:first-child { text-align: left; color: #cdd5ee; }
+  tr.hl td { color: #a9e3c4; }
+  .dim { color: #6f7a99; }
+  .note { margin-top: 16px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+</style>
+</head>
+<body>
+<main data-visualizer="frontier-2026-09-23">
+  <h1>What a thousand workers actually buy you</h1>
+  <p class="sub">The top table varies worker count at fixed rounds — the comparison the paper makes. The bottom one holds token spend constant and spends it different ways. Same simulation as the Code tab.</p>
+
+  <div class="panel">
+    <div class="row">
+      <label for="lift">How much one worker's shared finding helps the others <b id="liftV">0.035</b></label>
+      <input type="range" id="lift" min="0" max="80" step="1" value="35">
+    </div>
+    <div class="row">
+      <label for="cont">Claim contention — two workers reaching for one subtask <b id="contV">4%</b></label>
+      <input type="range" id="cont" min="0" max="40" step="1" value="4">
+    </div>
+    <div class="seg"><span class="lbl">rounds</span>
+      <button data-r="15">15</button><button data-r="30">30</button><button data-r="60">60</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>workers</th><th>pass rate</th><th>tokens</th><th>pass / Mtok</th></tr></thead>
+    <tbody id="varyRows"></tbody>
+  </table>
+
+  <p class="sub" style="margin:16px 0 0">Same tokens, spent differently — rounds is the wall-clock column:</p>
+  <table>
+    <thead><tr><th>workers</th><th>rounds</th><th>pass rate</th><th>tokens</th></tr></thead>
+    <tbody id="equalRows"></tbody>
+  </table>
+
+  <p class="note" id="explain"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var SUBTASKS = 60, BASE = 0.04, TOK = 9000, TRIALS = 30;
+  var D = { lift: 35, cont: 4, rounds: 30 };
+  var s = { lift: D.lift, cont: D.cont, rounds: D.rounds };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function rng(seed) { return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }; }
+
+  function trial(n, rounds, r, lift, cont) {
+    var open = SUBTASKS, findings = 0, tokens = 0;
+    for (var round = 0; round < rounds && open > 0; round++) {
+      for (var w = 0; w < n && open > 0; w++) {
+        if (r() < cont) continue;                 // claim collision, no work done
+        tokens += TOK;
+        var p = Math.min(0.95, BASE + lift * Math.sqrt(findings));
+        if (r() < p) { open--; findings++; }
+      }
+    }
+    return [(SUBTASKS - open) / SUBTASKS, tokens];
+  }
+
+  function measure(n, rounds) {
+    var r = rng(11), lift = s.lift / 1000, cont = s.cont / 100, p = 0, t = 0;
+    for (var i = 0; i < TRIALS; i++) {
+      var out = trial(n, rounds, r, lift, cont);
+      p += out[0]; t += out[1];
+    }
+    return [p / TRIALS, t / TRIALS];
+  }
+
+  function render() {
+    $("liftV").textContent = (s.lift / 1000).toFixed(3);
+    $("contV").textContent = s.cont + "%";
+    var btns = document.querySelectorAll("[data-r]");
+    for (var b = 0; b < btns.length; b++) btns[b].setAttribute("aria-pressed", String(+btns[b].dataset.r === s.rounds));
+
+    var html = "", best = 0, bestN = 1, first = null, last = null;
+    [1, 2, 4, 8, 16, 32, 64].forEach(function (n) {
+      var m = measure(n, s.rounds), eff = m[1] ? m[0] / (m[1] / 1e6) : 0;
+      if (eff > best) { best = eff; bestN = n; }
+      if (first === null) first = m[0];
+      last = m[0];
+      html += "<tr><td>" + n + "</td><td>" + (m[0] * 100).toFixed(1) + "%</td><td class='dim'>"
+            + Math.round(m[1]).toLocaleString() + "</td><td>" + eff.toFixed(2) + "</td></tr>";
+    });
+    $("varyRows").innerHTML = html;
+
+    var budget = 64 * s.rounds, eq = "", one = null, crowd = null;
+    [[1, budget], [8, budget / 8], [64, s.rounds]].forEach(function (pair) {
+      var m = measure(pair[0], pair[1]);
+      if (one === null) one = m[0];
+      crowd = m[0];
+      eq += "<tr" + (pair[0] === 64 ? " class='hl'" : "") + "><td>" + pair[0] + "</td><td class='dim'>"
+          + pair[1] + "</td><td>" + (m[0] * 100).toFixed(1) + "%</td><td class='dim'>"
+          + Math.round(m[1]).toLocaleString() + "</td></tr>";
+    });
+    $("equalRows").innerHTML = eq;
+
+    var msg;
+    if (s.lift === 0) {
+      msg = "<b>Nothing is shared.</b> The workers are parallel retries, so the bottom table's rows "
+          + "match: at equal spend, one worker given the same attempts does just as well. This is the "
+          + "case where 'organizational intelligence' is only a bigger attempt budget.";
+    } else if (s.cont > 25) {
+      msg = "<b>Contention at " + s.cont + "%.</b> Most claims collide, so extra workers mostly waste "
+          + "attempts. The claim has become the bottleneck — you have rebuilt the dispatcher inside "
+          + "the lock.";
+    } else {
+      msg = "<b>Pass rate per token peaks at " + bestN + " workers</b> and flattens after, while the raw "
+          + "pass rate keeps climbing (" + (first * 100).toFixed(1) + "% to " + (last * 100).toFixed(1)
+          + "%). The bottom table is the control: at equal spend the crowd reaches a similar score in "
+          + "a fraction of the rounds. That is a latency win, and it is worth having — as long as you "
+          + "report it as one.";
+    }
+    $("explain").innerHTML = msg;
+    report();
+  }
+
+  $("lift").addEventListener("input", function (e) { s.lift = +e.target.value; render(); });
+  $("cont").addEventListener("input", function (e) { s.cont = +e.target.value; render(); });
+  var rs = document.querySelectorAll("[data-r]");
+  for (var i = 0; i < rs.length; i++) {
+    rs[i].addEventListener("click", function (ev) { s.rounds = +ev.currentTarget.dataset.r; render(); });
+  }
+  $("reset").addEventListener("click", function () {
+    s = { lift: D.lift, cont: D.cont, rounds: D.rounds };
+    $("lift").value = D.lift; $("cont").value = D.cont; render();
+  });
+
+  function report() {
+    parent.postMessage({ type: "adl-visualize-height",
+      height: document.documentElement.scrollHeight }, "*");
+  }
+  addEventListener("load", report);
+  new ResizeObserver(report).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>
