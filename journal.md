@@ -300,3 +300,9 @@
 - **Key insight**: The setting that used to bound how much a model thinks has been replaced everywhere by a dial that only shifts it. A dial moves the middle of the range and leaves the expensive end alone, so the only limit still enforced is the one that stops a request part-way and charges you for the work it threw away. Pick that limit from traffic you have already logged.
 - **Code**: `2026-09-23/code_example.py` — fits a ceiling to a logged distribution of reasoning tokens; shows a round 4,096 truncating 17.5% of requests and burning $3.41 on responses that returned nothing, against 2.0% and $0.85 for a fitted cap
 - **Articles**: 4 sources (OpenAI's reasoning guide as primary + Anthropic's extended-thinking migration page + Gemini's thinking docs + the prompt-cache diagnostics changelog entry)
+
+## 2026-09-24 — How Much of Your Work a 15B Model Can Actually Close
+- **Category**: Applied Research
+- **Key insight**: A small model can be taught when to reason and when to answer straight away, and the teaching happens in the training data rather than in a router built around it. Examples are tagged with the mode they deserve, weighted heavily toward the fast one. The part worth remembering is what the averaged score hides: a slice of work the model cannot close at any thinking budget.
+- **Code**: `2026-09-24/code_example.py` — builds the mode-token mix from scratch and measures the tradeoff; the hybrid keeps 96.3% of the always-reason accuracy for 25% of the tokens, while the hard subset stays at zero no matter how long the model thinks
+- **Articles**: 4 sources (the technical report on arXiv as primary + Microsoft Research's own lessons post + the open-weights model card + the Foundry deployment post)

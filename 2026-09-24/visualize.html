@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>What the training mix teaches a small model to do</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .row { display: grid; gap: 4px; margin-bottom: 13px; }
+  .row label { font-size: 12.5px; color: #cdd5ee; display: flex; justify-content: space-between; gap: 10px; }
+  .row label b { color: #e8ecfb; font-variant-numeric: tabular-nums; font-weight: 650; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  input[type=range]:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 3px; }
+  .seg { display: flex; gap: 6px; align-items: center; border-top: 1px solid #1c2130; padding-top: 13px; }
+  button { font: inherit; font-size: 12px; padding: 7px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  svg { width: 100%; height: auto; display: block; margin-top: 16px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
+  th { font-size: 11px; color: #9aa5c4; text-transform: uppercase; letter-spacing: .05em;
+       text-align: right; padding: 0 0 7px; font-weight: 650; }
+  th:first-child { text-align: left; }
+  td { padding: 6px 0; border-top: 1px solid #1c2130; text-align: right; font-variant-numeric: tabular-nums; }
+  td:first-child { text-align: left; color: #cdd5ee; }
+  tr.hy td { color: #a9e3c4; }
+  .dim { color: #6f7a99; }
+  .note { margin-top: 15px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-24">
+  <h1>What the training mix teaches a small model to do</h1>
+  <p class="sub">Each stripe is a slice of tasks by difficulty. Green answers directly, blue reasons, red is past the model's ceiling where neither helps. Move the mix and watch where the switch lands. Same simulation as the Code tab.</p>
+
+  <div class="panel">
+    <div class="row">
+      <label for="share">Share of the training mix labelled reason <b id="shareV">20%</b></label>
+      <input type="range" id="share" min="0" max="100" step="5" value="20">
+    </div>
+    <div class="row">
+      <label for="ceil">Share of your traffic past the model's ceiling <b id="ceilV">6%</b></label>
+      <input type="range" id="ceil" min="0" max="40" step="1" value="6">
+    </div>
+    <div class="seg"><button class="reset" id="reset">Reset</button></div>
+  </div>
+
+  <svg id="strip" viewBox="0 0 360 52" role="img" aria-label="Tasks by difficulty, coloured by which mode handles them"></svg>
+
+  <table>
+    <thead><tr><th>policy</th><th>accuracy</th><th>tokens/task</th><th>acc / Ktok</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <p class="note" id="explain"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var N = 4000, NOTOK = 40, THTOK = 640;
+  var D = { share: 20, ceil: 6 };
+  var s = { share: D.share, ceil: D.ceil };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function rnd(seed) { return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }; }
+
+  function tasks() {
+    var r = rnd(5), cut = 1 - s.ceil / 100, out = [];
+    for (var i = 0; i < N; i++) { var d = r(); out.push({ d: d, beyond: d > cut }); }
+    return out;
+  }
+  function directAcc(d) { return Math.max(0.05, 0.95 - Math.max(0, d - 0.45) * 0.85); }
+
+  function evaluate(list, policy, thr, r) {
+    var solved = 0, tokens = 0, hardOk = 0, hardN = 0;
+    for (var i = 0; i < list.length; i++) {
+      var t = list[i], think = policy === "think" || (policy === "hybrid" && t.d >= thr);
+      var ok;
+      if (t.beyond) ok = false;
+      else ok = think ? r() < 0.93 : r() < directAcc(t.d);
+      if (!t.beyond || true) { solved += ok ? 1 : 0; }
+      tokens += think ? THTOK : NOTOK;
+      if (t.beyond) { hardN++; hardOk += ok ? 1 : 0; }
+    }
+    return { acc: solved / list.length, tok: tokens / list.length,
+             hard: hardN ? hardOk / hardN : 0 };
+  }
+
+  function render() {
+    $("shareV").textContent = s.share + "%";
+    $("ceilV").textContent = s.ceil + "%";
+    var list = tasks(), thr = 1 - s.share / 100;
+
+    var out = "", res = {};
+    [["always direct", "direct"], ["always reason", "think"], ["hybrid, mode token", "hybrid"]]
+      .forEach(function (p) {
+        var m = evaluate(list, p[1], thr, rnd(5));
+        res[p[1]] = m;
+        out += "<tr" + (p[1] === "hybrid" ? " class='hy'" : "") + "><td>" + p[0] + "</td><td>"
+             + (m.acc * 100).toFixed(1) + "%</td><td class='dim'>" + m.tok.toFixed(0)
+             + "</td><td>" + (m.acc / (m.tok / 1000)).toFixed(2) + "</td></tr>";
+      });
+    $("rows").innerHTML = out;
+
+    var W = 360, H = 52, SL = 60, sp = [];
+    for (var i = 0; i < SL; i++) {
+      var d = (i + 0.5) / SL, x = i * (W / SL);
+      var fill = d > 1 - s.ceil / 100 ? "rgba(224,95,95,.85)"
+               : d >= thr ? "rgba(124,140,248,.85)" : "rgba(110,200,150,.75)";
+      sp.push('<rect x="' + x.toFixed(1) + '" y="8" width="' + (W / SL - 0.6).toFixed(1) +
+              '" height="26" fill="' + fill + '"/>');
+    }
+    sp.push('<text x="0" y="48" fill="#8f9ab8" font-size="8">easy</text>');
+    sp.push('<text x="' + W + '" y="48" fill="#8f9ab8" font-size="8" text-anchor="end">hard</text>');
+    sp.push('<text x="' + (thr * W) + '" y="6" fill="#7c8cf8" font-size="8" text-anchor="middle">switch</text>');
+    $("strip").innerHTML = sp.join("");
+
+    var hy = res.hybrid, th = res.think, msg;
+    if (s.share === 0) {
+      msg = "<b>Nothing is labelled reason.</b> The model never thinks, so it is fast and it loses "
+          + "the hard-but-reachable work entirely. The mix, not the architecture, decided that.";
+    } else if (s.share === 100) {
+      msg = "<b>Everything is labelled reason.</b> You have retrained a model that thinks about "
+          + "trivial perception, and you pay " + (th.tok / NOTOK).toFixed(0)
+          + "x the tokens per task for it. This is the default people accept by not choosing.";
+    } else {
+      msg = "<b>The hybrid keeps " + (hy.acc / th.acc * 100).toFixed(1)
+          + "% of the always-reason accuracy for " + (hy.tok / th.tok * 100).toFixed(0)
+          + "% of the tokens.</b> The red band is the part none of this touches: at "
+          + s.ceil + "% of traffic past the ceiling, thinking scores "
+          + (th.hard * 100).toFixed(1) + "% there. Widen it and watch every policy converge.";
+    }
+    $("explain").innerHTML = msg;
+    report();
+  }
+
+  $("share").addEventListener("input", function (e) { s.share = +e.target.value; render(); });
+  $("ceil").addEventListener("input", function (e) { s.ceil = +e.target.value; render(); });
+  $("reset").addEventListener("click", function () {
+    s = { share: D.share, ceil: D.ceil };
+    $("share").value = D.share; $("ceil").value = D.ceil; render();
+  });
+
+  function report() {
+    parent.postMessage({ type: "adl-visualize-height",
+      height: document.documentElement.scrollHeight }, "*");
+  }
+  addEventListener("load", report);
+  new ResizeObserver(report).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>
