@@ -46,6 +46,14 @@ merit, judged by the acceptance test in `SKILL.md` — could a competent enginee
 from this alone. If a campaign day can only be justified by who might read it, cut it and take
 the autonomous pick for that date instead.
 
+**And a row that repeats a shipped article is cut or reshaped, never written as planned.** Added
+2026-09-25, after it happened twice in one week. A slate is written weeks ahead, so it cannot know
+what the intervening days shipped — row 6 turned out to be 2026-09-20's thesis and row 8 turned
+out to be 2026-08-03's. Run the argument-shape check in `selection.md` against the row **before**
+writing, not after. Reshaping keeps the slot and changes the argument, which is what row 6 got:
+same category and audience, but cost *control* instead of cost *measurement*. Cutting is right
+when the row has no second angle, which is what row 8 got.
+
 **Check the source is still alive before you write.** Day 1 was planned against
 `microsoft/vscode-copilot-chat`, and that repository turned out to be archived — last pushed
 2026-05-20, issues closed. The article would have described a dead system and pointed readers at

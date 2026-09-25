@@ -133,9 +133,23 @@ correct it. Read them as instructions for tomorrow, never as a reason to hold to
 Other warnings are advisory and do not block: a `code_example.py` that exits non-zero is a
 *rendered traceback* by design, not a broken build.
 
-Then confirm by eye the two things no linter can see (`ai-daily-learn` Step 11 has the same pair):
+Then confirm by eye the things no linter can see (`ai-daily-learn` Step 11 has the same list):
 `## Implementing It` gives code for **every role the change touches**, and `## Why It Matters`
-carries no momentum reporting. `publish.sh` enforces the machine-checkable half of this gate
+carries no momentum reporting.
+
+**Two more, added 2026-09-25, because both reached the live site and the newsletter before anyone
+noticed.** Neither is machine-checkable and both are cheap to run:
+
+- **Is this the same argument as a recent session?** Print the section skeletons of the last five
+  or six sessions — the command is in `selection.md`'s repeat gate — and compare. Subjects differ
+  far more often than arguments do. On 2026-09-23 and again on 2026-09-25 a planned topic turned
+  out to be an already-published thesis wearing a new subject, and both were caught only by
+  reading shipped `topic.md` files by hand.
+- **Does the title promise something the method only does conditionally?** Ask whether it works on
+  input the reader has not prepared. `How to Tell Whether Text Came From Your Own Model` shipped
+  on 2026-09-25 and reads as detecting AI-written text in general; the technique needs the text to
+  have been watermarked in advance. A retitle after the newsletter has gone out costs a
+  `RETIRED_SLUGS` entry and a correction; thirty seconds here costs nothing. `publish.sh` enforces the machine-checkable half of this gate
 itself, so the unattended run is protected even when nobody reads its log.
 
 ## Step B: Publish (push to GitHub, deploy to both hosts)

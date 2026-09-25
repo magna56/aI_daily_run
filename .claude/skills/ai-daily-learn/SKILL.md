@@ -717,6 +717,20 @@ Tokenizer-Agnostic LLM-Based Lossless Image Compression` announces.
     surprise-led rule above already sends it.
   This applies identically to the daily lab and to Frontier — a deeper subject is a reason for a
   plainer title, not a licence for a cleverer one.
+- **If the method needs a prior step, the title names the method, not the outcome.** Added
+  2026-09-25. A title that states only the goal reads as a general capability, and the reader
+  arrives expecting something that works on input they have not prepared. Ask one question of every
+  `How to` title: *does this work on something the reader did nothing to beforehand?* If not, the
+  precondition belongs in the words.
+  - ✗ `How to Tell Whether Text Came From Your Own Model` — reads as detecting AI-written text in
+    general, which is a far larger claim. The article teaches watermarking, and detection only
+    works on text generated while the watermark was on.
+    → ✓ `How to Watermark a Model's Output Without Changing a Word`
+  The ✗ shipped, and the owner read the piece and asked "how is the title related to what you
+  explained?" That question is the tell: the title described a wish, the article delivered a
+  mechanism with a condition attached. Naming the technique usually satisfies the concrete-noun
+  rule above at the same time, because the technique is the concrete thing and the goal is the
+  abstract one.
 - **Never let an inversion carry the title alone.** An inversion — *the best X are the wrong X*,
   *the fastest path is the slow one* — is the specific shape that defeats every other rule on
   this list. It can be one clause with one subject, avoid overloaded words, pay off its count in
@@ -828,6 +842,16 @@ paragraph one never reaches the good part.
 - Zero jargon and zero acronyms. If a term is unavoidable, you picked the wrong analogy.
 - 3-5 sentences. Land the *shape* of the problem, not the mechanism.
 - It must still be **true** — a simplification, never a fiction you walk back later.
+- **Show the payoff; never assert it.** Added 2026-09-25. The sentence where the analogy pays off
+  is the one most likely to be waved through, because the writer already knows it works.
+  - ✗ *"But you shuffled using a rule only you know. Later, holding the pile, you can work
+    backwards and see your rule in it."* — "work backwards and see your rule" explains nothing; the
+    reader is told the trick succeeds and shown no reason it would.
+    → ✓ *"Afterwards, holding the pile, you check each turn against your password. If turn after
+    turn matches, those cards were yours."*
+- **The analogy's shape must match the mechanism's shape.** A deck being shuffled all at once is
+  the wrong picture for a model choosing one token at a time, however good the rest of the image
+  is. If the mechanism is repeated small decisions, the analogy has to be repeated small decisions.
 
 **`## The Problem`** — names the actual pain before the reader is shown the fix for it. A
 solution without its problem reads as cleverness for its own sake; this is what keeps a deep
@@ -1003,6 +1027,20 @@ section at position four until 2026-09-02, which was late for it.
   2. **Say what maps to what**, in the topic's own mechanism, plainly. This is the sentence the old
      rule was missing and it is the one doing the work.
   3. **Say what it costs the reader**, in their terms. Their test, their bill, their pager.
+- **The analogy has to map to what the article is FOR, not only to how it works.** Added
+  2026-09-25. The three moves above make you explain a mapping; they do not make you check that it
+  is the right one. An analogy can describe the mechanism accurately and still point the reader at
+  the wrong problem, and they will read the whole article through that frame.
+  - ✗ For a piece on watermarking: *"This is the seeded random you already use — you swapped the
+    system random for one seeded from a value you logged, so a run could be replayed."* Accurate
+    about the mechanism, and about **replaying your own run**. The article is about **proving
+    provenance to somebody else**, which is a different problem.
+    → ✓ *"This is a deterministic tie-break. When two records sort equal, something has to pick an
+    order, and the result is correctly sorted whichever you choose. Make that choice a hash of a
+    secret and the output is unchanged but recognizable later."* Same length, and it carries both
+    properties the article actually turns on.
+  The check: state the article's purpose in four words, then ask whether the familiar thing you
+  named serves that purpose or merely resembles the machinery.
 - **Never stack a second metaphor on the first.** A reader who did not follow the analogy cannot
   follow a figure of speech built on top of it. Every noun in the box should be either something
   the reader has shipped or something this article is about — nothing in between.

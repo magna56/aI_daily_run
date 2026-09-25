@@ -103,6 +103,25 @@ grep -ril "<the topic's key noun>" --include=topic.md 20*/ frontier/ | sort | ta
 grep -rl "<the primary source's URL>" --include=articles.md 20*/ frontier/
 ```
 
+**Both commands above search for NOUNS. Neither catches a repeat of the argument.** Added
+2026-09-25, after two in one week. On 2026-09-23 the planned topic was "what a reasoning model
+costs per task, not per token" — which is 2026-09-20's thesis verbatim, whose section three is
+titled *Make the Task the Unit*. On 2026-09-25 the planned topic was small/frontier routing, which
+2026-08-03 had already shipped as a confidence-gated cascade, with calibration named as the moat —
+and 2026-09-21 had then spent a whole article on calibrating confidence. Different subjects, same
+article. So run a third check, on the shape rather than the words:
+
+```bash
+cd ~/ai_learning
+for d in $(ls -d 20*/ | sort | tail -6); do echo "--- $d"; grep -E '^## |^\*\*(Hook|TLDR)' $d/topic.md; done
+```
+
+Read the last five or six **section skeletons**, not the journal titles. The repetition a reader
+notices is the argument: *"several vendors converged on one thing and the rules underneath still
+differ"* is one article, and writing it twice in a fortnight reads as a formula even when the two
+subjects are unrelated. If a candidate echoes a recent piece, either reshape it to a genuinely
+different mechanism or say plainly in the summary why the difference is real.
+
 **A hit on a dated source disqualifies the candidate. A hit on an evergreen doc does not.** Several
 sessions legitimately cite the same reference pages — the Claude Code changelog and the hooks doc
 each appear in three — because a stable doc supports many different topics. A dated post or a

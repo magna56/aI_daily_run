@@ -1652,3 +1652,50 @@ now skipped.
   available; they are now ranked below the explanatory form rather than beside it.
 - **Not changed**: the demoted surprise-led rule, which already routes numbers and twists into
   `**Hook**` and `Key insight`. This note reinforces it from the other direction.
+
+## 2026-09-25 — 2026-09-25 (the watermarking session, and the week around it)
+
+- **Note**: "todays article I dodnt get it what it means", then, after the explanation, "how title
+  is related to what yoy eplxained?" Followed by "take this conversation as feedback update the
+  skill".
+- **Verdict**: four notes, triaged separately. Two standing rules, two gaps in rules that already
+  existed and were too weak to bite.
+
+- **Changed**: `SKILL.md` title rules — new rule: **if the method needs a prior step, the title
+  names the method, not the outcome.** The shipped title *How to Tell Whether Text Came From Your
+  Own Model* reads as detecting AI-written text in general; the technique only works on text
+  watermarked in advance. Carries the ✗/✓ pair and the owner's question as the tell, because
+  "how is the title related to what you explained?" is what this failure sounds like from the
+  reader's side. Retitled live to *How to Watermark a Model's Output Without Changing a Word*,
+  with the old slug in `RETIRED_SLUGS` so the newsletter link still resolves.
+- **Changed**: `SKILL.md` `Engineer's view` rules — the existing three moves (name the familiar
+  thing, explain the mapping, say what it costs) make you explain *a* mapping but never check it is
+  the *right* one. New rule: **the analogy must map to what the article is FOR, not only to how it
+  works.** The shipped box used seeded random in a test suite — accurate about mechanism, and about
+  replaying your own run, when the article was about proving provenance to someone else. ✗/✓ pair
+  uses the replacement, a deterministic tie-break, which carries both properties at once.
+- **Changed**: `SKILL.md` `## Explain Like I'm 5` rules — two additions. **Show the payoff, never
+  assert it**: "you can work backwards and see your rule in it" tells the reader the trick succeeds
+  and shows no reason it would. And **the analogy's shape must match the mechanism's shape**: a deck
+  shuffled all at once is the wrong picture for a model choosing one token at a time.
+- **Changed**: `selection.md` repeat gate — the gate existed and was run; both its commands search
+  for **nouns**, so neither can catch a repeat of the *argument*. Added a third check that prints
+  the section skeletons of the last five or six sessions, with the two cases that prompted it:
+  2026-09-23's planned topic was 2026-09-20's thesis (*Make the Task the Unit*), and 2026-09-25's
+  was 2026-08-03's cascade plus 2026-09-21's calibration piece.
+- **Changed**: `campaign.md` — **a slate row that repeats a shipped article is cut or reshaped,
+  never written as planned.** A slate is written weeks ahead and cannot know what the intervening
+  days shipped. Records which remedy each row got: row 6 reshaped (kept the slot, swapped cost
+  measurement for cost control), row 8 cut.
+- **Changed**: `ai-daily-learn-publish/SKILL.md` Step A½ — the two checks above added to the
+  by-eye gate, since both defects reached the live site *and* the newsletter before anyone saw
+  them. This is the file the owner asked to update; the content rules themselves live in
+  `ai-daily-learn/SKILL.md`, which is where the generator reads them.
+
+- **Not changed**: the title shapes table, the demoted surprise-led rule, and the plain-title
+  default from 2026-09-20. The new title rule sits alongside them and contradicts none — naming
+  the technique usually satisfies the concrete-noun rule too, because the technique is the concrete
+  thing and the goal is the abstract one.
+- **Not changed**: no linter rule was added. All four notes are judgment calls over meaning, and a
+  regex over titles or analogies would fire constantly on correct articles. Saying so rather than
+  inventing a check that would be switched off within a week.
