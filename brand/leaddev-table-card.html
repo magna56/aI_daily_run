@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<!--
+  LeadDev table card for theaicommit.com
+  Print: open this file in a browser → Print → landscape, no margins,
+  or print brand/leaddev-table-card.png at 4in × 3in (2400×1800 = 600 dpi).
+  QR target: https://theaicommit.com/
+-->
+<head>
+<meta charset="utf-8" />
+<title>The AI Commit — LeadDev table card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Source+Sans+3:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #111217;
+    --panel: #161821;
+    --ink: #e7e2d8;
+    --muted: #9a9488;
+    --dim: #857f70;
+    --sky: #38bdf8;
+    --sky2: #7dd3fc;
+    --line: rgba(255,255,255,.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #0a0b0f;
+    color: var(--ink);
+    font-family: "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+  }
+  /* 4in × 3in at 300dpi export target = 1200×900 CSS px at 1x; we render at 2x via chrome */
+  .sheet {
+    width: 1200px;
+    height: 900px;
+    margin: 24px auto;
+    background:
+      radial-gradient(ellipse 80% 60% at 12% 0%, rgba(56,189,248,.14), transparent 55%),
+      radial-gradient(ellipse 70% 50% at 100% 100%, rgba(196,181,253,.08), transparent 50%),
+      linear-gradient(160deg, #14161d 0%, #111217 55%, #0e1016 100%);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    padding: 56px 64px;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 48px;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .sheet::before {
+    content: "";
+    position: absolute;
+    inset: 18px;
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 18px;
+    pointer-events: none;
+  }
+  .left { display: flex; flex-direction: column; gap: 28px; position: relative; z-index: 1; }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .brand img {
+    width: 72px;
+    height: 72px;
+    border-radius: 18px;
+    flex-shrink: 0;
+  }
+  .brand-name {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-weight: 700;
+    font-size: 28px;
+    letter-spacing: .04em;
+    background: linear-gradient(90deg, var(--sky2), #c4b5fd);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    line-height: 1.1;
+  }
+  .brand-sub {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 13px;
+    color: var(--dim);
+    letter-spacing: .18em;
+    margin-top: 6px;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 1.18;
+    letter-spacing: -.02em;
+    max-width: 14ch;
+    color: var(--ink);
+  }
+  .pitch {
+    font-size: 22px;
+    line-height: 1.45;
+    color: var(--muted);
+    max-width: 28ch;
+    font-weight: 500;
+  }
+  .url {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--sky2);
+    letter-spacing: .02em;
+  }
+  .right {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    position: relative;
+    z-index: 1;
+  }
+  .qr-wrap {
+    background: #e7e2d8;
+    padding: 22px;
+    border-radius: 20px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08);
+  }
+  .qr-wrap img {
+    width: 280px;
+    height: 280px;
+    display: block;
+  }
+  .scan {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 14px;
+    color: var(--dim);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  @media print {
+    html, body { background: white; }
+    .sheet { margin: 0; border-radius: 0; border: none; page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+  <article class="sheet" role="img" aria-label="The AI Commit conference table card">
+    <div class="left">
+      <div class="brand">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDI0IDEwMjQiIHJvbGU9ImltZyIgYXJpYS1sYWJlbD0iVGhlIEFJIENvbW1pdCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImhlYWQiIHgxPSIyOCUiIHkxPSIxOCUiIHgyPSI3OCUiIHkyPSI4NiUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjN2RkM2ZjIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTUlIiBzdG9wLWNvbG9yPSIjMzhiZGY4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzBlYTVlOSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iaGFsbyIgY3g9IjUwJSIgY3k9IjQ2JSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4YmRmOCIgc3RvcC1vcGFjaXR5PSIuNDIiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSI1NSUiIHN0b3AtY29sb3I9IiMzOGJkZjgiIHN0b3Atb3BhY2l0eT0iLjEyIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzM4YmRmOCIgc3RvcC1vcGFjaXR5PSIwIi8+CiAgICA8L3JhZGlhbEdyYWRpZW50PgogIDwvZGVmcz4KICA8cmVjdCB3aWR0aD0iMTAyNCIgaGVpZ2h0PSIxMDI0IiByeD0iMjMwIiBmaWxsPSIjMTExMjE3Ii8+CiAgPGNpcmNsZSBjeD0iNTk2IiBjeT0iNTEyIiByPSIyNDgiIGZpbGw9InVybCgjaGFsbykiLz4KICA8bGluZSB4MT0iMTY4IiB5MT0iNTEyIiB4Mj0iODU2IiB5Mj0iNTEyIiBzdHJva2U9IiMzYTQxNDgiIHN0cm9rZS13aWR0aD0iNDQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxjaXJjbGUgY3g9IjI5MiIgY3k9IjUxMiIgcj0iNDIiIGZpbGw9IiMyYTMwMzgiLz4KICA8Y2lyY2xlIGN4PSIyOTIiIGN5PSI1MTIiIHI9IjI4IiBmaWxsPSIjNGI1NTYzIi8+CiAgPGNpcmNsZSBjeD0iNTk2IiBjeT0iNTEyIiByPSIxMzIiIGZpbGw9InVybCgjaGVhZCkiLz4KPC9zdmc+Cg==" alt="The AI Commit mark" />
+        <div>
+          <div class="brand-name">THE AI COMMIT</div>
+          <div class="brand-sub">Read / See / Run</div>
+        </div>
+      </div>
+      <h1>A daily AI lab for software engineers</h1>
+      <p class="pitch">One real AI mechanism in 30 minutes — plain English, a diagram of how it works, and code you can run.</p>
+      <p class="url">theaicommit.com</p>
+    </div>
+    <div class="right">
+      <div class="qr-wrap">
+        <img src="data:image/png;base64,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" alt="QR code to theaicommit.com" />
+      </div>
+      <p class="scan">Scan to open</p>
+    </div>
+  </article>
+</body>
+</html>
