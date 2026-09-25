@@ -1,4 +1,4 @@
-# Further Reading: How to Tell Whether Text Came From Your Own Model
+# Further Reading: How to Watermark a Model's Output Without Changing a Word
 
 ## Articles
 

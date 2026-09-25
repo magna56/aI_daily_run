@@ -307,7 +307,7 @@
 - **Code**: `2026-09-24/code_example.py` — builds the mode-token mix from scratch and measures the tradeoff; the hybrid keeps 96.3% of the always-reason accuracy for 25% of the tokens, while the hard subset stays at zero no matter how long the model thinks
 - **Articles**: 4 sources (the technical report on arXiv as primary + Microsoft Research's own lessons post + the open-weights model card + the Foundry deployment post)
 
-## 2026-09-25 — How to Tell Whether Text Came From Your Own Model
+## 2026-09-25 — How to Watermark a Model's Output Without Changing a Word
 - **Category**: AI in Production
 - **Key insight**: A model's output can be marked without changing a single word of it, because there is a way of sampling that is provably identical to ordinary sampling and yet driven by a secret you hold. Checking a passage later needs that secret and the text, but not the model. What the mark cannot survive is output that was never a real choice.
 - **Code**: `2026-09-25/code_example.py` — implements the keyed sampler and the statistical detector from scratch; the top token's true probability of 0.2000 comes back as 0.1991 watermarked, and detection dies once the output drops to 0.30 bits per token

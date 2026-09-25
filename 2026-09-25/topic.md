@@ -1,4 +1,4 @@
-# How to Tell Whether Text Came From Your Own Model
+# How to Watermark a Model's Output Without Changing a Word
 
 **Category**: AI in Production
 **Tags**: inference-serving, security, benchmarks
@@ -6,31 +6,31 @@
 **Level**: Building
 **For**: Shipping AI
 **Hook**: A watermark can be added to a model's output without changing a single word of it, and checking for one later needs the key and the text but not the model.
-**Engineer's view**: This is the seeded random you already use. You swapped the system random for one seeded from a value you logged, so a run could be replayed. Here the sampler still draws from the model's true distribution, but its randomness is a function of your secret — so you can replay it later.
+**Engineer's view**: This is a deterministic tie-break. When two records sort equal, something has to pick an order, and the result is correctly sorted whichever you choose. Make that choice a hash of a secret and the output is unchanged but recognizable later. That is exactly what the sampler is doing here.
 **TLDR**: Adding Gumbel noise to logits and taking the argmax samples from the same distribution as ordinary sampling. Make that noise a function of a secret key and the output carries a mark that costs nothing in quality.
 **Time to read**: ~12 minutes
 
 ## Explain Like I'm 5
 
-You and a friend each shuffle a deck and turn over cards.
+Imagine a game where several cards are allowed each turn and you pick one. To choose, you flip a coin.
 
-Yours looks as random as theirs. Nobody watching can tell the difference, because it genuinely is a fair shuffle — every card still comes up as often as it should.
+Now use a special coin instead. It is perfectly fair, so the game plays out exactly as before and nobody watching can tell. But you can work out what it landed on again later, from a password only you know.
 
-But you shuffled using a rule only you know. Later, holding the pile, you can work backwards and see your rule in it.
+Afterwards, holding the pile, you check each turn against your password. If turn after turn matches, those cards were yours.
 
-The catch: if the deck was all one suit, there was nothing to arrange, and your rule left no trace at all.
+And if only one card had been allowed all game, you never flipped at all — so there is nothing to find.
 
 ## The Problem
 
 You have shipped this before, and it had nothing to do with AI.
 
-Your test suite failed intermittently and you could not reproduce it. The fixture data was randomized, so every run was a different run, and the failure vanished when you looked at it.
+You licensed the same dataset to three partners. Months later it turned up somewhere it should not have been, and you could not tell which of the three had leaked it. The file was identical in all three copies, so there was nothing to trace.
 
-You fixed it by seeding the generator from a value you logged. The data stayed just as random; it simply became replayable.
+The fix was not detective work. It was planting something first.
 
-That is the whole idea below, one scale up.
+You gave each partner a copy with one harmless difference — a spelling, a row order, a value nobody would check. The data stayed correct and usable. But every copy was now distinguishable, and the next leak answered itself.
 
-Now the AI version of the problem. Your model generates text, and it goes out into the world. Later somebody asks whether a particular passage came from your system — a support reply that was quoted back at you, a student's submission, a document in a compliance review. You cannot tell. Comparing against logs fails because the text has been edited, and running it back through the model tells you only that the model *could* have said it.
+Same shape here. Your model generates text, and it goes out into the world. Later somebody asks whether a particular passage came from your system — a support reply that was quoted back at you, a student's submission, a document in a compliance review. You cannot tell. Comparing against logs fails because the text has been edited, and running it back through the model tells you only that the model *could* have said it.
 
 The usual fix is to degrade the output: push the sampler toward a set of preferred tokens, accept slightly worse text, and call the difference a watermark. Nobody wants to ship that.
 

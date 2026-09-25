@@ -137,6 +137,11 @@ const JOBS = ["Using tools", "Building agents", "Shipping AI", "How models work"
 const RETIRED_SLUGS = {
   // retitled 2026-09-18, same day it shipped
   "2026-09-18-how-to-decide-what-falls-out-of-your-prompt-first": "2026-09-18",
+  // retitled 2026-09-25, hours after the newsletter went out: the old title
+  // promised the outcome ("tell whether text came from your model") when the
+  // method only works on text you watermarked in advance. The link in that
+  // email points here.
+  "2026-09-25-how-to-tell-whether-text-came-from-your-own-model": "2026-09-25",
 };
 
 // Evergreen two-day track. Folders live under learn/<id>/; ids are the slugs
