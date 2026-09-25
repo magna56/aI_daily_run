@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>How much text it takes to prove a watermark</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .row { display: grid; gap: 4px; margin-bottom: 13px; }
+  .row label { font-size: 12.5px; color: #cdd5ee; display: flex; justify-content: space-between; gap: 10px; }
+  .row label b { color: #e8ecfb; font-variant-numeric: tabular-nums; font-weight: 650; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  input[type=range]:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 3px; }
+  .seg { display: flex; gap: 6px; align-items: center; border-top: 1px solid #1c2130; padding-top: 13px; }
+  button { font: inherit; font-size: 12px; padding: 7px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .cols { display: grid; gap: 11px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 15px; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 13px; }
+  .big { font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .big.ok { color: #6ec896; } .big.bad { color: #e0885f; } .big.neu { color: #cdd5ee; }
+  .stat p { margin: 3px 0 0; font-size: 11.5px; color: #8f9ab8; }
+  svg { width: 100%; height: auto; display: block; margin-top: 15px; }
+  .note { margin-top: 15px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-25">
+  <h1>How much text it takes to prove a watermark</h1>
+  <p class="sub">The curve is the p-value as tokens accumulate — lower means stronger evidence. The dashed line is your threshold after correcting for how many keys you tried. Same simulation as the Code tab.</p>
+
+  <div class="panel">
+    <div class="row">
+      <label for="ent">Entropy of the output <b id="entV">3.0 bits / token</b></label>
+      <input type="range" id="ent" min="1" max="60" step="1" value="30">
+    </div>
+    <div class="row">
+      <label for="keys">Candidate keys the detector has to try <b id="keysV">1</b></label>
+      <input type="range" id="keys" min="1" max="200" step="1" value="1">
+    </div>
+    <div class="seg"><button class="reset" id="reset">Reset</button></div>
+  </div>
+
+  <div class="cols">
+    <div class="stat"><div class="big" id="verdict">detected</div><p>at the length you need below</p></div>
+    <div class="stat"><div class="big neu" id="need">—</div><p>tokens needed to clear the threshold</p></div>
+    <div class="stat"><div class="big neu" id="thr">1.0e-2</div><p>threshold after correction</p></div>
+  </div>
+
+  <svg id="plot" viewBox="0 0 360 170" role="img" aria-label="p-value against token count"></svg>
+  <p class="note" id="explain"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var D = { ent: 30, keys: 1 };
+  var s = { ent: D.ent, keys: D.keys };
+  var $ = function (id) { return document.getElementById(id); };
+
+  // Per-token evidence grows with entropy: a peaked distribution gives the key
+  // almost nothing to choose between, so each token carries little signal.
+  function bitsPerToken() { return s.ent / 10; }
+  function evidencePerToken() {
+    var b = bitsPerToken();
+    return 0.62 * (1 - Math.exp(-b / 1.1));   // saturating: extra entropy helps less
+  }
+  function logP(n) { return -evidencePerToken() * n; }   // natural log of the p-value
+
+  function render() {
+    var b = bitsPerToken(), thr = 0.01 / s.keys, logThr = Math.log(thr);
+    $("entV").textContent = b.toFixed(1) + " bits / token";
+    $("keysV").textContent = s.keys;
+    $("thr").textContent = thr.toExponential(1);
+
+    var per = evidencePerToken();
+    var need = per > 1e-9 ? Math.ceil(-logThr / per) : Infinity;
+    var reachable = need <= 2000;
+    $("need").textContent = reachable ? need.toLocaleString() : "> 2,000";
+    $("verdict").textContent = reachable ? "detected" : "not detected";
+    $("verdict").className = "big " + (reachable ? "ok" : "bad");
+
+    var W = 360, H = 170, P = 34, MAXN = 600, FLOOR = Math.log(1e-30), sp = [];
+    function X(n) { return P + (n / MAXN) * (W - P - 10); }
+    function Y(lp) { return 12 + (lp / FLOOR) * (H - P - 12); }
+    sp.push('<line x1="' + P + '" y1="' + Y(0) + '" x2="' + (W - 10) + '" y2="' + Y(0) + '" stroke="#2b3247"/>');
+    sp.push('<line x1="' + P + '" y1="12" x2="' + P + '" y2="' + Y(FLOOR) + '" stroke="#2b3247"/>');
+    var ty = Y(Math.max(logThr, FLOOR));
+    sp.push('<line x1="' + P + '" y1="' + ty.toFixed(1) + '" x2="' + (W - 10) + '" y2="' + ty.toFixed(1) +
+            '" stroke="#7c8cf8" stroke-dasharray="4 4"/>');
+    sp.push('<text x="' + (W - 10) + '" y="' + (ty - 4).toFixed(1) + '" fill="#7c8cf8" font-size="8" text-anchor="end">threshold</text>');
+    var pts = [];
+    for (var n = 0; n <= MAXN; n += 10) {
+      pts.push(X(n).toFixed(1) + "," + Y(Math.max(logP(n), FLOOR)).toFixed(1));
+    }
+    sp.push('<polyline points="' + pts.join(" ") + '" fill="none" stroke="' +
+            (reachable ? "#6ec896" : "#e0885f") + '" stroke-width="2"/>');
+    if (reachable && need <= MAXN) {
+      sp.push('<circle cx="' + X(need).toFixed(1) + '" cy="' + ty.toFixed(1) + '" r="3.5" fill="#6ec896"/>');
+    }
+    sp.push('<text x="' + P + '" y="' + (H - 12) + '" fill="#8f9ab8" font-size="8">0 tokens</text>');
+    sp.push('<text x="' + (W - 10) + '" y="' + (H - 12) + '" fill="#8f9ab8" font-size="8" text-anchor="end">600</text>');
+    sp.push('<text x="10" y="18" fill="#8f9ab8" font-size="8">p=1</text>');
+    $("plot").innerHTML = sp.join("");
+
+    var msg;
+    if (b < 0.5) {
+      msg = "<b>Almost no entropy.</b> The model is emitting the only token that fits — JSON, "
+          + "boilerplate, the closing brace. The key had nothing to choose between, so there is "
+          + "nowhere to put a mark. This is the case the article says to measure before shipping.";
+    } else if (!reachable) {
+      msg = "<b>Not reachable.</b> At " + b.toFixed(1) + " bits per token and " + s.keys
+          + " candidate keys, you would need more than 2,000 tokens. Trying more keys costs you "
+          + "real detection power, which is why the key inventory is a design decision.";
+    } else {
+      msg = "<b>" + need + " tokens</b> at " + b.toFixed(1) + " bits per token. Drag the key count up: "
+          + "every extra candidate divides your threshold, so the same text needs to carry more "
+          + "evidence to clear it. Drag entropy down and the curve flattens toward useless.";
+    }
+    $("explain").innerHTML = msg;
+    report();
+  }
+
+  $("ent").addEventListener("input", function (e) { s.ent = +e.target.value; render(); });
+  $("keys").addEventListener("input", function (e) { s.keys = +e.target.value; render(); });
+  $("reset").addEventListener("click", function () {
+    s = { ent: D.ent, keys: D.keys };
+    $("ent").value = D.ent; $("keys").value = D.keys; render();
+  });
+
+  function report() {
+    parent.postMessage({ type: "adl-visualize-height",
+      height: document.documentElement.scrollHeight }, "*");
+  }
+  addEventListener("load", report);
+  new ResizeObserver(report).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>
