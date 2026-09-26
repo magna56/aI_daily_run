@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Skip It or Cheapen It</title>
+<style>
+  :root {
+    --bg: #111217; --ink: #e7e2d8; --muted: #9a9488; --dim: #857f70;
+    --line: rgba(255,255,255,.11); --card: rgba(255,255,255,.03);
+    --accent: #a78bfa; --accent2: #c4b5fd;
+    --fp16: #6ec18e; --int8: #d9a441; --gone: #d9744e;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 20px 16px 28px; }
+  h1 { font-size: 17px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13.5px; margin: 0 0 18px; }
+
+  .ctl { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; margin: 0 0 18px; padding: 12px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  .ctl label { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); display: block; margin-bottom: 5px; }
+  .ctl input[type=range] { width: 190px; accent-color: var(--accent); }
+  .ctl .val { font-family: var(--mono); font-size: 13px; color: var(--accent2); }
+  .modes { display: flex; gap: 6px; }
+  .modes button { font-family: var(--mono); font-size: 11.5px; padding: 6px 11px; cursor: pointer; background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; }
+  .modes button.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+  .modes button:focus-visible, .ctl input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .grid-wrap { overflow-x: auto; margin: 0 0 8px; }
+  table.m { border-collapse: collapse; font-family: var(--mono); font-size: 10px; }
+  table.m td { width: 17px; height: 17px; border: 1px solid rgba(0,0,0,.35); }
+  td.fp16 { background: var(--fp16); }
+  td.int8 { background: var(--int8); }
+  td.gone { background: repeating-linear-gradient(45deg, var(--gone), var(--gone) 3px, transparent 3px, transparent 6px); }
+  td.hdr { background: none; border: none; color: var(--dim); text-align: center; width: auto; padding: 0 4px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin: 4px 0 16px; }
+  .legend i { display: inline-block; width: 11px; height: 11px; margin-right: 5px; vertical-align: -1px; border: 1px solid rgba(0,0,0,.4); }
+
+  .stats { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin: 0 0 14px; }
+  .stat { border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px; background: var(--card); }
+  .stat .k { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 0 0 4px; }
+  .stat .v { font-family: var(--mono); font-size: 19px; font-weight: 700; margin: 0; }
+  .stat .n { font-size: 12px; color: var(--muted); margin: 3px 0 0; }
+  .note { font-size: 13px; color: var(--muted); border-left: 2px solid var(--accent); padding-left: 12px; margin: 0; }
+  .word { font-family: var(--mono); font-size: 12px; color: var(--accent2); margin: 0 0 14px; word-break: break-all; }
+</style>
+</head>
+<body>
+<div class="wrap" data-visualizer>
+  <h1>Same map. Skip the tiles, or cheapen them?</h1>
+  <p class="sub">A sparse-attention template marks tiles as unimportant. Sparse attention deletes them; TileMix computes them in INT8. Move the budget and watch what each choice costs.</p>
+
+  <div class="ctl">
+    <div>
+      <label for="band">FP16 band width</label>
+      <input id="band" type="range" min="0" max="7" step="1" value="1" />
+      <span class="val" id="bandv">1</span>
+    </div>
+    <div>
+      <label>what happens to marked tiles</label>
+      <div class="modes">
+        <button type="button" id="mInt8" class="on">cheapen to INT8</button>
+        <button type="button" id="mSkip">skip entirely</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-wrap">
+    <table class="m" id="grid"></table>
+  </div>
+  <div class="legend">
+    <span><i style="background:var(--fp16)"></i>FP16</span>
+    <span><i style="background:var(--int8)"></i>INT8</span>
+    <span><i class="gone" style="background:var(--gone)"></i>deleted</span>
+    <span id="planted"></span>
+  </div>
+
+  <p class="word" id="word"></p>
+
+  <div class="stats">
+    <div class="stat"><p class="k">INT8 coverage</p><p class="v" id="cov">—</p><p class="n">share of tile groups routed</p></div>
+    <div class="stat"><p class="k">deviation from FP16</p><p class="v" id="dev">—</p><p class="n">mean absolute, over all outputs</p></div>
+    <div class="stat"><p class="k">planted signal</p><p class="v" id="sig">—</p><p class="n">a strong key hidden in a "boring" group</p></div>
+  </div>
+
+  <p class="note" id="note"></p>
+</div>
+
+<script>
+(function () {
+  var D = 16, NQ = 8, NK = 64, GROUP = 8, NG = NK / GROUP, PLANTED = NK - 3;
+
+  function rnd(seed) { var s = seed; return function () { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648 * 2 - 1; }; }
+  var r = rnd(7);
+  var Q = [], K = [], V = [];
+  for (var i = 0; i < NQ; i++) { var q = []; for (var d = 0; d < D; d++) q.push(r()); Q.push(q); }
+  for (i = 0; i < NK; i++) { var k = [], v = []; for (d = 0; d < D; d++) { k.push(r()); v.push(r()); } K.push(k); V.push(v); }
+  K[PLANTED] = Q[0].map(function (x) { return x * 2.4; });
+  V[PLANTED] = new Array(D).fill(9);
+
+  function bitsFor(band) {
+    var rows = [];
+    for (var m = 0; m < NQ; m++) {
+      var b = 0;
+      for (var g = 0; g < NG; g++) if (!(Math.abs(g - m) <= band || g < 1)) b |= (1 << g);
+      rows.push(b);
+    }
+    return rows;
+  }
+  function quant(xs) {
+    var peak = 0; xs.forEach(function (x) { peak = Math.max(peak, Math.abs(x)); });
+    var dq = (peak || 1e-9) / 127;
+    return xs.map(function (x) { return Math.max(-127, Math.min(127, Math.round(x / dq))) * dq; });
+  }
+  function attend(qi, rowBits, mode) {
+    var mx = -Infinity, sum = 0, acc = new Array(D).fill(0);
+    for (var s = 0; s < NK; s += GROUP) {
+      var routed = (rowBits >> (s / GROUP)) & 1;
+      if (routed && mode === "skip") continue;
+      var idx = [], sc = [];
+      for (var j = s; j < s + GROUP; j++) {
+        idx.push(j);
+        var t = 0; for (var d = 0; d < D; d++) t += Q[qi][d] * K[j][d];
+        sc.push(t);
+      }
+      if (routed && mode === "int8") sc = quant(sc);
+      for (var a = 0; a < idx.length; a++) {
+        var nm = Math.max(mx, sc[a]);
+        var rs = mx === -Infinity ? 1 : Math.exp(mx - nm);
+        var w = Math.exp(sc[a] - nm);
+        sum = sum * rs + w;
+        for (d = 0; d < D; d++) acc[d] = acc[d] * rs + w * V[idx[a]][d];
+        mx = nm;
+      }
+    }
+    return sum === 0 ? new Array(D).fill(0) : acc.map(function (x) { return x / sum; });
+  }
+
+  var els = ["band", "bandv", "grid", "cov", "dev", "sig", "note", "word", "planted", "mInt8", "mSkip"]
+    .reduce(function (a, id) { a[id] = document.getElementById(id); return a; }, {});
+  var mode = "int8";
+
+  function render() {
+    var band = +els.band.value;
+    els.bandv.textContent = band;
+    var rows = bitsFor(band);
+    var refRows = new Array(NQ).fill(0);
+    var ref = [], got = [];
+    for (var m = 0; m < NQ; m++) { ref.push(attend(m, refRows[m], "fp16")); got.push(attend(m, rows[m], mode)); }
+
+    var n = 0, tot = 0, dev = 0;
+    for (m = 0; m < NQ; m++) for (var d = 0; d < D; d++) { dev += Math.abs(got[m][d] - ref[m][d]); n++; }
+    dev /= n;
+    rows.forEach(function (b) { for (var g = 0; g < NG; g++) { tot++; if ((b >> g) & 1) 0; } });
+    var set = 0; rows.forEach(function (b) { for (var g = 0; g < NG; g++) if ((b >> g) & 1) set++; });
+
+    var html = "<tr><td class='hdr'></td>";
+    for (var g = 0; g < NG; g++) html += "<td class='hdr'>g" + g + "</td>";
+    html += "</tr>";
+    for (m = 0; m < NQ; m++) {
+      html += "<tr><td class='hdr'>q" + m + "</td>";
+      for (g = 0; g < NG; g++) {
+        var routed = (rows[m] >> g) & 1;
+        var cls = !routed ? "fp16" : (mode === "skip" ? "gone" : "int8");
+        var star = (g === Math.floor(PLANTED / GROUP)) ? " title='holds the planted signal'" : "";
+        html += "<td class='" + cls + "'" + star + "></td>";
+      }
+      html += "</tr>";
+    }
+    els.grid.innerHTML = html;
+    els.planted.textContent = "group g" + Math.floor(PLANTED / GROUP) + " holds a strong key the template calls boring";
+
+    els.word.textContent = "row 0 routing map = 0b" + rows[0].toString(2).padStart(NG, "0") +
+      "  ->  " + NG + " groups, one integer, fits a 64-bit word at any context length";
+
+    els.cov.textContent = (set / tot * 100).toFixed(0) + "%";
+    els.dev.textContent = dev.toFixed(5);
+    els.dev.style.color = dev > 0.05 ? "var(--gone)" : "var(--fp16)";
+
+    var sigOK = mode === "int8" || !((rows[0] >> Math.floor(PLANTED / GROUP)) & 1);
+    els.sig.textContent = sigOK ? "still seen" : "erased";
+    els.sig.style.color = sigOK ? "var(--fp16)" : "var(--gone)";
+
+    els.note.textContent = mode === "skip"
+      ? "Deleting the marked tiles is the sparse-attention bet: if the template was wrong about this input, the information is simply gone and no budget knob brings it back."
+      : "Every token stays connected. A marked tile is computed coarsely — one shared scale across the tile is where the precision actually goes — so a wrong guess costs accuracy, not existence.";
+
+    try { parent.postMessage({ type: "adl-visualize-height", height: document.body.scrollHeight }, "*"); } catch (e) {}
+  }
+
+  els.band.addEventListener("input", render);
+  els.mInt8.addEventListener("click", function () { mode = "int8"; els.mInt8.classList.add("on"); els.mSkip.classList.remove("on"); render(); });
+  els.mSkip.addEventListener("click", function () { mode = "skip"; els.mSkip.classList.add("on"); els.mInt8.classList.remove("on"); render(); });
+  window.addEventListener("load", render);
+  render();
+})();
+</script>
+</body>
+</html>

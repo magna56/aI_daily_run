@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Stateful vs Stateless MCP Scaling Lab</title>
+  <style>
+    :root{color-scheme:dark;--bg:#071313;--panel:#0d2020;--line:#294242;--text:#eafffb;--muted:#94b4b0;--mint:#56e6c0;--blue:#62b8ff;--bad:#ff6f7d;--amber:#ffc760}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0,#103333 0,transparent 40%),var(--bg);color:var(--text);font:15px/1.45 ui-sans-serif,system-ui,sans-serif}[data-visualizer]{max-width:1160px;margin:auto;padding:clamp(18px,4vw,42px)}
+    .eyebrow{color:var(--mint);font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}h1{font-size:clamp(25px,4vw,42px);line-height:1.08;margin:4px 0 8px}.lede{max-width:800px;color:var(--muted);margin:0 0 22px}
+    .controls{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:16px;align-items:end;background:#0a1b1b;border:1px solid var(--line);border-radius:14px;padding:16px}label{font-weight:700}output{float:right;color:var(--mint);font-variant-numeric:tabular-nums}input[type=range]{width:100%;display:block;margin-top:9px;accent-color:var(--mint)}.check{display:flex;align-items:center;min-height:38px;gap:9px}.check input{width:18px;height:18px;accent-color:var(--bad)}button{background:transparent;border:1px solid #51706e;color:var(--text);border-radius:9px;padding:9px 14px;font-weight:700;cursor:pointer}button:hover,button:focus-visible{outline:none;border-color:var(--mint)}
+    .systems{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.system{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}.system.stateful{border-top:3px solid var(--amber)}.system.stateless{border-top:3px solid var(--mint)}.system h2{margin:0;font-size:19px}.flow{color:var(--muted);font:12px ui-monospace,SFMono-Regular,monospace;margin:4px 0 14px;min-height:34px}
+    .cluster{position:relative;display:grid;grid-template-columns:78px 42px 1fr;gap:10px;align-items:center;min-height:210px}.client,.lb{display:grid;place-items:center;text-align:center;border:1px solid var(--line);background:#102727;border-radius:10px;height:64px;font-size:12px;font-weight:800}.lb{height:96px;color:var(--blue)}.replicas{display:grid;gap:8px}.node{display:grid;grid-template-columns:72px 1fr 34px;gap:8px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:9px;background:#102727}.node.down{border-color:var(--bad);background:#2a171b}.load{height:8px;background:#1e3837;border-radius:99px;overflow:hidden}.load i{display:block;height:100%;background:var(--blue);border-radius:99px}.node.down .load i{background:var(--bad)}.count{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+    .requests{display:flex;gap:4px;flex-wrap:wrap;margin-top:13px}.req{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--mint);color:#05201b;font-size:10px;font-weight:900}.req.fail{background:var(--bad);color:#2b070b}.req.init{background:var(--amber);color:#291900}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}.metric{background:#102727;border-radius:9px;padding:10px}.metric b{display:block;font-size:21px}.metric small{color:var(--muted)}.protocol{grid-column:1/-1;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:10px;margin-top:2px}.protocol code{color:#c9fff2}
+    .insight{margin-top:16px;border-left:3px solid var(--mint);padding:12px 15px;background:#0d2020;color:var(--muted)}.insight strong{color:var(--text)}
+    @media(max-width:820px){.controls{grid-template-columns:1fr 1fr}.systems{grid-template-columns:1fr}}@media(max-width:500px){.controls{grid-template-columns:1fr}.cluster{grid-template-columns:58px 34px 1fr}.node{grid-template-columns:62px 1fr 25px}.summary{grid-template-columns:1fr}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer>
+  <div class="eyebrow">Round-robin scaling lab</div>
+  <h1>Where does request state live?</h1>
+  <p class="lede">Replay the same load through both transports. Stateful MCP binds follow-up calls to the replica that initialized the session; the 2026-07-28 stateless transport makes each tool call self-contained.</p>
+  <section class="controls" aria-label="Load controls">
+    <label>Replicas <output id="replicasOut" for="replicas">3</output><input id="replicas" type="range" min="1" max="6" step="1" value="3"></label>
+    <label>Tool calls <output id="callsOut" for="calls">6</output><input id="calls" type="range" min="3" max="12" step="1" value="6"></label>
+    <label class="check"><input id="restart" type="checkbox"> Restart session owner after initialize</label>
+    <button id="reset" type="button">Reset</button>
+  </section>
+  <section class="systems">
+    <article class="system stateful">
+      <h2>Stateful MCP</h2><div class="flow">initialize → Session ID → tools/call + same ID</div>
+      <div class="cluster"><div class="client">MCP<br>client</div><div class="lb">round<br>robin</div><div class="replicas" id="statefulNodes"></div></div>
+      <div class="requests" id="statefulReqs" aria-label="Stateful request outcomes"></div>
+      <div class="summary"><div class="metric"><b id="sfRate"></b><small>success rate</small></div><div class="metric"><b id="sfRequests"></b><small>HTTP requests</small></div><div class="metric"><b id="sfSessions"></b><small>live sessions</small></div><div class="protocol">Failure: <code id="sfFailure"></code></div></div>
+    </article>
+    <article class="system stateless">
+      <h2>Stateless MCP</h2><div class="flow">tools/call + headers + params._meta → result</div>
+      <div class="cluster"><div class="client">MCP<br>client</div><div class="lb">round<br>robin</div><div class="replicas" id="statelessNodes"></div></div>
+      <div class="requests" id="statelessReqs" aria-label="Stateless request outcomes"></div>
+      <div class="summary"><div class="metric"><b id="slRate"></b><small>success rate</small></div><div class="metric"><b id="slRequests"></b><small>HTTP requests</small></div><div class="metric"><b>0</b><small>live sessions</small></div><div class="protocol">Carries: <code>Mcp-Method</code>, <code>Mcp-Name</code>, and client info in <code>params._meta</code></div></div>
+    </article>
+  </section>
+  <div class="insight" id="insight" aria-live="polite"></div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $=s=>document.querySelector(s), controls={replicas:$("#replicas"),calls:$("#calls"),restart:$("#restart")};
+  function nodeHTML(loads,total,down){
+    const peak=Math.max(1,...loads);
+    return loads.map((n,i)=>`<div class="node ${down===i?"down":""}"><b>replica-${i+1}</b><span class="load"><i style="width:${n/peak*100}%"></i></span><span class="count">${n}</span></div>`).join("");
+  }
+  function render(){
+    const replicas=+controls.replicas.value,calls=+controls.calls.value,restart=controls.restart.checked;
+    const sfLoads=Array(replicas).fill(0),slLoads=Array(replicas).fill(0),sf=[];
+    sfLoads[0]++;sf.push({ok:true,type:"init",node:0});
+    for(let i=0;i<calls;i++){const node=(i+1)%replicas;sfLoads[node]++;sf.push({ok:node===0&&!restart,type:"call",node})}
+    const sl=[];
+    for(let i=0;i<calls;i++){const node=i%replicas;slLoads[node]++;sl.push({ok:true,type:"call",node})}
+    const sfOK=sf.filter(r=>r.ok).length;
+    $("#statefulNodes").innerHTML=nodeHTML(sfLoads,sf.length,restart?0:-1);
+    $("#statelessNodes").innerHTML=nodeHTML(slLoads,sl.length,-1);
+    $("#statefulReqs").innerHTML=sf.map((r,i)=>`<span class="req ${r.type==="init"?"init":r.ok?"":"fail"}" title="${r.type} via replica-${r.node+1}: ${r.ok?"OK":"unknown session"}">${i+1}</span>`).join("");
+    $("#statelessReqs").innerHTML=sl.map((r,i)=>`<span class="req" title="tools/call via replica-${r.node+1}: OK">${i+1}</span>`).join("");
+    $("#sfRate").textContent=Math.round(sfOK/sf.length*100)+"%";$("#slRate").textContent="100%";
+    $("#sfRequests").textContent=sf.length;$("#slRequests").textContent=sl.length;$("#sfSessions").textContent=restart?"0":"1";
+    $("#sfFailure").textContent=restart?"session vanished with restarted replica":"unknown session on non-owner replicas";
+    $("#replicasOut").textContent=replicas;$("#callsOut").textContent=calls;
+    const failed=sf.length-sfOK;
+    $("#insight").innerHTML=`<strong>${failed} stateful requests fail.</strong> ${restart?"Restarting the owner erases its session; every later call fails.":"Round-robin only succeeds when a follow-up happens to return to replica-1."} Stateless MCP serves all ${calls} calls from any replica and skips the initialize request.`;
+  }
+  controls.replicas.addEventListener("input",render);controls.calls.addEventListener("input",render);controls.restart.addEventListener("change",render);
+  $("#reset").addEventListener("click",()=>{controls.replicas.value=3;controls.calls.value=6;controls.restart.checked=false;render()});
+  render();
+  const report=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(report).observe(document.documentElement);report();
+})();
+</script>
+</body>
+</html>

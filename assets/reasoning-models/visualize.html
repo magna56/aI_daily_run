@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Thinking budget vs a smarter weight file</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1020;--panel:#141a2c;--line:#2a3550;--ink:#eef3ff;--muted:#93a0bb;--gold:#f5c15c;--lime:#9be37a;--blue:#7eb6ff;--red:#ff7a90}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0,#1c2744 0,transparent 40%),var(--bg);color:var(--ink);font:15px/1.45 ui-sans-serif,system-ui,sans-serif}
+    [data-visualizer]{max-width:1100px;margin:auto;padding:clamp(16px,4vw,40px)}
+    .kicker{color:var(--gold);font:800 11px/1.2 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}
+    h1{font-size:clamp(24px,4vw,40px);line-height:1.08;margin:6px 0 8px}
+    .lede{max-width:720px;color:var(--muted);margin:0 0 20px}
+    .controls{display:grid;grid-template-columns:1.2fr 1fr auto auto;gap:14px;align-items:end;background:var(--panel);border:1px solid var(--line);padding:14px;border-radius:14px}
+    label{font-weight:700}output{float:right;color:var(--gold);font-variant-numeric:tabular-nums}
+    input[type=range]{display:block;width:100%;margin-top:8px;accent-color:var(--gold)}
+    select,button{padding:9px 12px;border-radius:9px;border:1px solid #3d4d6e;background:#1b2338;color:var(--ink);font-weight:700}
+    button{cursor:pointer}button:hover,button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #f5c15c66;outline-offset:2px}
+    .hero{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+    .stat{background:#101628;border:1px solid var(--line);border-radius:12px;padding:14px}
+    .stat b{display:block;color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+    .stat strong{display:block;font-size:clamp(22px,4vw,34px);margin-top:4px;font-variant-numeric:tabular-nums}
+    .stat.good strong{color:var(--lime)}.stat.warn strong{color:var(--gold)}.stat.bad strong{color:var(--red)}
+    .grid{display:grid;grid-template-columns:1.3fr .7fr;gap:14px;margin-top:14px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+    .card h2{margin:0 0 10px;font-size:15px}
+    .bars{display:grid;gap:11px}
+    .bar-row{display:grid;grid-template-columns:92px 1fr 58px;gap:8px;align-items:center;font-size:13px}
+    .track{height:12px;background:#1c2438;border-radius:99px;overflow:hidden}
+    .bar{display:block;height:100%;border-radius:99px;background:var(--blue)}
+    .bar.now{background:var(--gold)}
+    .bar.waste{background:var(--red)}
+    .pad{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
+    .tok{width:10px;height:18px;border-radius:2px;background:#2a3550}
+    .tok.think{background:var(--gold)}
+    .tok.ans{background:var(--lime)}
+    .note{color:var(--muted);font-size:13px;margin:10px 0 0}
+    .route{margin-top:12px;padding:10px;border-left:3px solid var(--gold);color:var(--muted)}
+    .route strong{color:var(--ink)}
+    @media(max-width:800px){.controls,.hero,.grid{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer="reasoning-models">
+  <div class="kicker">Test-time compute · same weights</div>
+  <h1>The pad is a timeout, not a new model.</h1>
+  <p class="lede">A fast model gets one guess at a lock. A reasoning model spends billed thought tokens on yes/no questions, then guesses. Same program. You choose how long it may search.</p>
+  <section class="controls" aria-label="Budget controls">
+    <label>Thinking steps <output id="stepsOut" for="steps">8</output>
+      <input id="steps" type="range" min="0" max="12" step="1" value="8">
+    </label>
+    <label>Lock size
+      <select id="lock">
+        <option value="16">Easy · 16 keys</option>
+        <option value="4096" selected>Hard · 4,096 keys</option>
+      </select>
+    </label>
+    <button id="route" type="button">Auto-route</button>
+    <button id="reset" type="button">Reset</button>
+  </section>
+  <section class="hero" aria-live="polite">
+    <div class="stat" id="pStat"><b>P(hit)</b><strong id="phit">—</strong></div>
+    <div class="stat"><b>Thought tokens</b><strong id="think">—</strong></div>
+    <div class="stat"><b>Cost at $15/M out</b><strong id="usd">—</strong></div>
+    <div class="stat"><b>Wait at 40 tok/s</b><strong id="sec">—</strong></div>
+  </section>
+  <section class="grid">
+    <article class="card">
+      <h2>Quality vs extra thought (this lock)</h2>
+      <div class="bars" id="bars"></div>
+      <p class="note">Each step is 80 output tokens. Easy locks saturate at 4 steps. Hard locks still need 12. A sloppy 8,000-token pad is $0.12 and 200s of waiting — and does not ask better questions.</p>
+    </article>
+    <article class="card">
+      <h2>What you billed</h2>
+      <div class="pad" id="pad" aria-label="Token pad"></div>
+      <p class="note"><span style="color:var(--gold)">■</span> thought &nbsp; <span style="color:var(--lime)">■</span> answer (40 tok)</p>
+      <div class="route" id="insight"></div>
+    </article>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const PRICE=15/1e6, TPS=40, PER=80, ANS=40, $=s=>document.querySelector(s);
+  const stepsEl=$("#steps"), lockEl=$("#lock");
+  function remaining(n,s){return Math.max(1, Math.ceil(n / 2**s));}
+  function row(n,s){
+    const left=remaining(n,s), think=s*PER, tok=think+ANS;
+    return {s,p:1/left,think,usd:tok*PRICE,sec:tok/TPS};
+  }
+  function render(){
+    const n=+lockEl.value, s=+stepsEl.value, r=row(n,s);
+    $("#stepsOut").textContent=s+" steps";
+    $("#phit").textContent=(r.p*100).toFixed(r.p<0.01?2:0)+"%";
+    $("#think").textContent=r.think.toLocaleString();
+    $("#usd").textContent="$"+r.usd.toFixed(4);
+    $("#sec").textContent=r.sec.toFixed(1)+"s";
+    const cls=r.p>=0.99?"good":r.p>=0.2?"warn":"bad";
+    $("#pStat").className="stat "+cls;
+    const maxP=1;
+    $("#bars").innerHTML=[0,4,8,12].map(k=>{
+      const x=row(n,k);
+      return `<div class="bar-row"><span>${k} steps</span><span class="track"><i class="bar ${k===s?"now":""}" style="width:${x.p/maxP*100}%"></i></span><span>${(x.p*100).toFixed(x.p<0.01?2:0)}%</span></div>`;
+    }).join("")+`<div class="bar-row"><span>8k pad</span><span class="track"><i class="bar waste" style="width:${row(n,s).p*100}%"></i></span><span>$0.12</span></div>`;
+    const thinkN=Math.min(40, Math.round(r.think/20)), ansN=2;
+    $("#pad").innerHTML=Array.from({length:thinkN},()=>'<i class="tok think"></i>').join("")+Array.from({length:ansN},()=>'<i class="tok ans"></i>').join("");
+    const easyDone=n===16 && s>=4, hardNeed=n===4096 && s<12;
+    $("#insight").innerHTML=easyDone
+      ?"<strong>Easy lock is already solved.</strong> Extra steps are latency you bought for free quality."
+      :hardNeed
+      ?"<strong>Hard lock still has leftover keys.</strong> A fast SKU here is the wrong tool — 0.02% at 0 steps."
+      :"<strong>Same weights, a product timeout.</strong> Route easy work off the pad; spend steps where a checker exists.";
+  }
+  stepsEl.addEventListener("input",render);
+  lockEl.addEventListener("change",render);
+  $("#route").addEventListener("click",()=>{
+    lockEl.value==="16" ? (stepsEl.value=4) : (stepsEl.value=12);
+    render();
+  });
+  $("#reset").addEventListener("click",()=>{stepsEl.value=8;lockEl.value="4096";render();});
+  render();
+  const reportHeight=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

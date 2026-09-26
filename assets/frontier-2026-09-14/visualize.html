@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>What backwards labels do to preference training</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  label { display: block; font-size: 12px; color: #9aa5c4; margin-bottom: 5px; }
+  label b { color: #dfe4f2; font-weight: 650; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  .seg { display: flex; gap: 6px; margin-top: 13px; align-items: center; flex-wrap: wrap; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed="true"] { background: rgba(124,140,248,.16); border-color: rgba(124,140,248,.55); color: #e8ecfb; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .cols { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); margin-top: 18px; }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 9px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  .r { display: grid; grid-template-columns: 92px 1fr 54px; gap: 9px; align-items: center;
+       padding: 5px 9px; border-radius: 6px; background: #10131f; border: 1px solid #1c2130;
+       margin-bottom: 4px; font-size: 12px; }
+  .r.win { border-color: rgba(110,200,150,.45); background: rgba(110,200,150,.09); }
+  .bar { height: 8px; border-radius: 4px; background: #1c2130; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: #7c8cf8; }
+  .r.win .bar i { background: #6ec896; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; color: #dfe4f2; }
+  .mix { display: flex; height: 22px; border-radius: 6px; overflow: hidden; border: 1px solid #222839; margin: 3px 0 9px; }
+  .mix span { display: flex; align-items: center; justify-content: center; font-size: 10.5px; color: #0a0d18; font-weight: 650; }
+  .mc { background: #7c8cf8; } .mf { background: #e0885f; } .mt { background: #56607f; }
+  .cap { font-size: 11.5px; color: #8f9ab8; margin: 0 0 4px; }
+  .hist { display: flex; align-items: flex-end; gap: 2px; height: 96px; margin-top: 6px; }
+  .hist div { flex: 1; display: flex; flex-direction: column-reverse; gap: 1px; }
+  .hist i { display: block; border-radius: 1px; }
+  .hc { background: #7c8cf8; } .hf { background: #e0885f; }
+  .axis { display: flex; justify-content: space-between; font-size: 10.5px; color: #6f7a99; margin-top: 5px; }
+  .note { margin-top: 16px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+  .key { display: flex; gap: 14px; font-size: 11.5px; color: #8f9ab8; margin-top: 8px; }
+  .key s { text-decoration: none; display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  @media (prefers-reduced-motion: no-preference) { .bar i, .mix span { transition: width .18s ease; } }
+</style>
+</head>
+<body>
+<main data-visualizer="frontier-2026-09-14">
+  <h1>What backwards labels do to preference training</h1>
+  <p class="sub">An independent run of the same 600-pair experiment as the Code tab, computed live in your browser. It draws its own random data, so the numbers sit near the article’s rather than matching them exactly.</p>
+
+  <div class="panel">
+    <label for="flip">Labels that are backwards: <b id="flipv">20%</b></label>
+    <input type="range" id="flip" min="0" max="40" step="5" value="20">
+    <div class="seg">
+      <span style="font-size:12px;color:#9aa5c4">Warm-up before correction starts:</span>
+      <button class="warm" data-w="0" aria-pressed="false">none</button>
+      <button class="warm" data-w="0.25" aria-pressed="true">25%</button>
+      <button class="warm" data-w="0.5" aria-pressed="false">50%</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h2>Ranking accuracy against true quality</h2>
+      <div id="rows"></div>
+      <p class="cap" style="margin-top:10px">Routing weights on your noisy data</p>
+      <div class="mix" id="mix"></div>
+      <p class="cap">The same weights on data with no backwards labels at all</p>
+      <div class="mix" id="mixc"></div>
+      <div class="key">
+        <span><s class="mc"></s>keep</span><span><s class="mf"></s>reverse</span><span><s class="mt"></s>cancel</span>
+      </div>
+    </div>
+    <div>
+      <h2>Where the margins land after training</h2>
+      <div class="hist" id="hist"></div>
+      <div class="axis"><span>−2</span><span>margin</span><span>+4</span></div>
+      <div class="key">
+        <span><s class="hc"></s>correctly labeled</span><span><s class="hf"></s>backwards</span>
+      </div>
+      <p class="cap" id="sep" style="margin-top:9px"></p>
+    </div>
+  </div>
+
+  <div class="note" id="note"></div>
+</main>
+<script>
+"use strict";
+var TIE_BAND = 0.06, BETA = 0.5, EPOCHS = 60, LR = 0.35, SEED = 7;
+
+function rng32(a) { return function () {
+  a |= 0; a = a + 0x6D2B79F5 | 0;
+  var t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+}; }
+function sigmoid(x) { return 1 / (1 + Math.exp(-Math.max(-60, Math.min(60, x)))); }
+
+function makeDataset(flipRate) {
+  var rand = rng32(SEED), prompts = [], pairs = [], p, i, j;
+  for (p = 0; p < 40; p++) {
+    var q = []; for (i = 0; i < 6; i++) q.push(rand());
+    prompts.push(q);
+    for (i = 0; i < 6; i++) for (j = i + 1; j < 6; j++) {
+      var gap = q[i] - q[j], w = gap > 0 ? i : j, l = gap > 0 ? j : i, tw = w;
+      var tie = Math.abs(gap) < TIE_BAND;
+      if (tie) { var f = rand() < 0.5; w = f ? i : j; l = f ? j : i; }
+      else if (rand() < flipRate) { var t = w; w = l; l = t; }
+      pairs.push({ p: p, w: w, l: l, tw: tw, tie: tie });
+    }
+  }
+  return { prompts: prompts, pairs: pairs };
+}
+
+// Same router as code_example.py: calibrate the margin against a running mean and
+// variance, turn it into three weights, blend the three losses.
+function train(prompts, pairs, routed, warm) {
+  var rand = rng32(SEED + 1), theta = [], ref = [], i, p;
+  for (p = 0; p < prompts.length; p++) {
+    theta.push(prompts[p].map(function () { return 0; }));
+    ref.push(prompts[p].map(function () { return (rand() - 0.5) * 0.2; }));
+  }
+  var mu = 0, varr = 1, mix = [0, 0, 0], a = 0.05;
+  var lp = [Math.log(0.80), Math.log(0.10), Math.log(0.10)];
+  for (var ep = 0; ep < EPOCHS; ep++) {
+    for (var k = pairs.length - 1; k > 0; k--) {
+      var s = Math.floor(rand() * (k + 1)), tmp = pairs[k]; pairs[k] = pairs[s]; pairs[s] = tmp;
+    }
+    for (i = 0; i < pairs.length; i++) {
+      var pr = pairs[i], pp = pr.p, w = pr.w, l = pr.l;
+      var m = BETA * ((theta[pp][w] - ref[pp][w]) - (theta[pp][l] - ref[pp][l]));
+      var g = -sigmoid(-m);
+      if (routed) {
+        mu = (1 - a) * mu + a * m;
+        var d = m - mu; varr = (1 - a) * varr + a * d * d;
+        var z = d / Math.max(Math.sqrt(varr), 1e-2);
+        var L = [lp[0] + z, lp[1] - z, lp[2] - Math.abs(z) / 0.6];
+        var hi = Math.max(L[0], L[1], L[2]);
+        var e = [Math.exp(L[0] - hi), Math.exp(L[1] - hi), Math.exp(L[2] - hi)];
+        var tot = e[0] + e[1] + e[2], q = [e[0] / tot, e[1] / tot, e[2] / tot];
+        var gamma = (ep / EPOCHS) < warm ? 0 : 1;
+        var wgt = gamma * ((Math.max(q[0], q[1], q[2]) - 1 / 3) / (2 / 3));
+        var routedG = q[0] * -sigmoid(-m) + q[1] * sigmoid(m)
+                    + q[2] * sigmoid(Math.abs(m)) * (m >= 0 ? 1 : -1);
+        g = (1 - wgt) * g + wgt * routedG;
+        if (ep === EPOCHS - 1) { mix[0] += q[0]; mix[1] += q[1]; mix[2] += q[2]; }
+      }
+      theta[pp][w] -= LR * g * BETA;
+      theta[pp][l] += LR * g * BETA;
+    }
+  }
+  var mt = (mix[0] + mix[1] + mix[2]) || 1;
+  return { theta: theta, mix: [mix[0] / mt, mix[1] / mt, mix[2] / mt], ref: ref };
+}
+
+function rankAcc(pairs, theta) {
+  var hits = 0;
+  for (var i = 0; i < pairs.length; i++) {
+    var pr = pairs[i], other = pr.w !== pr.tw ? pr.w : pr.l;
+    if (theta[pr.p][pr.tw] > theta[pr.p][other]) hits++;
+  }
+  return 100 * hits / pairs.length;
+}
+
+function margins(pairs, theta, ref) {
+  var clean = [], flip = [];
+  for (var i = 0; i < pairs.length; i++) {
+    var pr = pairs[i], p = pr.p;
+    if (pr.tie) continue;
+    var m = BETA * ((theta[p][pr.w] - ref[p][pr.w]) - (theta[p][pr.l] - ref[p][pr.l]));
+    (pr.w !== pr.tw ? flip : clean).push(m);
+  }
+  return { clean: clean, flip: flip };
+}
+
+var warmup = 0.25;
+
+function render() {
+  var rate = +document.getElementById("flip").value / 100;
+  document.getElementById("flipv").textContent = Math.round(rate * 100) + "%";
+
+  var d = makeDataset(rate);
+  var backwards = d.pairs.filter(function (p) { return !p.tie && p.w !== p.tw; }).length;
+  var plain = train(d.prompts, d.pairs, false, warmup);
+  var routed = train(d.prompts, d.pairs, true, warmup);
+  var clean = makeDataset(0);
+  var plainClean = train(clean.prompts, clean.pairs, false, warmup);
+  var routedClean = train(clean.prompts, clean.pairs, true, warmup);
+  var ceiling = rankAcc(clean.pairs, plainClean.theta);
+
+  var aP = rankAcc(d.pairs, plain.theta), aR = rankAcc(d.pairs, routed.theta);
+  var rows = [
+    { k: "trust labels", v: aP, win: aP > aR },
+    { k: "routed", v: aR, win: aR >= aP }
+  ];
+  document.getElementById("rows").innerHTML = rows.map(function (r) {
+    return '<div class="r' + (r.win ? " win" : "") + '"><span>' + r.k + '</span>'
+      + '<span class="bar"><i style="width:' + ((r.v - 50) / 45 * 100).toFixed(1) + '%"></i></span>'
+      + '<span class="num">' + r.v.toFixed(1) + '%</span></div>';
+  }).join("");
+
+  function drawMix(el, mix) {
+    document.getElementById(el).innerHTML =
+      '<span class="mc" style="width:' + (mix[0] * 100) + '%">' + Math.round(mix[0] * 100) + '%</span>'
+    + '<span class="mf" style="width:' + (mix[1] * 100) + '%">' + Math.round(mix[1] * 100) + '%</span>'
+    + '<span class="mt" style="width:' + (mix[2] * 100) + '%">' + Math.round(mix[2] * 100) + '%</span>';
+  }
+  drawMix("mix", routed.mix);
+  drawMix("mixc", routedClean.mix);
+
+  var mg = margins(d.pairs, plain.theta, plain.ref), B = 18, lo = -2, hi = 4;
+  var hc = new Array(B).fill(0), hf = new Array(B).fill(0), i;
+  function bin(v) { return Math.max(0, Math.min(B - 1, Math.floor((v - lo) / (hi - lo) * B))); }
+  for (i = 0; i < mg.clean.length; i++) hc[bin(mg.clean[i])]++;
+  for (i = 0; i < mg.flip.length; i++) hf[bin(mg.flip[i])]++;
+  var peak = Math.max(1, Math.max.apply(null, hc), Math.max.apply(null, hf));
+  var bars = "";
+  for (i = 0; i < B; i++) {
+    bars += '<div><i class="hc" style="height:' + (hc[i] / peak * 88) + 'px"></i>'
+          + '<i class="hf" style="height:' + (hf[i] / peak * 88) + 'px"></i></div>';
+  }
+  document.getElementById("hist").innerHTML = bars;
+
+  function mean(x) { return x.length ? x.reduce(function (s, v) { return s + v; }, 0) / x.length : 0; }
+  var mc = mean(mg.clean), mf = mean(mg.flip);
+  document.getElementById("sep").textContent = backwards === 0
+    ? "No backwards labels at this setting, so there is nothing for the router to find."
+    : "Correct pairs average " + mc.toFixed(2) + ", backwards ones " + mf.toFixed(2)
+      + ". Both are positive — the evidence is relative, which is why the margin is centered before it is read.";
+
+  var note = document.getElementById("note");
+  if (backwards === 0) {
+    note.innerHTML = "<b>Nothing is wrong, and routing costs you " + (aP - aR).toFixed(1)
+      + " points.</b> On curated labels, plain training is the right choice. Notice the reverse weight above: it does not fall to zero, because routing measures where a pair sits in the margin distribution, and clean data still has a lower tail.";
+  } else {
+    note.innerHTML = "<b>" + backwards + " of 600 labels are backwards, and they cost "
+      + (ceiling - aP).toFixed(1) + " points of accuracy.</b> Routing recovers "
+      + (aR - aP).toFixed(1) + " of them. Compare the two weight bars: they barely differ, even though one dataset is clean and the other is not. The reverse weight is a training signal, never an estimate of how much of your data is wrong.";
+  }
+  reportHeight();
+}
+
+document.getElementById("flip").addEventListener("input", render);
+function setWarm(v) {
+  warmup = v;
+  Array.prototype.forEach.call(document.querySelectorAll(".warm"), function (b) {
+    b.setAttribute("aria-pressed", +b.dataset.w === v ? "true" : "false");
+  });
+  render();
+}
+Array.prototype.forEach.call(document.querySelectorAll(".warm"), function (b) {
+  b.addEventListener("click", function () { setWarm(+b.dataset.w); });
+});
+document.getElementById("reset").addEventListener("click", function () {
+  document.getElementById("flip").value = 20;
+  setWarm(0.25);
+});
+
+function reportHeight() {
+  parent.postMessage({ type: "adl-visualize-height",
+                       height: document.documentElement.scrollHeight }, "*");
+}
+addEventListener("load", reportHeight);
+new ResizeObserver(reportHeight).observe(document.documentElement);
+render();
+</script>
+</body>
+</html>

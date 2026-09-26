@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Pluggy Extension Workbench</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090c12;--panel:#121821;--edge:#2a3544;--ink:#edf4ff;--muted:#95a4b8;--lime:#bef264;--blue:#60a5fa;--orange:#fb923c;--pink:#f472b6}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#101928 0,#090c12 42%);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,sans-serif}main{max-width:1180px;margin:auto;padding:clamp(18px,4vw,42px)}
+    header{display:flex;justify-content:space-between;align-items:end;gap:22px;margin-bottom:22px}h1{font-size:clamp(27px,4.7vw,46px);line-height:1.04;margin:5px 0}.kicker{font:800 11px ui-monospace,monospace;letter-spacing:.16em;color:var(--lime);text-transform:uppercase}.intro{max-width:570px;color:var(--muted)}
+    button{border:1px solid #435168;border-radius:9px;background:#192231;color:var(--ink);padding:9px 13px;font-weight:750;cursor:pointer}button:hover{border-color:var(--lime)}button:focus-visible,input:focus-visible{outline:3px solid #bef26466;outline-offset:2px}
+    .board{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:14px}.column{border:1px solid var(--edge);border-radius:16px;background:#101620;padding:15px;min-width:0}.column h2{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:0 0 13px}.num{display:grid;place-items:center;width:23px;height:23px;border-radius:7px;background:#263143;color:var(--lime);font:800 11px ui-monospace,monospace}
+    .spec{border-left:3px solid var(--blue);background:#151e2b;border-radius:8px;margin:8px 0;padding:10px}.spec code{font:700 12px ui-monospace,monospace}.spec small{display:block;color:var(--muted);margin-top:4px}
+    .ep{position:relative;padding:10px 10px 10px 35px;border:1px dashed #47546a;border-radius:10px;color:var(--muted);font:12px ui-monospace,monospace}.ep:before{content:"⌁";position:absolute;left:12px;color:var(--orange);font-size:18px}.plugin{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:11px;border:1px solid var(--edge);border-radius:11px;margin-top:9px;background:#151c27}.plugin input{width:19px;height:19px;accent-color:var(--lime)}.plugin label{font-weight:800;cursor:pointer}.plugin small{display:block;color:var(--muted);margin-top:2px}.plugin.off{opacity:.46}
+    .bus{display:flex;align-items:center;gap:8px;margin:13px 0;color:var(--muted);font-size:11px}.bus:before,.bus:after{content:"";height:1px;background:var(--edge);flex:1}.impls{display:grid;gap:8px}.impl{border:1px solid var(--edge);border-radius:9px;padding:9px;background:#0c111a}.impl b{display:block;font:700 12px ui-monospace,monospace}.impl span{color:var(--muted);font-size:11px}.impl.models{border-left:3px solid var(--pink)}.impl.tools{border-left:3px solid var(--orange)}
+    .registry{display:grid;grid-template-columns:1fr 1fr;gap:8px}.bucket{border:1px solid var(--edge);border-radius:11px;padding:11px;min-height:106px}.bucket h3{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 8px}.chip{display:inline-block;border:1px solid #3c506b;border-radius:999px;padding:5px 8px;margin:3px 2px;background:#172438;font:700 11px ui-monospace,monospace}.empty{color:#657287;font-style:italic}
+    .aggregate{margin-top:14px;border:1px solid var(--edge);border-radius:16px;background:#101620;padding:16px}.aggregate-head{display:flex;justify-content:space-between;gap:12px}.aggregate h2{font-size:14px;margin:0}.aggregate p{color:var(--muted);margin:2px 0 0}.rail{display:flex;align-items:stretch;gap:7px;margin-top:14px;overflow-x:auto;padding-bottom:4px}.event{min-width:150px;flex:1;border-top:3px solid var(--lime);background:#151e29;border-radius:7px;padding:10px}.event b{display:block;font-size:11px}.event span{color:var(--muted);font-size:11px}.event.discovery{border-color:var(--orange)}.event.specification{border-color:var(--blue)}.event.none{border-color:#586579}
+    .callout{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.callout div{padding:11px;border-radius:10px;background:#111925;color:var(--muted)}.callout b{color:var(--ink);display:block}
+    @media(max-width:850px){header{display:block}.board{grid-template-columns:1fr}.callout{grid-template-columns:1fr}.registry{grid-template-columns:1fr 1fr}}
+    @media(prefers-reduced-motion:no-preference){.plugin,.event{transition:opacity .2s,transform .2s}.event:hover{transform:translateY(-2px)}}
+  </style>
+</head>
+<body>
+<main data-visualizer>
+  <header>
+    <div><div class="kicker">In-process dependency inversion</div><h1>Core defines the verbs.<br>Plugins supply the nouns.</h1></div>
+    <div class="intro">Toggle installed packages. Watch setuptools entry-point discovery find code the host never imported by name, then see every matching hook implementation aggregate into one registry.</div>
+  </header>
+  <section class="board" aria-label="Plugin lifecycle">
+    <div class="column">
+      <h2>Core hook specifications <span class="num">1</span></h2>
+      <div class="spec"><code>register_models(register)</code><small>Plugins contribute one or many model instances.</small></div>
+      <div class="spec"><code>register_tools(register)</code><small>Tools are typed callables; no concrete model lives here.</small></div>
+      <div class="spec"><code>register_commands(cli)</code><small>More extension points need no core-side implementation.</small></div>
+      <div class="bus">name + signature contract</div>
+      <div class="ep">PluginManager("llm").add_hookspecs(HookSpecs)</div>
+    </div>
+    <div class="column">
+      <h2>Installed entry points <span class="num">2</span></h2>
+      <div class="ep">[project.entry-points.llm]</div>
+      <div id="plugins"></div>
+      <div class="bus">discover → name-match @hookimpl</div>
+      <div class="impls" id="impls"></div>
+    </div>
+    <div class="column">
+      <h2>Aggregated host registry <span class="num">3</span></h2>
+      <div class="registry">
+        <div class="bucket"><h3>Models</h3><div id="models"></div></div>
+        <div class="bucket"><h3>Aliases</h3><div id="aliases"></div></div>
+        <div class="bucket"><h3>Tools</h3><div id="tools"></div></div>
+        <div class="bucket"><h3>Commands</h3><div id="commands"></div></div>
+      </div>
+      <div class="bus">all implementations run</div>
+      <div class="ep" id="dispatch">No model selected for dispatch</div>
+    </div>
+  </section>
+  <section class="aggregate">
+    <div class="aggregate-head"><div><h2>Startup event trace</h2><p>Aggregation composes contributions; it does not use “last plugin wins.”</p></div><button id="reset">Reset plugins</button></div>
+    <div class="rail" id="trace" aria-live="polite"></div>
+    <div class="callout">
+      <div><b>Discovery is metadata-driven</b>The host asks installed packages who registered under group <code>llm</code>.</div>
+      <div><b>Matching is by function name</b><code>@hookimpl register_tools</code> attaches to the same-named specification.</div>
+      <div><b>MCP is the cross-process cousin</b>JSON-RPC capability discovery replaces Python entry points and callables.</div>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const plugins=[
+    {id:"models",name:"llm-models-demo",desc:"Two models, three aliases",hooks:[["register_models","EchoModel · ShoutModel"]],models:["echo-1","shout-1"],aliases:["echo → echo-1","shout → shout-1","loud → shout-1"],tools:[],commands:[]},
+    {id:"tools",name:"llm-tools-demo",desc:"One typed callable",hooks:[["register_tools","word_count(text: str)"]],models:[],aliases:[],tools:["word_count"],commands:[]},
+    {id:"local",name:"llm-local-lab",desc:"Independent third plugin",hooks:[["register_models","LocalModel"],["register_commands","models-doctor"]],models:["local-7b"],aliases:["local → local-7b"],tools:[],commands:["models-doctor"]}
+  ];
+  const $=id=>document.getElementById(id);
+  function chips(id,items){$(id).innerHTML=items.length?items.map(x=>`<span class="chip">${x}</span>`).join(""):'<span class="empty">none</span>'}
+  function render(){
+    const active=plugins.filter(p=>$("p-"+p.id).checked);
+    document.querySelectorAll(".plugin").forEach(el=>el.classList.toggle("off",!el.querySelector("input").checked));
+    $("impls").innerHTML=active.flatMap(p=>p.hooks.map(h=>`<div class="impl ${h[0].includes("models")?"models":"tools"}"><b>@hookimpl ${h[0]}</b><span>${p.name} → ${h[1]}</span></div>`)).join("")||'<div class="empty">No implementations discovered</div>';
+    ["models","aliases","tools","commands"].forEach(k=>chips(k,active.flatMap(p=>p[k])));
+    const first=active.flatMap(p=>p.models)[0];
+    $("dispatch").textContent=first?`core.prompt("${first}", "hello") → plugin Model.execute()`:"Dispatch unavailable: registry is empty";
+    const events=[{c:"specification",b:"Specs loaded",s:"register_models · register_tools"},...active.map(p=>({c:"discovery",b:"Discovered",s:p.name})),...active.flatMap(p=>p.hooks.map(h=>({c:"",b:"Hook called",s:h[0]+" → "+h[1]})))];
+    if(active.length===0)events.push({c:"none",b:"No entry points",s:"Core remains valid—and empty"});
+    $("trace").innerHTML=events.map(e=>`<div class="event ${e.c}"><b>${e.b}</b><span>${e.s}</span></div>`).join("");
+  }
+  $("plugins").innerHTML=plugins.map((p,i)=>`<div class="plugin"><input type="checkbox" id="p-${p.id}" ${i<2?"checked":""}><div><label for="p-${p.id}">${p.name}</label><small>${p.desc}</small></div></div>`).join("");
+  plugins.forEach(p=>$("p-"+p.id).addEventListener("change",render));
+  $("reset").addEventListener("click",()=>{plugins.forEach((p,i)=>$("p-"+p.id).checked=i<2);render()});
+  render();
+  const postHeight=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(postHeight).observe(document.documentElement);postHeight();
+})();
+</script>
+</body>
+</html>

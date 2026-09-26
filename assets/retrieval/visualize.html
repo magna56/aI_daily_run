@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Chunk, Retrieve, Stuff</title>
+  <style>
+    :root{color-scheme:dark;--bg:#080c14;--panel:#111827;--line:#2a3548;--ink:#edf2fb;--muted:#98a6bc;--cyan:#55e6d2;--amber:#ffd166;--red:#ff758f;--violet:#b197fc}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 70% 0,#1a2744 0,transparent 40%),var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif}
+    [data-visualizer]{max-width:1120px;margin:auto;padding:clamp(16px,3vw,36px)}
+    h1{font-size:clamp(23px,4vw,36px);line-height:1.08;margin:0 0 8px}p{color:var(--muted);margin:0 0 14px;max-width:780px}
+    .controls{display:grid;grid-template-columns:1fr 1fr auto;gap:14px;align-items:end;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+    label{font-weight:700}output{float:right;color:var(--amber);font-variant-numeric:tabular-nums}
+    input[type=range]{display:block;width:100%;margin-top:8px;accent-color:var(--cyan)}
+    button{font:inherit;font-weight:750;color:var(--ink);background:#192238;border:1px solid var(--line);border-radius:9px;padding:9px 13px;cursor:pointer}
+    button:hover,button:focus-visible,input:focus-visible{outline:3px solid #55e6d266;border-color:var(--cyan)}
+    .layout{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .card h2{font-size:14px;margin:0 0 10px}
+    .chunks{display:flex;flex-wrap:wrap;gap:6px}
+    .chunk{flex:1 1 140px;border:1px solid var(--line);border-radius:8px;padding:8px;font-size:12px;color:var(--muted);background:#0c121c}
+    .chunk.hit{border-color:var(--cyan);color:var(--ink);box-shadow:inset 3px 0 0 var(--cyan)}
+    .chunk.miss{opacity:.55}
+    .chunk b{display:block;font:700 10px ui-monospace,monospace;color:var(--amber);margin-bottom:4px}
+    pre{margin:0;white-space:pre-wrap;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;color:#d7e3f4;background:#0c121c;border-radius:8px;padding:10px;max-height:280px;overflow:auto}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+    .stat span{display:block;font-size:11px;color:var(--muted)}.stat strong{font-size:22px}
+    .ok{color:var(--cyan)}.bad{color:var(--red)}
+    @media(max-width:800px){.controls,.layout,.stats{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer="retrieval">
+  <h1>The model does not search. It reads the stapled pages.</h1>
+  <p>Same refund question, two docs. Change chunk size and top-k. Watch the documents tear into records, which records retrieve, and the exact string stuffed into the prompt — the same numbers as <code>code_example.py</code>.</p>
+  <div class="controls">
+    <label>Chunk size <output id="sizeOut" for="size">20 words</output><input id="size" type="range" min="0" max="2" step="1" value="1"></label>
+    <label>Top-k <output id="kOut" for="k">2 chunks</output><input id="k" type="range" min="1" max="3" step="1" value="2"></label>
+    <button id="reset" type="button">Reset</button>
+  </div>
+  <div class="layout">
+    <section class="card">
+      <h2>Chunks (overlap 25%)</h2>
+      <div class="chunks" id="chunks"></div>
+    </section>
+    <section class="card">
+      <h2>Stuffed prompt</h2>
+      <pre id="prompt"></pre>
+    </section>
+  </div>
+  <div class="stats">
+    <div class="card stat"><span>Answer in stack?</span><strong id="hit"></strong></div>
+    <div class="card stat"><span>Words stuffed</span><strong id="words"></strong></div>
+    <div class="card stat"><span>Best cell in this demo</span><strong>20 × k=2</strong></div>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const DOCS = {
+    "billing.md": "Refunds are available for thirty days after purchase. Open the billing portal, pick the invoice, and submit the refund form. Credits apply to the original payment method within five business days.",
+    "search.md": "The index stores one embedding per chunk. Chunk size is the record size. A one-hundred-fifty word window with thirty percent overlap held the finance answer. Raising top-k added words, not new facts."
+  };
+  const QUERY = "how long is the refund window and where do I submit it?";
+  const ANSWER = "thirty days after purchase";
+  const SIZES = [8, 20, 40];
+  const $ = id => document.getElementById(id);
+  function tokenize(t){return t.split(/\s+/).map(w=>w.replace(/[.,!?]/g,"").toLowerCase()).filter(Boolean)}
+  function chunk(text,size){
+    const words=text.split(/\s+/), step=Math.max(1,Math.floor(size*0.75)), out=[];
+    for(let i=0;i<words.length;){out.push(words.slice(i,i+size).join(" "));if(i+size>=words.length)break;i+=step}
+    return out;
+  }
+  function embed(text){
+    const c={}; tokenize(text).forEach(w=>c[w]=(c[w]||0)+1);
+    let n=0; for(const k in c) n+=c[k]*c[k];
+    return {c,n:Math.sqrt(n)||1};
+  }
+  function cosine(a,b){
+    let dot=0; for(const k in a.c) if(b.c[k]) dot+=a.c[k]*b.c[k];
+    return dot/(a.n*b.n);
+  }
+  function render(){
+    const size=SIZES[+$("size").value], k=+$("k").value;
+    $("sizeOut").value=size+" words"; $("kOut").value=k+(k===1?" chunk":" chunks");
+    const q=embed(QUERY), items=[];
+    Object.keys(DOCS).forEach(src=>chunk(DOCS[src],size).forEach((c,i)=>items.push({src,i,c,score:cosine(q,embed(c))})));
+    const ranked=[...items].sort((a,b)=>b.score-a.score);
+    const hits=new Set(ranked.slice(0,k).map(x=>x.src+"#"+x.i));
+    $("chunks").innerHTML=items.map(x=>{
+      const on=hits.has(x.src+"#"+x.i);
+      return `<div class="chunk ${on?"hit":"miss"}"><b>${x.src} #${x.i} · ${x.score.toFixed(2)}${on?" · stuffed":""}</b>${x.c}</div>`;
+    }).join("");
+    const top=ranked.slice(0,k);
+    const prompt=["You answer only from Context.","","Context:",...top.flatMap(x=>[`## ${x.src} #chunk-${x.i} (${x.score.toFixed(2)})`,x.c,""]),"Question: "+QUERY].join("\n");
+    $("prompt").textContent=prompt;
+    const found=top.some(x=>x.c.includes(ANSWER));
+    const words=top.reduce((n,x)=>n+x.c.split(/\s+/).length,0);
+    $("hit").textContent=found?"yes":"no";
+    $("hit").className=found?"ok":"bad";
+    $("words").textContent=words;
+  }
+  ["size","k"].forEach(id=>$(id).addEventListener("input",render));
+  $("reset").addEventListener("click",()=>{$("size").value=1;$("k").value=2;render();});
+  render();
+  const post=()=>parent.postMessage({type:"adl-visualize-height",height:document.documentElement.scrollHeight},"*");
+  new ResizeObserver(post).observe(document.documentElement); post();
+})();
+</script>
+</body>
+</html>

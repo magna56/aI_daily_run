@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Stateless MCP Wire Budget</title>
+  <style>
+    :root{color-scheme:dark;--bg:#080c14;--card:#111827;--line:#29344a;--text:#edf2fb;--muted:#98a6bc;--violet:#b197fc;--cyan:#55e6d2;--amber:#ffd166;--red:#ff758f}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 78% 0,#1f2347 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.45 system-ui,sans-serif}
+    main{max-width:1120px;margin:auto;padding:clamp(16px,3vw,34px)}
+    header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:18px}
+    h1{font-size:clamp(23px,4vw,37px);line-height:1.08;margin:0 0 8px}p{margin:0;color:var(--muted);max-width:800px}
+    button,select{font:inherit;color:var(--text);background:#192238;border:1px solid var(--line);border-radius:9px;padding:9px 13px}
+    button{cursor:pointer}button:hover,button:focus-visible,select:focus-visible,input:focus-visible{outline:none;border-color:var(--violet)}
+    .layout{display:grid;grid-template-columns:minmax(250px,.7fr) minmax(0,1.5fr);gap:15px}
+    .card{background:color-mix(in srgb,var(--card) 93%,transparent);border:1px solid var(--line);border-radius:15px;padding:18px}
+    .controls{display:grid;gap:15px;align-content:start}
+    .control label{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}
+    .control select{width:100%}.control input[type=range]{width:100%;accent-color:var(--violet)}
+    .control .val{float:right;color:var(--text);font-variant-numeric:tabular-nums}
+    .chk{display:flex;gap:9px;align-items:center;color:var(--muted);font-size:13px}.chk input{accent-color:var(--red);width:16px;height:16px}
+    .verdict{border-left:3px solid var(--amber);padding-left:11px}
+    .verdict span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .verdict strong{display:block;color:var(--amber);margin-top:3px;font-size:14px;line-height:1.35}
+    .stage-top{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+    .stage h2{font-size:15px;margin:0}.legend{font-size:11px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+    .legend i{font-style:normal}canvas{display:block;width:100%;height:330px}
+    .stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+    .stat span{font-size:12px;color:var(--muted)}.stat strong{display:block;font-size:clamp(19px,3vw,27px);font-variant-numeric:tabular-nums}
+    .amber{color:var(--amber)}.cyan{color:var(--cyan)}.violet{color:var(--violet)}.red{color:var(--red)}
+    @media(max-width:730px){header{display:block}header button{margin-top:13px}.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}canvas{height:300px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+<main data-visualizer="2026-08-24">
+  <header>
+    <div>
+      <h1>The <code>_meta</code> tax is a sliver. The cache is the bill.</h1>
+      <p>Every byte here comes from the literal request bodies in the 2026-07-28 specification: a bare call is 117 B, a 2025-11-25 call 205 B, a self-describing 2026-07-28 call 391 B, and the handshake it replaces 618 B. Move the cache policy and watch which segment actually moves.</p>
+    </div>
+    <button id="reset" type="button">Reset</button>
+  </header>
+  <section class="layout">
+    <div class="card controls">
+      <div class="control"><label for="policy">Client cache policy for <code>tools/list</code></label>
+        <select id="policy">
+          <option value="0">ignores ttlMs — re-lists every call</option>
+          <option value="30000">honours ttlMs = 30 s</option>
+          <option value="60000">honours ttlMs = 60 s</option>
+          <option value="300000" selected>honours ttlMs = 5 min</option>
+          <option value="900000">honours ttlMs = 15 min</option>
+        </select></div>
+      <div class="control"><label for="calls">Tool calls in the session <span class="val" id="callsV"></span></label>
+        <input id="calls" type="range" min="5" max="80" step="1" value="40"></div>
+      <div class="control"><label for="tools">Tools in the server's catalog <span class="val" id="toolsV"></span></label>
+        <input id="tools" type="range" min="4" max="60" step="1" value="18"></div>
+      <div class="control"><label for="mins">Session length <span class="val" id="minsV"></span></label>
+        <input id="mins" type="range" min="2" max="30" step="1" value="12"></div>
+      <label class="chk"><input id="restart" type="checkbox"> Pod restarts mid-session</label>
+      <div class="verdict"><span>Verdict</span><strong id="verdict"></strong></div>
+    </div>
+    <div class="card stage">
+      <div class="stage-top"><h2>Bytes on the wire, one agent session</h2>
+        <div class="legend">
+          <i style="color:var(--violet)">■</i> call bodies
+          <i style="color:var(--cyan)">■</i> <code>_meta</code> tax
+          <i style="color:var(--amber)">■</i> <code>tools/list</code>
+          <i style="color:var(--red)">■</i> handshake / restart recovery
+        </div></div>
+      <canvas id="chart" role="img" aria-label="Stacked bar chart comparing session bytes for legacy sessions, stateless MCP under the selected cache policy, and stateless with subscriptions/listen"></canvas>
+    </div>
+    <div class="stats">
+      <div class="card stat"><span>One <code>tools/list</code></span><strong id="listSz" class="amber"></strong></div>
+      <div class="card stat"><span>List fetches this session</span><strong id="fetches" class="amber"></strong></div>
+      <div class="card stat"><span>Total <code>_meta</code> tax</span><strong id="metaTax" class="cyan"></strong></div>
+      <div class="card stat"><span>Cost of the cache policy</span><strong id="cachePen" class="violet"></strong></div>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $ = s => document.querySelector(s);
+  const policy = $("#policy"), calls = $("#calls"), tools = $("#tools"), mins = $("#mins"),
+        restart = $("#restart"), canvas = $("#chart"), ctx = canvas.getContext("2d");
+
+  // Constants measured from the spec's own examples — identical to code_example.py.
+  const LEGACY_CALL = 205, STATELESS_CALL = 391, HANDSHAKE = 618, LIST_POST = 96,
+        LISTEN_REQ = 180, LIST_CHANGES = 1, META_TAX = STATELESS_CALL - LEGACY_CALL;
+
+  const listBytes = t => { let s = 64; for (let i = 0; i < t; i++) s += 260 + (i * 97) % 540; return s; };
+  const kb = b => (b / 1024).toFixed(b < 10240 ? 1 : 0) + " KB";
+
+  function model() {
+    const n = +calls.value, t = +tools.value, m = +mins.value, ttl = +policy.value, L = listBytes(t);
+    const fetches = ttl === 0 ? n : Math.max(1, Math.floor(m * 60000 / ttl));
+    const bars = [
+      { name: "2025-11-25 sessions", body: n * LEGACY_CALL, meta: 0,
+        list: L * (1 + LIST_CHANGES), extra: HANDSHAKE + (restart.checked ? HANDSHAKE + LEGACY_CALL : 0) },
+      { name: "2026-07-28, your policy", body: n * LEGACY_CALL, meta: n * META_TAX,
+        list: fetches * (L + LIST_POST), extra: restart.checked ? STATELESS_CALL : 0 },
+      { name: "2026-07-28 + listen", body: n * LEGACY_CALL, meta: n * META_TAX,
+        list: (1 + LIST_CHANGES) * (L + LIST_POST) + LISTEN_REQ, extra: restart.checked ? STATELESS_CALL + LISTEN_REQ : 0 }
+    ];
+    bars.forEach(b => b.total = b.body + b.meta + b.list + b.extra);
+    // What honouring a 5-minute TTL instead of the current policy would have cost or saved.
+    const ideal = Math.max(1, Math.floor(m * 60000 / 300000)) * (L + LIST_POST);
+    return { bars, fetches, L, n, m, metaTax: n * META_TAX, cachePen: bars[1].list - ideal };
+  }
+
+  function draw() {
+    const d = model();
+    $("#callsV").textContent = d.n;
+    $("#toolsV").textContent = tools.value + " tools";
+    $("#minsV").textContent = d.m + " min";
+    $("#listSz").textContent = kb(d.L);
+    $("#fetches").textContent = d.fetches;
+    $("#metaTax").textContent = kb(d.metaTax);
+    $("#cachePen").textContent = d.cachePen > 0 ? "+" + kb(d.cachePen) : d.cachePen < 0 ? "−" + kb(-d.cachePen) : "at 5-min TTL";
+
+    const ratio = d.bars[1].total / d.bars[0].total;
+    $("#verdict").textContent = +policy.value === 0
+      ? `Ignoring ttlMs costs ${(d.cachePen / d.metaTax).toFixed(0)}× more than the entire _meta tax — ${ratio.toFixed(1)}× the legacy session.`
+      : ratio > 1.6
+        ? `Still ${ratio.toFixed(1)}× the legacy session: this TTL is short enough that re-listing dominates.`
+        : `Stateless costs ${((ratio - 1) * 100).toFixed(0)}% more than sessions here — and buys round-robin routing for it.`;
+
+    const dpr = Math.min(devicePixelRatio || 1, 2), r = canvas.getBoundingClientRect();
+    canvas.width = Math.max(1, Math.round(r.width * dpr));
+    canvas.height = Math.max(1, Math.round(r.height * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const w = r.width, h = r.height, L0 = 8, R = 14, T = 26, B = 22;
+    ctx.clearRect(0, 0, w, h);
+    ctx.font = "12px system-ui";
+
+    const max = Math.max(...d.bars.map(b => b.total)) || 1;
+    const rowH = (h - T - B) / d.bars.length, barH = Math.min(46, rowH * .46);
+    const segs = [["body", "#b197fc"], ["meta", "#55e6d2"], ["list", "#ffd166"], ["extra", "#ff758f"]];
+
+    d.bars.forEach((b, i) => {
+      const y = T + i * rowH;
+      ctx.fillStyle = "#edf2fb"; ctx.textAlign = "left";
+      ctx.fillText(b.name, L0, y + 13);
+      ctx.fillStyle = "#98a6bc"; ctx.textAlign = "right";
+      ctx.fillText(kb(b.total), w - R, y + 13);
+
+      let x = L0;
+      const usable = w - L0 - R;
+      segs.forEach(([key, col]) => {
+        const px = (b[key] / max) * usable;
+        if (px <= 0) return;
+        ctx.fillStyle = col;
+        ctx.fillRect(x, y + 20, Math.max(1, px), barH);
+        if (px > 42) {
+          ctx.fillStyle = "#07111a"; ctx.textAlign = "center";
+          ctx.fillText(kb(b[key]), x + px / 2, y + 20 + barH / 2 + 4);
+        }
+        x += px;
+      });
+      ctx.strokeStyle = "#29344a"; ctx.lineWidth = 1;
+      ctx.strokeRect(L0 + .5, y + 20.5, usable, barH);
+    });
+  }
+
+  [policy, calls, tools, mins, restart].forEach(el => {
+    el.addEventListener("input", draw);
+    el.addEventListener("change", draw);
+  });
+  $("#reset").addEventListener("click", () => {
+    policy.value = "300000"; calls.value = "40"; tools.value = "18"; mins.value = "12";
+    restart.checked = false; draw();
+  });
+
+  new ResizeObserver(draw).observe(canvas);
+  new ResizeObserver(() => parent.postMessage({
+    type: "adl-visualize-height",
+    height: document.documentElement.scrollHeight
+  }, "*")).observe(document.documentElement);
+  addEventListener("load", () => parent.postMessage({
+    type: "adl-visualize-height",
+    height: document.documentElement.scrollHeight
+  }, "*"));
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Which MCP clients your server can still answer</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 9px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg + h2 { margin-top: 15px; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed=true] { background: #2a3566; border-color: #4b5ba8; color: #fff; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .rows { margin-top: 17px; display: grid; gap: 4px; }
+  .r { display: grid; grid-template-columns: 210px 96px 1fr; gap: 10px; align-items: center;
+       padding: 6px 10px; border-radius: 6px; background: #10131f; border: 1px solid #1c2130; }
+  .r.fail { border-color: rgba(240,138,75,.45); background: rgba(240,138,75,.08); }
+  .r.workd { border-color: rgba(95,212,164,.35); background: rgba(95,212,164,.07); }
+  .r code { font: 11.5px ui-monospace, Menlo, monospace; color: #cdd5ee; }
+  .r em { font-style: normal; font: 600 11px ui-monospace, Menlo, monospace; text-align: center; }
+  .r span { font-size: 12px; color: #8f9ab8; }
+  .ok2 { color: #5fd4a4; } .no { color: #f08a4b; }
+  .out { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 17px; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 12px; }
+  .stat u { display: block; font-size: 11px; color: #8f9ab8; text-decoration: none; margin-bottom: 4px; }
+  .stat b { font: 600 19px ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  .mid { color: #dfe4f2; }
+  .say { margin-top: 15px; font-size: 12.5px; color: #a7b1cd; border-left: 2px solid #2b3247;
+         padding-left: 11px; }
+  .say b { color: #dfe4f2; }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-14">
+  <h1>Which MCP clients your server can still answer</h1>
+  <p class="sub">The 2026-07-28 revision dropped the handshake. Pick what your server implements
+     and see which callers it serves — and which of the failures the caller can recover from.</p>
+
+  <div class="panel">
+    <h2>Your server implements</h2>
+    <div class="seg" id="eras"></div>
+    <h2>Your server speaks version</h2>
+    <div class="seg" id="vers"></div>
+    <div class="seg" style="margin-top:14px"><button class="reset" id="reset">Reset</button></div>
+  </div>
+
+  <div class="rows" id="rows"></div>
+
+  <div class="out">
+    <div class="stat"><u>callers served</u><b id="served" class="mid">—</b></div>
+    <div class="stat"><u>can retry</u><b id="retry" class="mid">—</b></div>
+    <div class="stat"><u>stuck until a human acts</u><b id="stuck" class="mid">—</b></div>
+  </div>
+
+  <p class="say" id="say"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var MODERN = "2026-07-28", OLD = "2025-11-25";
+  // Each caller: how it opens, and which version it asks for.
+  var CALLERS = [
+    { id: "modern, current",   era: "modern", ver: MODERN },
+    { id: "modern, older rev", era: "modern", ver: OLD },
+    { id: "modern, ancient",   era: "modern", ver: "1900-01-01" },
+    { id: "legacy, initialize", era: "legacy", ver: OLD },
+    { id: "legacy, no _meta",   era: "legacy", ver: OLD }
+  ];
+  var DEFAULTS = { modern: true, legacy: true, speaksOld: true };
+  var st = Object.assign({}, DEFAULTS);
+  var $ = function (id) { return document.getElementById(id); };
+
+  function verdict(c) {
+    if (c.era === "legacy") {
+      // A legacy caller has no fall-forward: it cannot learn a newer protocol.
+      return st.legacy
+        ? { served: true, note: "answered on the legacy path, with a session" }
+        : { served: false, retry: false,
+            note: "no code path for this error — stuck until a human edits its config" };
+    }
+    if (!st.modern) {
+      return { served: false, retry: false,
+               note: "server has no modern path; this caller cannot downgrade either" };
+    }
+    var speaks = c.ver === MODERN || (c.ver === OLD && st.speaksOld);
+    if (speaks) return { served: true, note: "version accepted per request, no session" };
+    return { served: false, retry: true,
+             note: "UnsupportedProtocolVersionError with a supported list — can retry" };
+  }
+
+  function seg(host, opts) {
+    host.textContent = "";
+    opts.forEach(function (o) {
+      var b = document.createElement("button");
+      b.textContent = o.label;
+      b.setAttribute("aria-pressed", String(o.on()));
+      b.addEventListener("click", function () { o.toggle(); render(); });
+      host.appendChild(b);
+    });
+  }
+
+  function render() {
+    seg($("eras"), [
+      { label: "modern (per-request _meta)", on: function () { return st.modern; },
+        toggle: function () { st.modern = !st.modern; } },
+      { label: "legacy (initialize)", on: function () { return st.legacy; },
+        toggle: function () { st.legacy = !st.legacy; } }
+    ]);
+    seg($("vers"), [
+      { label: MODERN, on: function () { return true; }, toggle: function () {} },
+      { label: OLD + " as well", on: function () { return st.speaksOld; },
+        toggle: function () { st.speaksOld = !st.speaksOld; } }
+    ]);
+
+    var host = $("rows"); host.textContent = "";
+    var served = 0, retry = 0, stuck = 0;
+    CALLERS.forEach(function (c) {
+      var v = verdict(c);
+      if (v.served) served++; else if (v.retry) retry++; else stuck++;
+      var d = document.createElement("div");
+      d.className = "r " + (v.served ? "workd" : "fail");
+      var n = document.createElement("code"); n.textContent = c.id;
+      var s = document.createElement("em");
+      s.className = v.served ? "ok2" : "no";
+      s.textContent = v.served ? "served" : "rejected";
+      var w = document.createElement("span"); w.textContent = v.note;
+      d.appendChild(n); d.appendChild(s); d.appendChild(w);
+      host.appendChild(d);
+    });
+
+    $("served").textContent = served + " of " + CALLERS.length;
+    $("served").className = served === CALLERS.length ? "ok2" : "mid";
+    $("retry").textContent = retry;
+    $("retry").className = "mid";
+    $("stuck").textContent = stuck;
+    $("stuck").className = stuck ? "no" : "ok2";
+
+    var say;
+    if (!st.modern && !st.legacy) {
+      say = "<b>Nothing implemented.</b> Every caller fails, and only the modern ones are told "
+          + "anything useful — which is the whole asymmetry, in its most extreme form.";
+    } else if (stuck > 0 && !st.legacy) {
+      say = "<b>" + stuck + " callers stuck.</b> They opened with <code>initialize</code> or sent "
+          + "no <code>_meta</code>, so a modern-only server has nothing to say to them that they "
+          + "can act on. This is the cell the specification's matrix marks as a failure rather "
+          + "than a downgrade — there is no fall-forward in that direction.";
+    } else if (retry > 0) {
+      say = "<b>" + retry + " caller can recover.</b> A version the server does not speak comes "
+          + "back as an error carrying a <code>supported</code> list, so the client picks one and "
+          + "retries. Rejecting a modern caller is cheap; rejecting a legacy one is not.";
+    } else {
+      say = "<b>Everything is served.</b> Dual-era is the only configuration that answers both, "
+          + "and the cost is one branch on the first request — <code>initialize</code> is the one "
+          + "method the modern era does not have, so the eras are always distinguishable.";
+    }
+    $("say").innerHTML = say;
+    reportHeight();
+  }
+
+  function reportHeight() {
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+
+  $("reset").addEventListener("click", function () {
+    st = Object.assign({}, DEFAULTS); render();
+  });
+
+  render();
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

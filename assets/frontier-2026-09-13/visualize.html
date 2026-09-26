@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Ranking layers against measuring pairs</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  label { display: block; font-size: 12px; color: #9aa5c4; margin-bottom: 5px; }
+  label b { color: #dfe4f2; font-weight: 650; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  .seg { display: flex; gap: 6px; margin-top: 13px; align-items: center; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .cols { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 18px; }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 9px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  .r { display: grid; grid-template-columns: 56px 42px 1fr 62px; gap: 8px; align-items: center;
+       padding: 4px 8px; border-radius: 5px; background: #10131f; border: 1px solid #1c2130;
+       margin-bottom: 3px; font-size: 12px; }
+  .r.pick { border-color: rgba(124,140,248,.5); background: rgba(124,140,248,.10); }
+  .r.bad  { border-color: rgba(240,138,75,.45); background: rgba(240,138,75,.09); }
+  .r code { font: 11.5px ui-monospace, Menlo, monospace; color: #cdd5ee; }
+  .r .g { font: 10.5px ui-monospace, Menlo, monospace; color: #7d88a6; text-align: center; }
+  .bar { height: 12px; background: #171b2b; border-radius: 3px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: rgba(124,140,248,.5); }
+  .r em { font-style: normal; text-align: right; font: 11.5px ui-monospace, Menlo, monospace; }
+  .out { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 17px; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 12px; }
+  .stat u { display: block; font-size: 11px; color: #8f9ab8; text-decoration: none; margin-bottom: 4px; }
+  .stat b { font: 600 19px ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  .good { color: #5fd4a4; } .bad2 { color: #f08a4b; } .mid { color: #dfe4f2; }
+  .say { margin-top: 15px; font-size: 12.5px; color: #a7b1cd; border-left: 2px solid #2b3247;
+         padding-left: 11px; }
+  .say b { color: #dfe4f2; }
+</style>
+</head>
+<body>
+<main data-visualizer="frontier-2026-09-13">
+  <h1>Ranking layers against measuring pairs</h1>
+  <p class="sub">Left: every layer scored alone, best first. Right: every pair measured as a pair.
+     Turn coupling to zero and the two agree — the sort is correct exactly when nothing interacts.</p>
+
+  <div class="panel">
+    <label for="coupling">How much layers in a group share <b id="cv">0.75</b></label>
+    <input type="range" id="coupling" min="0" max="1" step="0.01" value="0.75">
+    <div class="seg"><button class="reset" id="reset">Reset</button></div>
+  </div>
+
+  <div class="cols">
+    <div><h2>Scored alone</h2><div id="singles"></div></div>
+    <div><h2>Measured as a pair</h2><div id="pairs"></div></div>
+  </div>
+
+  <div class="out">
+    <div class="stat"><u>top two by score</u><b id="t2" class="mid">—</b></div>
+    <div class="stat"><u>best measured pair</u><b id="bp" class="good">—</b></div>
+    <div class="stat"><u>rank of the top-two pair</u><b id="rk" class="mid">—</b></div>
+    <div class="stat"><u>error it costs you</u><b id="gp" class="mid">—</b></div>
+  </div>
+
+  <p class="say" id="say"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var GROUPS = { 0:"a",1:"b",2:"c",3:"c",4:"d",5:"e",6:"e",7:"f",8:"e",9:"g" };
+  var CAP = { 0:1.0,1:0.9,2:1.3,3:1.2,4:1.1,5:1.4,6:0.8,7:1.5,8:0.85,9:1.2 };
+  var N = 10, BASE = 4.8;
+  var DEFAULTS = { coupling: 0.75 };
+  var st = Object.assign({}, DEFAULTS);
+  var $ = function (id) { return document.getElementById(id); };
+
+  // Coupling governs ALL of the interaction: at 0 the system is additive and a
+  // ranking is exactly right, which is the control this whole page rests on.
+  function err(removed) {
+    var e = BASE, byG = {};
+    removed.forEach(function (l) { (byG[GROUPS[l]] = byG[GROUPS[l]] || []).push(l); });
+    Object.keys(byG).forEach(function (g) {
+      byG[g].sort(function (a, b) { return CAP[b] - CAP[a]; }).forEach(function (l, i) {
+        var cushion = i === 0 ? 1 - 0.65 * st.coupling : 1;
+        e += CAP[l] * cushion;
+        if (i > 0) e += st.coupling * CAP[l];
+      });
+    });
+    return e;
+  }
+
+  function row(host, label, group, val, lo, hi, cls) {
+    var d = document.createElement("div"); d.className = "r" + (cls ? " " + cls : "");
+    var c = document.createElement("code"); c.textContent = label;
+    var g = document.createElement("span"); g.className = "g"; g.textContent = group;
+    var bar = document.createElement("div"); bar.className = "bar";
+    var f = document.createElement("i");
+    f.style.width = (hi > lo ? ((val - lo) / (hi - lo)) * 100 : 4).toFixed(1) + "%";
+    bar.appendChild(f);
+    var v = document.createElement("em"); v.textContent = val.toFixed(2);
+    d.appendChild(c); d.appendChild(g); d.appendChild(bar); d.appendChild(v);
+    host.appendChild(d);
+  }
+
+  function render() {
+    $("cv").textContent = st.coupling.toFixed(2);
+
+    var layers = [], i, j;
+    for (i = 0; i < N; i++) layers.push(i);
+    var singles = layers.map(function (l) { return { l: l, v: err([l]) }; })
+                        .sort(function (a, b) { return a.v - b.v; });
+
+    var pairs = [];
+    for (i = 0; i < N; i++) for (j = i + 1; j < N; j++)
+      pairs.push({ p: [i, j], v: err([i, j]) });
+    pairs.sort(function (a, b) { return a.v - b.v; });
+
+    var top2 = [singles[0].l, singles[1].l].sort(function (a, b) { return a - b; });
+    var key = function (p) { return p[0] + "," + p[1]; };
+    var top2v = err(top2);
+    var rank = pairs.findIndex(function (x) { return key(x.p) === key(top2); }) + 1;
+
+    var sh = $("singles"); sh.textContent = "";
+    var slo = singles[0].v, shi = singles[singles.length - 1].v;
+    singles.forEach(function (s, idx) {
+      row(sh, "layer " + s.l, GROUPS[s.l], s.v, slo, shi, idx < 2 ? "pick" : "");
+    });
+
+    var ph = $("pairs"); ph.textContent = "";
+    var plo = pairs[0].v, phi = pairs[pairs.length - 1].v;
+    pairs.slice(0, 5).forEach(function (p, idx) {
+      row(ph, "{" + p.p.join(",") + "}", GROUPS[p.p[0]] + GROUPS[p.p[1]], p.v, plo, phi,
+          idx === 0 ? "pick" : "");
+    });
+    row(ph, "{" + top2.join(",") + "}", GROUPS[top2[0]] + GROUPS[top2[1]], top2v, plo, phi,
+        rank === 1 ? "pick" : "bad");
+
+    $("t2").textContent = "{" + top2.join(",") + "}";
+    $("bp").textContent = "{" + pairs[0].p.join(",") + "}";
+    $("rk").textContent = rank + " of " + pairs.length;
+    $("rk").className = rank === 1 ? "good" : "bad2";
+    var gap = top2v - pairs[0].v;
+    $("gp").textContent = gap.toFixed(2);
+    $("gp").className = gap < 0.01 ? "good" : "bad2";
+
+    var say;
+    if (st.coupling < 0.02) {
+      say = "<b>Nothing interacts.</b> The system is additive, so sorting and taking the top "
+          + "two is exactly right and the combination search buys nothing. This is the case "
+          + "where the ranking is the whole answer — and it is worth knowing you are in it.";
+    } else if (rank === 1) {
+      say = "<b>The ranking still happens to win.</b> At this coupling the two best singles do "
+          + "not share enough to hurt each other. Note that you only know that because the "
+          + "pairs were measured; the sorted list looks identical either way.";
+    } else {
+      say = "<b>The top-two pair ranks " + rank + " of " + pairs.length + ".</b> Both layers "
+          + "scored well alone and they share a group, so removing one is cheap and removing "
+          + "both is not. Every number on the left is correct — adding them is the mistake.";
+    }
+    $("say").innerHTML = say;
+    reportHeight();
+  }
+
+  function reportHeight() {
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+
+  $("coupling").addEventListener("input", function (e) {
+    st.coupling = +e.target.value; render();
+  });
+  $("reset").addEventListener("click", function () {
+    st = Object.assign({}, DEFAULTS); $("coupling").value = st.coupling; render();
+  });
+
+  render();
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

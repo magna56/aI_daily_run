@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>Concepts: what a coarse target can carry</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .row { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  label { display: block; font-size: 12px; color: #9aa5c4; margin-bottom: 5px; }
+  label b { color: #dfe4f2; font-weight: 650; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  .seg { display: flex; gap: 6px; margin-top: 13px; align-items: center; flex-wrap: wrap; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .bars { margin-top: 17px; display: grid; gap: 10px; }
+  .b { display: grid; grid-template-columns: 210px 1fr 92px; align-items: center; gap: 10px; }
+  .b span { font-size: 12px; color: #9aa5c4; }
+  .track { height: 24px; background: #171b2b; border-radius: 5px; overflow: hidden; }
+  .track i { display: block; height: 100%; border-radius: 5px; transition: width .2s; }
+  .b em { font-style: normal; text-align: right; font: 600 13px ui-monospace, Menlo, monospace;
+          font-variant-numeric: tabular-nums; }
+  .out { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 17px; }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 12px; }
+  .stat u { display: block; font-size: 11px; color: #8f9ab8; text-decoration: none; margin-bottom: 4px; }
+  .stat b { font: 600 20px ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  .good { color: #5fd4a4; } .bad { color: #f08a4b; } .mid { color: #dfe4f2; }
+  .say { margin-top: 15px; font-size: 12.5px; color: #a7b1cd; border-left: 2px solid #2b3247;
+         padding-left: 11px; }
+  .say b { color: #dfe4f2; }
+</style>
+</head>
+<body>
+<main data-visualizer="frontier-2026-09-11">
+  <h1>What a coarse target can carry</h1>
+  <p class="sub">Concepts are built from spans of a corpus with phrase-level structure. Move the
+     span past that structure, or make the codebook too big, and the second target stops paying.
+     This is its own run with its own clustering, so the exact bits differ from the Code tab —
+     the shape is the point, not the third decimal.</p>
+
+  <div class="panel">
+    <div class="row">
+      <div>
+        <label for="span">Tokens per concept <b id="spanv">4</b></label>
+        <input type="range" id="span" min="1" max="12" step="1" value="4">
+      </div>
+      <div>
+        <label for="books">Sub-codebooks (M) <b id="booksv">2</b></label>
+        <input type="range" id="books" min="1" max="4" step="1" value="2">
+      </div>
+      <div>
+        <label for="k">Centroids per book (K) <b id="kv">4</b></label>
+        <input type="range" id="k" min="2" max="16" step="1" value="4">
+      </div>
+    </div>
+    <div class="seg"><button class="reset" id="reset">Reset</button></div>
+  </div>
+
+  <div class="bars" id="bars"></div>
+
+  <div class="out">
+    <div class="stat"><u>entropy the concept removes</u><b id="gain" class="mid">—</b></div>
+    <div class="stat"><u>distinct concepts</u><b id="ncon" class="mid">—</b></div>
+    <div class="stat"><u>spans per concept</u><b id="per" class="mid">—</b></div>
+    <div class="stat"><u>centroids stored</u><b id="cost" class="mid">—</b></div>
+  </div>
+
+  <p class="say" id="say"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var DIM = 16, SEQ = 2400;
+  var FAMILIES = [
+    [["the"], ["cat", "dog"], ["sat", "lay"], ["down", "still"]],
+    [["the"], ["bird", "bat"], ["flew", "rose"], ["north", "high"]],
+    [["a"], ["fish", "eel"], ["swam", "dove"], ["south", "deep"]],
+    [["a"], ["car", "van"], ["drove", "sped"], ["east", "past"]]
+  ];
+  var DEFAULTS = { span: 4, books: 2, k: 4 };
+  var st = Object.assign({}, DEFAULTS);
+  var $ = function (id) { return document.getElementById(id); };
+
+  function rngFrom(seed) {
+    return function () { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967296; };
+  }
+  // Sum of four uniforms has sd ~0.404 after the 0.7 scale; 0.62 brings it to
+  // the 0.25 that code_example.py uses, so both artifacts report the same bits.
+  function gauss(r) { return (r() + r() + r() + r() - 2) * 0.7 * 0.62; }
+
+  function corpus() {
+    var r = rngFrom(5), toks = [], states = [];
+    while (toks.length < SEQ) {
+      var f = Math.floor(r() * FAMILIES.length);
+      for (var i = 0; i < FAMILIES[f].length; i++) {
+        var ch = FAMILIES[f][i];
+        toks.push(ch[Math.floor(r() * ch.length)]);
+        var v = new Array(DIM).fill(0);
+        v[f % DIM] = 1; v[(4 + i) % DIM] = 1;
+        states.push(v.map(function (x) { return x + gauss(r); }));
+      }
+    }
+    return { toks: toks.slice(0, SEQ), states: states.slice(0, SEQ) };
+  }
+
+  function d2(a, b) { var s = 0, i; for (i = 0; i < a.length; i++) s += (a[i] - b[i]) * (a[i] - b[i]); return s; }
+
+  function kmeans(pts, k, r) {
+    var cents = [], i, j;
+    for (i = 0; i < k && i < pts.length; i++) cents.push(pts[Math.floor(r() * pts.length)].slice());
+    for (var it = 0; it < 12; it++) {
+      var groups = cents.map(function () { return []; });
+      for (i = 0; i < pts.length; i++) {
+        var best = 0;
+        for (j = 1; j < cents.length; j++) if (d2(pts[i], cents[j]) < d2(pts[i], cents[best])) best = j;
+        groups[best].push(pts[i]);
+      }
+      for (i = 0; i < cents.length; i++) {
+        if (!groups[i].length) continue;
+        var m = new Array(cents[i].length).fill(0);
+        groups[i].forEach(function (p) { p.forEach(function (x, q) { m[q] += x / groups[i].length; }); });
+        cents[i] = m;
+      }
+    }
+    return cents;
+  }
+
+  function entropy(pairs) {
+    var byCtx = {}, total = pairs.length, h = 0;
+    pairs.forEach(function (p) {
+      var c = p[0]; (byCtx[c] = byCtx[c] || {}); byCtx[c][p[1]] = (byCtx[c][p[1]] || 0) + 1;
+    });
+    Object.keys(byCtx).forEach(function (c) {
+      var counts = byCtx[c], n = 0, inner = 0;
+      Object.keys(counts).forEach(function (t) { n += counts[t]; });
+      Object.keys(counts).forEach(function (t) {
+        var q = counts[t] / n; inner -= q * Math.log2(q);
+      });
+      h += (n / total) * inner;
+    });
+    return h;
+  }
+
+  function compute() {
+    var c = corpus(), r = rngFrom(9), i, j;
+    var pooled = [];
+    for (i = 0; i + st.span <= c.states.length; i += st.span) {
+      var m = new Array(DIM).fill(0);
+      for (j = i; j < i + st.span; j++) c.states[j].forEach(function (x, q) { m[q] += x / st.span; });
+      pooled.push(m);
+    }
+    var dim = Math.floor(DIM / st.books), books = [];
+    for (var b = 0; b < st.books; b++) {
+      books.push(kmeans(pooled.map(function (v) { return v.slice(b * dim, (b + 1) * dim); }), st.k, r));
+    }
+    var concepts = pooled.map(function (v) {
+      var id = [];
+      for (var b2 = 0; b2 < st.books; b2++) {
+        var sl = v.slice(b2 * dim, (b2 + 1) * dim), best = 0;
+        for (j = 1; j < books[b2].length; j++) if (d2(sl, books[b2][j]) < d2(sl, books[b2][best])) best = j;
+        id.push(best);
+      }
+      return id.join("-");
+    });
+
+    var hNone = entropy(c.toks.map(function (t) { return [0, t]; }));
+    var tokPairs = [];
+    for (i = 1; i < c.toks.length; i++) tokPairs.push([c.toks[i - 1], c.toks[i]]);
+    var hTok = entropy(tokPairs);
+    var conPairs = [];
+    concepts.forEach(function (cc, ci) {
+      for (j = 0; j < st.span; j++) {
+        var idx = ci * st.span + j;
+        if (idx < c.toks.length) conPairs.push([cc + "|" + j, c.toks[idx]]);
+      }
+    });
+    var hCon = entropy(conPairs);
+    var uniq = {}; concepts.forEach(function (x) { uniq[x] = 1; });
+    var n = Object.keys(uniq).length;
+    return { hNone: hNone, hTok: hTok, hCon: hCon, n: n,
+             per: concepts.length / n, cost: st.books * st.k };
+  }
+
+  function bar(host, label, val, max, cls) {
+    var row = document.createElement("div"); row.className = "b";
+    var l = document.createElement("span"); l.textContent = label;
+    var tr = document.createElement("div"); tr.className = "track";
+    var f = document.createElement("i");
+    f.style.width = Math.max(1, val / max * 100).toFixed(1) + "%";
+    f.style.background = cls === "good" ? "rgba(95,212,164,.55)"
+      : cls === "bad" ? "rgba(240,138,75,.55)" : "rgba(124,140,248,.5)";
+    tr.appendChild(f);
+    var v = document.createElement("em"); v.textContent = val.toFixed(3) + " bits"; v.className = cls;
+    row.appendChild(l); row.appendChild(tr); row.appendChild(v);
+    host.appendChild(row);
+  }
+
+  function render() {
+    $("spanv").textContent = st.span;
+    $("booksv").textContent = st.books;
+    $("kv").textContent = st.k;
+
+    var m = compute(), host = $("bars"); host.textContent = "";
+    bar(host, "knowing nothing", m.hNone, m.hNone, "bad");
+    bar(host, "knowing the previous token", m.hTok, m.hNone, "mid");
+    bar(host, "knowing the concept + position", m.hCon, m.hNone, "good");
+
+    var gain = m.hTok - m.hCon;
+    // Positive = the concept leaves less uncertainty than the previous token.
+    $("gain").textContent = (gain > 0 ? "+" : "") + gain.toFixed(3) + " bits";
+    $("gain").className = gain > 0.1 ? "good" : gain > 0.02 ? "mid" : "bad";
+    $("ncon").textContent = m.n;
+    $("per").textContent = m.per.toFixed(1);
+    $("per").className = m.per < 3 ? "bad" : "mid";
+    $("cost").textContent = m.cost;
+
+    var say;
+    if (m.per < 5) {
+      say = "<b>More concepts than the corpus can support.</b> Each one is estimated from "
+          + m.per.toFixed(1) + " spans, so the entropy below is memorization, not structure. "
+          + "This is the trap in measuring a discrete vocabulary on a small sample — shrink "
+          + "K or M until every code is seen many times.";
+    } else if (gain < 0) {
+      say = "<b>The concept is worse than the previous token.</b> At a span of " + st.span
+          + " it straddles phrase boundaries, blurring together spans that behave differently. "
+          + "A coarse target that does not match the structure is not neutral — it is noise with "
+          + "a gradient attached.";
+    } else if (gain < 0.02) {
+      say = "<b>The concept is carrying nothing.</b> At a span of " + st.span + " it no longer "
+          + "lines up with the phrase structure, so the coarse target has nothing to be coarse "
+          + "about. No amount of training repairs a span that does not match the data.";
+    } else if (st.span === 4) {
+      say = "<b>Span matched to the structure.</b> The concept removes " + gain.toFixed(3)
+          + " bits the previous token leaves behind — that gap is the whole claim, and it is "
+          + "why a second target can pay for itself.";
+    } else {
+      say = "<b>Span " + st.span + ".</b> Still some gain, but less than at a span that matches "
+          + "the phrase length. This is the ablation the paper reports as a 4-to-8 range rather "
+          + "than a constant.";
+    }
+    $("say").innerHTML = say;
+    reportHeight();
+  }
+
+  function reportHeight() {
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+
+  ["span", "books", "k"].forEach(function (id) {
+    $(id).addEventListener("input", function (e) { st[id] = +e.target.value; render(); });
+  });
+  $("reset").addEventListener("click", function () {
+    st = Object.assign({}, DEFAULTS);
+    $("span").value = st.span; $("books").value = st.books; $("k").value = st.k;
+    render();
+  });
+
+  render();
+  addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

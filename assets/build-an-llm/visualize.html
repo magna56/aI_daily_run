@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <title>Five verbs, then a loop</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090c12;--card:#121821;--line:#2a3544;--ink:#edf4ff;--muted:#95a4b8;--cyan:#55e6d2;--violet:#b197fc;--amber:#ffd166}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif}
+    main{max-width:980px;margin:auto;padding:clamp(16px,3vw,32px)}
+    header{display:flex;justify-content:space-between;gap:16px;margin-bottom:16px}
+    h1{font-size:clamp(22px,4vw,34px);line-height:1.1;margin:0 0 6px}
+    p{margin:0;color:var(--muted);max-width:540px}
+    button{font:inherit;color:var(--ink);background:#192231;border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer}
+    button.on{border-color:var(--cyan);color:var(--cyan)}
+    .row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+    .pipe{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:14px 0}
+    .pipe div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px}
+    .pipe.on{border-color:var(--cyan);color:var(--cyan)}
+    .pipe span{display:block;font:11px ui-monospace,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .out{font:18px ui-monospace,monospace;color:var(--amber);min-height:2em}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+    label{display:block;color:var(--muted);font-size:12px;margin:8px 0 4px}
+    input[type=range]{width:100%;accent-color:var(--cyan)}
+    @media(max-width:720px){.pipe{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+<main data-visualizer="build-an-llm">
+  <header>
+    <div>
+      <h1>A reply is the same five verbs, looped.</h1>
+      <p>Pick a prefix. Step through tokenize → embed → mix → score → sample. Temperature only changes the last verb.</p>
+    </div>
+    <button type="button" id="reset">Reset</button>
+  </header>
+  <div class="card">
+    <div class="row" id="prompts"></div>
+    <div class="pipe" id="pipe"></div>
+    <p class="out" id="out"></p>
+    <label for="temp">Temperature <b id="tlab">0.7</b></label>
+    <input id="temp" type="range" min="0.2" max="1.6" step="0.1" value="0.7">
+    <div class="row">
+      <button type="button" id="step">Step once</button>
+      <button type="button" id="run">Sample 3 tokens</button>
+    </div>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const TABLE = {
+    "refund the": { charge: 0.62, invoice: 0.28, password: 0.10 },
+    "reset the": { password: 0.70, charge: 0.20, invoice: 0.10 },
+    "download the": { invoice: 0.80, charge: 0.12, password: 0.08 }
+  };
+  const STAGES = ["tokenize", "embed", "mix", "score", "sample"];
+  const $ = (id) => document.getElementById(id);
+  let prompt = "refund the";
+  let stage = 0;
+  let text = "refund the";
+  function softmax(obj, t) {
+    const keys = Object.keys(obj);
+    const logits = keys.map((k) => Math.log(obj[k]) / t);
+    const m = Math.max.apply(null, logits);
+    const ex = logits.map((x) => Math.exp(x - m));
+    const s = ex.reduce((a, b) => a + b, 0);
+    const out = {};
+    keys.forEach((k, i) => { out[k] = ex[i] / s; });
+    return out;
+  }
+  function pick(dist) {
+    const r = Math.random();
+    let acc = 0;
+    for (const k of Object.keys(dist)) {
+      acc += dist[k];
+      if (r <= acc) return k;
+    }
+    return Object.keys(dist)[0];
+  }
+  function dist() {
+    const t = +$("temp").value;
+    const key = text.endsWith("the") ? text : prompt;
+    return softmax(TABLE[key] || TABLE[prompt], t);
+  }
+  function render() {
+    $("tlab").textContent = (+$("temp").value).toFixed(1);
+    $("prompts").innerHTML = Object.keys(TABLE).map((p) =>
+      "<button type='button' data-p='" + p + "' class='" + (p === prompt ? "on" : "") + "'>" + p + "</button>").join("");
+    $("pipe").innerHTML = STAGES.map((s, i) =>
+      "<div class='" + (i === stage ? "on" : "") + "'><span>verb " + (i + 1) + "</span>" + s + "</div>").join("");
+    const d = dist();
+    const shown = Object.keys(d).map((k) => k + " " + d[k].toFixed(2)).join("   ");
+    $("out").textContent = text + (stage === 4 ? "" : "") + "\n" + shown;
+    reportHeight();
+  }
+  function sampleOnce() {
+    const nxt = pick(dist());
+    text = (text + " " + nxt).replace(/\s+/g, " ").trim();
+    // only one step of generation from a known prefix
+    if (!TABLE[text]) text = prompt + " " + nxt;
+    stage = 4;
+    render();
+  }
+  function reportHeight() {
+    parent.postMessage({ type: "adl-visualize-height", height: document.documentElement.scrollHeight }, "*");
+  }
+  $("prompts").addEventListener("click", (ev) => {
+    const b = ev.target.closest("button[data-p]");
+    if (!b) return;
+    prompt = b.getAttribute("data-p");
+    text = prompt;
+    stage = 0;
+    render();
+  });
+  $("step").onclick = () => { stage = (stage + 1) % 5; if (stage === 4) sampleOnce(); else render(); };
+  $("run").onclick = () => { text = prompt; stage = 4; sampleOnce(); };
+  $("temp").addEventListener("input", render);
+  $("reset").onclick = () => { prompt = "refund the"; text = prompt; stage = 0; $("temp").value = 0.7; render(); };
+  addEventListener("load", () => { render(); reportHeight(); });
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+})();
+</script>
+</body>
+</html>

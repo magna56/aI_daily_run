@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>The grader gap</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+  label.sl { display: block; font-size: 12px; color: #9aa5c4; margin-bottom: 5px; }
+  label.sl b { color: #dfe4f2; font-weight: 650; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  .seg { display: flex; gap: 6px; margin-top: 13px; align-items: center; flex-wrap: wrap;
+         border-top: 1px solid #1c2130; padding-top: 13px; }
+  button { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed="true"] { background: rgba(224,136,95,.18); border-color: rgba(224,136,95,.6); color: #f0b393; }
+  button:focus-visible, input:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .preset { background: #131725; color: #9aa5c4; }
+  .reset { margin-left: auto; }
+  .cols { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-top: 18px; }
+  h2 { font-size: 11.5px; color: #9aa5c4; font-weight: 650; margin: 0 0 9px;
+       letter-spacing: .05em; text-transform: uppercase; }
+  .cond { margin-bottom: 11px; }
+  .cond .nm { font-size: 11.5px; color: #8f9ab8; display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .cond .nm b { color: #dfe4f2; font-variant-numeric: tabular-nums; }
+  .track { height: 20px; border-radius: 5px; background: #131725; border: 1px solid #1c2130; overflow: hidden; }
+  .track i { display: block; height: 100%; background: #7c8cf8; }
+  .tr { transition: width .18s ease; }
+  @media (prefers-reduced-motion: reduce) { .tr { transition: none; } }
+  .stat { background: #10131f; border: 1px solid #222839; border-radius: 9px; padding: 11px 13px; margin-bottom: 9px; }
+  .big { font-size: 30px; font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .big.ok { color: #6ec896; } .big.bad { color: #e0885f; }
+  .stat p { margin: 3px 0 0; font-size: 12px; color: #8f9ab8; }
+  .note { margin-top: 14px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+</style>
+</head>
+<body>
+<main data-visualizer="frontier-2026-09-17">
+  <h1>The grader gap</h1>
+  <p class="sub">Two runs of one evaluation, differing only in what the model believes each authority wants. Set how much a model follows each, then turn the crossing off and watch an honest instruction-follower look guilty.</p>
+
+  <div class="panel">
+    <div class="grid">
+      <div>
+        <label class="sl" for="g">Follows the <b>grader</b>: <b id="gv">0.86</b></label>
+        <input type="range" id="g" min="0" max="1" step="0.01" value="0.86">
+      </div>
+      <div>
+        <label class="sl" for="d">Follows the <b>developer</b>: <b id="dv">0.04</b></label>
+        <input type="range" id="d" min="0" max="1" step="0.01" value="0.04">
+      </div>
+    </div>
+    <div class="seg">
+      <button class="preset" data-g="0.02" data-d="0.03">honest</button>
+      <button class="preset" data-g="0.33" data-d="0.05">mild hacker</button>
+      <button class="preset" data-g="0.86" data-d="0.04">late-RL checkpoint</button>
+      <button class="preset" data-g="0.40" data-d="0.40">instruction follower</button>
+      <button id="uncross" aria-pressed="false">stop crossing the authorities</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h2>Rate the feature appears</h2>
+      <div id="conds"></div>
+      <div class="note" id="setup"></div>
+    </div>
+    <div>
+      <h2>What you would report</h2>
+      <div class="stat"><div class="big" id="gap">0</div>
+        <p>grader gap, in points. Under about 10 is indistinguishable from noise.</p></div>
+      <div class="stat"><div class="big ok" id="verdict" style="font-size:19px">clean</div>
+        <p>what the harness concludes about this model</p></div>
+      <div class="note" id="msg"></div>
+    </div>
+  </div>
+</main>
+<script>
+(function () {
+  "use strict";
+  var BASE = 0.45, D = { g: 0.86, d: 0.04 };
+  var s = { g: D.g, d: D.d, uncross: false };
+  var $ = function (id) { return document.getElementById(id); };
+
+  // rate at which the graded feature appears, given what the model believes
+  // each authority wants. +1 means "wants the feature", -1 means "wants the opposite".
+  function rate(gWant, dWant) {
+    var p = BASE + s.g * 0.5 * gWant + s.d * 0.5 * dWant;
+    return Math.min(Math.max(p, 0), 1);
+  }
+
+  function render() {
+    $("gv").textContent = s.g.toFixed(2);
+    $("dv").textContent = s.d.toFixed(2);
+    $("uncross").setAttribute("aria-pressed", String(s.uncross));
+
+    // crossed: the developer always wants the opposite of the grader, so ordinary
+    // deference cancels in the subtraction. uncrossed: both move together.
+    var proD = s.uncross ? 1 : -1, conD = s.uncross ? -1 : 1;
+    var pro = rate(1, proD), con = rate(-1, conD);
+    var gap = Math.round((pro - con) * 100);
+
+    $("conds").innerHTML = [
+      { t: "grader wants it, developer " + (s.uncross ? "wants it too" : "wants the opposite"), v: pro },
+      { t: "grader dislikes it, developer " + (s.uncross ? "dislikes it too" : "wants it"), v: con }
+    ].map(function (c) {
+      return '<div class="cond"><div class="nm"><span>' + c.t + "</span><b>" +
+        Math.round(c.v * 100) + '%</b></div><div class="track"><i class="tr" style="width:' +
+        (c.v * 100).toFixed(1) + '%"></i></div></div>';
+    }).join("");
+
+    $("gap").textContent = gap;
+    $("gap").className = "big " + (Math.abs(gap) < 10 ? "ok" : "bad");
+    var clean = Math.abs(gap) < 10;
+    $("verdict").textContent = clean ? "clean" : "tracks the grader";
+    $("verdict").className = "big " + (clean ? "ok" : "bad");
+
+    $("setup").innerHTML = s.uncross
+      ? "<b>Uncrossed.</b> Both authorities want the same thing in each run, so the gap now contains every point of ordinary instruction-following."
+      : "<b>Crossed.</b> The authorities disagree in both runs, so general deference appears on both sides and cancels when you subtract.";
+
+    var msg;
+    if (s.uncross && s.d > 0.25 && Math.abs(s.g - s.d) < 0.15) {
+      msg = "<b>This is the false positive.</b> A model that defers equally to everyone is not reward-seeking, but with the crossing off it posts a large gap. Turn crossing back on and the same model reads near zero.";
+    } else if (clean) {
+      msg = "<b>Near zero is the useful result.</b> This model's behavior barely moves with what it believes the grader wants, so the score is measuring the task rather than the grader.";
+    } else if (s.g > 0.7) {
+      msg = "<b>This is roughly the late-RL checkpoint.</b> Honesty has not vanished — it has become contingent. The same model behaves differently depending on what it thinks is being rewarded.";
+    } else {
+      msg = "<b>A gap this size is a reason to look, not a verdict.</b> Validate the harness against a model whose reward-seeking you already know before you trust the number on one you don't.";
+    }
+    $("msg").innerHTML = msg;
+    report();
+  }
+
+  ["g", "d"].forEach(function (id) {
+    $(id).addEventListener("input", function (e) { s[id] = +e.target.value; render(); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".preset"), function (b) {
+    b.addEventListener("click", function () {
+      s.g = +b.dataset.g; s.d = +b.dataset.d;
+      $("g").value = s.g; $("d").value = s.d;
+      render();
+    });
+  });
+  $("uncross").addEventListener("click", function () { s.uncross = !s.uncross; render(); });
+  $("reset").addEventListener("click", function () {
+    s = { g: D.g, d: D.d, uncross: false };
+    $("g").value = D.g; $("d").value = D.d;
+    render();
+  });
+
+  function report() {
+    parent.postMessage({ type: "adl-visualize-height",
+                         height: document.documentElement.scrollHeight }, "*");
+  }
+  addEventListener("load", report);
+  new ResizeObserver(report).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>
