@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<title>What fits on the machine you already have</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d18; color: #dfe4f2;
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: #8f9ab8; font-size: 12.5px; margin: 0 0 16px; }
+  .panel { background: #10131f; border: 1px solid #222839; border-radius: 10px; padding: 14px; }
+  .row { display: grid; gap: 4px; margin-bottom: 13px; }
+  .row label { font-size: 12.5px; color: #cdd5ee; display: flex; justify-content: space-between; gap: 10px; }
+  .row label b { color: #e8ecfb; font-variant-numeric: tabular-nums; font-weight: 650; }
+  input[type=range] { width: 100%; accent-color: #7c8cf8; }
+  input[type=range]:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 3px; }
+  .seg { display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+         border-top: 1px solid #1c2130; padding-top: 13px; }
+  .lbl { font-size: 11.5px; color: #9aa5c4; font-weight: 650; letter-spacing: .05em;
+         text-transform: uppercase; margin: 0 4px 0 0; }
+  button { font: inherit; font-size: 12px; padding: 7px 11px; border-radius: 7px; cursor: pointer;
+           background: #171b2b; color: #cdd5ee; border: 1px solid #2b3247; }
+  button[aria-pressed="true"] { background: rgba(124,140,248,.16); border-color: rgba(124,140,248,.55); color: #e8ecfb; }
+  button:focus-visible { outline: 2px solid #7c8cf8; outline-offset: 2px; }
+  .reset { margin-left: auto; }
+  .bars { margin-top: 16px; }
+  .brow { margin-bottom: 11px; }
+  .bhead { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 4px; }
+  .bhead span { color: #8f9ab8; } .bhead b { font-variant-numeric: tabular-nums; }
+  .bar { height: 16px; border-radius: 4px; background: #1c2130; overflow: hidden; position: relative; }
+  .bar i { display: block; height: 100%; }
+  .bar i.ok { background: rgba(110,200,150,.8); } .bar i.bad { background: rgba(224,136,95,.85); }
+  .cap { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #7c8cf8; }
+  .note { margin-top: 14px; padding: 11px 13px; border-left: 3px solid #7c8cf8;
+          background: rgba(124,140,248,.07); border-radius: 0 7px 7px 0; font-size: 12.5px; }
+  .note b { color: #fff; }
+  @media (prefers-reduced-motion: no-preference) { .bar i { transition: width .18s ease; } }
+</style>
+</head>
+<body>
+<main data-visualizer="2026-09-26">
+  <h1>What fits on the machine you already have</h1>
+  <p class="sub">The blue line is your memory budget. Each bar is what one model needs to load — orange is the old path that expands every block first, green is reading the packed bytes. Rates from the Code tab: about 0.56 bytes per weight at four bits, two at bfloat16.</p>
+
+  <div class="panel">
+    <div class="row">
+      <label for="ram">Memory on the machine <b id="ramV">16 GB</b></label>
+      <input type="range" id="ram" min="4" max="128" step="4" value="16">
+    </div>
+    <div class="row">
+      <label for="params">Model size <b id="paramsV">14 B parameters</b></label>
+      <input type="range" id="params" min="1" max="120" step="1" value="14">
+    </div>
+    <div class="seg">
+      <span class="lbl">quantization</span>
+      <button data-q="4">4-bit</button><button data-q="5">5-bit</button><button data-q="6">6-bit</button>
+      <button class="reset" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="bars">
+    <div class="brow">
+      <div class="bhead"><span>expand first, then multiply</span><b id="bfL">—</b></div>
+      <div class="bar"><i class="bad" id="bf"></i><div class="cap" id="cap1"></div></div>
+    </div>
+    <div class="brow">
+      <div class="bhead"><span>read the packed bytes</span><b id="qL">—</b></div>
+      <div class="bar"><i class="ok" id="q"></i><div class="cap" id="cap2"></div></div>
+    </div>
+  </div>
+
+  <p class="note" id="explain"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var D = { ram: 16, params: 14, q: 4 };
+  var s = { ram: D.ram, params: D.params, q: D.q };
+  var $ = function (id) { return document.getElementById(id); };
+  // bytes per weight: 2 for bf16; for n-bit, n/8 plus ~0.06 for per-block scales
+  function bytesPerWeight(bits) { return bits / 8 + 0.06; }
+  var HEADROOM = 0.75;   // OS, activations and the KV cache need room too
+
+  function render() {
+    var usable = s.ram * HEADROOM;
+    var bf = s.params * 2, qz = s.params * bytesPerWeight(s.q);
+    var scale = Math.max(bf, qz, usable) * 1.1;
+
+    $("ramV").textContent = s.ram + " GB";
+    $("paramsV").textContent = s.params + " B parameters";
+    $("bfL").textContent = bf.toFixed(1) + " GB" + (bf > usable ? "  — does not fit" : "  — fits");
+    $("qL").textContent = qz.toFixed(1) + " GB" + (qz > usable ? "  — does not fit" : "  — fits");
+    $("bf").style.width = Math.min(100, bf / scale * 100) + "%";
+    $("q").style.width = Math.min(100, qz / scale * 100) + "%";
+    var capPct = Math.min(100, usable / scale * 100) + "%";
+    $("cap1").style.left = capPct; $("cap2").style.left = capPct;
+
+    var btns = document.querySelectorAll("[data-q]");
+    for (var i = 0; i < btns.length; i++) btns[i].setAttribute("aria-pressed", String(+btns[i].dataset.q === s.q));
+
+    var biggestQ = usable / bytesPerWeight(s.q), biggestBf = usable / 2;
+    var msg;
+    if (bf <= usable) {
+      msg = "<b>Both paths fit.</b> At " + s.params + "B on " + s.ram + " GB you had the headroom "
+          + "either way, so packed weights buy you speed of loading rather than the ability to run "
+          + "it at all. Push the model size up until the orange bar crosses the line.";
+    } else if (qz <= usable) {
+      msg = "<b>This is the case the change is for.</b> Expanded it needs " + bf.toFixed(1)
+          + " GB and you have " + usable.toFixed(1) + " GB usable, so the old path simply fails. "
+          + "Packed it needs " + qz.toFixed(1) + " GB and runs. On this machine the ceiling moves "
+          + "from about " + biggestBf.toFixed(0) + "B to about " + biggestQ.toFixed(0) + "B.";
+    } else {
+      msg = "<b>Neither fits.</b> " + s.params + "B needs " + qz.toFixed(1)
+          + " GB even packed. Quantization moves the ceiling by roughly "
+          + (2 / bytesPerWeight(s.q)).toFixed(1) + "x — it does not remove it, and going to fewer "
+          + "bits costs quality rather than being free.";
+    }
+    $("explain").innerHTML = msg;
+    report();
+  }
+
+  $("ram").addEventListener("input", function (e) { s.ram = +e.target.value; render(); });
+  $("params").addEventListener("input", function (e) { s.params = +e.target.value; render(); });
+  var qs = document.querySelectorAll("[data-q]");
+  for (var i = 0; i < qs.length; i++) {
+    qs[i].addEventListener("click", function (ev) { s.q = +ev.currentTarget.dataset.q; render(); });
+  }
+  $("reset").addEventListener("click", function () {
+    s = { ram: D.ram, params: D.params, q: D.q };
+    $("ram").value = D.ram; $("params").value = D.params; render();
+  });
+
+  function report() {
+    parent.postMessage({ type: "adl-visualize-height",
+      height: document.documentElement.scrollHeight }, "*");
+  }
+  addEventListener("load", report);
+  new ResizeObserver(report).observe(document.documentElement);
+  render();
+})();
+</script>
+</body>
+</html>

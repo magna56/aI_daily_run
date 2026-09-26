@@ -312,3 +312,9 @@
 - **Key insight**: A model's output can be marked without changing a single word of it, because there is a way of sampling that is provably identical to ordinary sampling and yet driven by a secret you hold. Checking a passage later needs that secret and the text, but not the model. What the mark cannot survive is output that was never a real choice.
 - **Code**: `2026-09-25/code_example.py` — implements the keyed sampler and the statistical detector from scratch; the top token's true probability of 0.2000 comes back as 0.1991 watermarked, and detection dies once the output drops to 0.30 bits per token
 - **Articles**: 4 sources (vLLM's implementation post as primary + their inference-system anatomy for context + the original green-list watermark paper + the distortion-free paper the implementation follows)
+
+## 2026-09-26 — How to Run a Quantized Model Without Expanding It First
+- **Category**: AI Hardware for Engineers
+- **Key insight**: A compressed model was always small enough to download and too big to load, because the old path rebuilt every weight at full precision before the first multiply. Reading the packed bytes directly removes that step, so the peak becomes one small block instead of the whole model. The practical effect is that a laptop holds a model several times larger than its owner assumed.
+- **Code**: `2026-09-26/code_example.py` — packs weights into scaled four-bit blocks and multiplies both ways over the same matrix; the outputs agree to 2.66e-15 while peak memory differs by 1,024x, with a table of what each machine size can hold
+- **Articles**: 4 sources (Hugging Face's implementation post as primary + the integration docs to build against + the actual quantized checkpoint the code loads + llama.cpp for the kernels underneath)
