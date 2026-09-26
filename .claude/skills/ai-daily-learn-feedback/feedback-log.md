@@ -1699,3 +1699,34 @@ now skipped.
 - **Not changed**: no linter rule was added. All four notes are judgment calls over meaning, and a
   regex over titles or analogies would fire constantly on correct articles. Saying so rather than
   inventing a check that would be switched off within a week.
+
+## 2026-09-26 — spec-wide (papers leaking into the daily lab)
+
+- **Note**: "why we are bine gpaper heavy from last few days I dind tlike it we have frontier for
+  it fix the distribution"
+- **Verdict**: **compliance gap**, not a missing rule. `SKILL.md` Step 9 already said the
+  `## Papers` block is for "when a paper genuinely is the primary source, not to make the list
+  look rigorous", and the generator broke it three times in a week.
+- **Measured before acting**, because the existing budget looked satisfied: of the last ten daily
+  sessions, exactly **one** was arXiv-led (2026-09-24), which is inside the one-per-seven cap —
+  and **four of ten** cited arXiv in `articles.md`, six links in total. The budget governs the
+  spine and said nothing about citations. Citations are the part the reader sees. Frontier is
+  meanwhile working as designed: five of its last six sessions are arXiv-based.
+- **Changed**: `build.js` — new `--check` warning. A daily-lab session citing arXiv without the
+  `paper` tag warns; a paper-tagged one citing more than one warns on the cap. Gated behind
+  `PAPER_CITE_SINCE = "2026-09-27"` so the back catalog is exempt. Verified against history: it
+  would have fired on 2026-09-01, 09-06, 09-09, 09-12, 09-20, 09-21 and 09-25, and both branches
+  trigger correctly.
+- **Changed**: `SKILL.md` Step 9 — the existing sentence kept and given a number: at most **one**
+  arXiv link on a daily-lab session, only when the paper is the subject. Names the two moves that
+  cause it, because both feel like diligence while you are doing them: adding the foundational
+  paper as *background*, and adding a second as *the contrast case*.
+- **Changed**: `selection.md` — two additions. **Count citations, not only what the session is
+  built on.** And **a Tier C candidate whose honest primary source is a paper belongs on
+  Frontier** — this resolves a real contradiction in the spec, where the audience bands pull Tier
+  C into the lab while the Frontier track pulls papers out of it. Resolved toward sourcing: keep
+  the Tier C slot, fill it from vendor architecture posts and engineering write-ups.
+- **Not changed**: the one-arXiv-led-session-per-7 budget. It was never wrong, it was just
+  measuring the wrong surface, and tightening it would have punished the one session that was
+  legitimately paper-led.
+- **Not changed**: no session was retro-edited. The rule is dated forward; the back catalog stands.

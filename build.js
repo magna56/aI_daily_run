@@ -358,6 +358,9 @@ const RETIRED_SE_SINCE = "2026-09-02";
 // appearance. Capped in count and length so it cannot grow back into the 305-word
 // wall that got it retired the first time.
 const GLOSSARY_SINCE = "2026-09-02";
+// Papers-in-further-reading cap. Dated so the back catalog is exempt: the rule
+// existed in prose from the start and was only made checkable on 2026-09-26.
+const PAPER_CITE_SINCE = "2026-09-27";
 // Five or six is the norm. The band is advisory and deliberately NOT in the
 // publish gate: an article that genuinely needs a seventh term should not be
 // blocked over it, but nothing should drift back toward a wall of definitions.
@@ -1342,6 +1345,25 @@ function compile(id, journal, runner, opts) {
   const articlesRaw = readIfExists(path.join(dir, "articles.md"));
   if (articlesRaw) articles = parseArticles(articlesRaw);
   else warn(`${id}: no articles.md.`);
+
+  /* Papers leak into the daily lab through further reading rather than through
+     the primary source, which is why the one-arXiv-led-session-per-7 budget can
+     read as satisfied while the reader sees arXiv links everywhere. Measured on
+     2026-09-26: exactly one of the previous ten sessions was paper-led, and four
+     of them cited arXiv. The Frontier track exists to carry papers, so a lab
+     session gets at most one and only when the paper IS the subject. */
+  if (articlesRaw && kind === "daily" && date >= PAPER_CITE_SINCE) {
+    const arxiv = (articlesRaw.match(/arxiv\.org/g) || []).length;
+    const paperLed = tags.includes("paper");
+    if (arxiv > 0 && !paperLed) {
+      warn(`${id}: articles.md cites arXiv ${arxiv} time(s) but the session is not tagged `
+        + `"paper" — the daily lab favors docs, changelogs and engineering write-ups, and `
+        + `papers belong on the Frontier track. Cite one only when it IS the primary source.`);
+    } else if (arxiv > 1) {
+      warn(`${id}: articles.md cites arXiv ${arxiv} times (cap 1 on the daily lab) — `
+        + `the extras are background, and background is what the Frontier track is for.`);
+    }
+  }
   const articleCount = (articles || []).reduce((n, g) => n + g.items.length, 0);
 
   /* interactive visualizer -> isolated standalone HTML, loaded only when its

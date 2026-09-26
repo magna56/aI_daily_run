@@ -1411,9 +1411,21 @@ Good candidates when they've covered the topic:
 - `blog.google/technology/ai` and `developers.googleblog.com` — Google AI; the primary source
   for anything Gemini, and the developers blog is usually the one with runnable detail.
 
-Same spirit as the source rule in Step 2: **favour engineering write-ups, docs and changelogs
+Same spirit as the source rule in Step 2: **favor engineering write-ups, docs and changelogs
 over papers** here too. The `## Papers` block is optional — use it when a paper genuinely is the
 primary source, not to make the list look rigorous.
+
+**That rule is now a number, because it was broken three times in a week while the paper budget
+read as satisfied.** On a daily-lab session, `articles.md` may cite **at most one** arXiv link,
+and only when the paper *is* the subject — which in practice means the session carries the `paper`
+tag. Measured on 2026-09-26: exactly one of the previous ten sessions was paper-led, so the
+one-per-seven budget was met, and four of those ten cited arXiv anyway. The budget governs the
+spine; nothing governed the citations, and the citations are the part the reader sees.
+
+The failure is always the same two moves, and both feel like diligence at the time: adding the
+foundational paper as *background*, and adding a second paper as *the contrast case*. Neither is
+the primary source. Both belong on the Frontier track, which exists precisely so papers stop
+appearing in the daily slot. `build.js --check` warns on this from 2026-09-27.
 
 ### Step 10: Update the Journal
 

@@ -79,6 +79,20 @@ Tier C one, which is why `For` is checked separately from tier.
 Fetch 4–6 items from the lists below. Prefer changelogs, engineering blogs, docs, and
 production write-ups. **Paper budget: at most one arXiv-led session in the last 7.**
 
+**Count citations, not only what the session is built on.** Added 2026-09-26, because the budget
+can read as satisfied while the track drifts. A reader does not know which source was the spine;
+they see the further-reading list. One paper-led session in ten is within budget, and four of ten
+citing arXiv still reads as a papers site. `articles.md` on the daily lab caps at one arXiv link,
+and `--check` enforces it.
+
+**And a Tier C candidate whose honest primary source is a paper belongs on Frontier.** This is the
+tension the two tracks create and it has to be resolved deliberately: the audience bands pull Tier
+C *into* the lab to keep the mix honest, while the Frontier track pulls papers *out* of it. Resolve
+it toward sourcing rather than toward tier — keep the Tier C slot in the lab and fill it from
+vendor architecture posts, hardware write-ups and engineering blogs, and send the paper to
+Frontier. A Tier C lab session built on arXiv is the shape that makes the whole site look like a
+paper feed.
+
 ### 3. Shortlist three, then pick one
 
 Write down three candidates (title, URL, category, one-line claim). Score each 0 or 1:
