@@ -92,6 +92,12 @@ never fix it by loosening the spec. The blocking ones:
 - `no fenced code block` — the section exists but defers to `code_example.py`, which most readers
   never open and nobody reading on a phone will run.
 - anything about `visualize.html` — a session without a working visualizer has no Visualize tab.
+- **`articles.md` cites arXiv** on a daily-lab session that is not tagged `paper`, or cites it more
+  than once when it is. Added 2026-09-27 and made **blocking rather than advisory on purpose**: the
+  prose rule had existed since the beginning, was broken three times in one week, and an advisory
+  warning is a rule the writer talks past at the moment they are most convinced the extra paper
+  belongs. Papers are what the Frontier track is for. Fix it by cutting the citation, not by
+  tagging the session `paper` to silence the check.
 - **the readability warnings** — a paragraph over 110 words, a sentence over 45, a single-block
   `The Problem`, **a British spelling**, **a mean sentence over 18 words**, or **any section outside its word band**. Both directions block, and the floors
   matter most: the 2026-08-31 regression was sections being *drained* to pay for a document-wide

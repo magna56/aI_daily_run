@@ -1730,3 +1730,20 @@ now skipped.
   measuring the wrong surface, and tightening it would have punished the one session that was
   legitimately paper-led.
 - **Not changed**: no session was retro-edited. The rule is dated forward; the back catalog stands.
+
+### 2026-09-26, same note, second pass — the warning was not a fix
+
+- **Note**: "fix the skill should not happen again"
+- **Verdict**: the first pass was insufficient and the owner was right. A `--check` warning is
+  advisory. `publish.sh` blocks only on a hardcoded pattern list at line 176, and the new arXiv
+  warning was not in it — so the gate would have printed the warning and published anyway. That is
+  the same mechanism by which the original prose rule went ignored three times: a rule you can talk
+  past at the moment you are most convinced the exception is justified.
+- **Changed**: `publish.sh` — `cites arXiv` added to the blocking grep. A daily-lab session that
+  cites arXiv without the `paper` tag now **cannot publish**.
+- **Changed**: `ai-daily-learn-publish/SKILL.md` — listed among the blocking warnings in Step A½,
+  with the reason it is blocking rather than advisory, and the escape hatch named so nobody takes
+  it: fix by cutting the citation, never by tagging the session `paper` to silence the check.
+- **Verified, not assumed**: ran the gate's own grep against history with the date gate moved back.
+  2026-09-25 reports **PUBLISH BLOCKED**; 2026-09-26 passes; with the real gate date nothing
+  retroactive fires.
